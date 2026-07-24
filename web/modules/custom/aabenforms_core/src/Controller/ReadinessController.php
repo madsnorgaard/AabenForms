@@ -29,8 +29,14 @@ class ReadinessController extends ControllerBase {
    * [capability, status, evidence].
    */
   protected const CAPABILITIES = [
-    ['Webform → ECA workflow engine', 'ready', 'Audited: 23 flows, all webform bindings valid, every plugin resolves, 0 broken, 0 stuck-case dead ends'],
-    ['Field-level CPR encryption (AES-256)', 'ready', 'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext'],
+    [
+      'Webform → ECA workflow engine', 'ready',
+      'Audited: 23 flows, all webform bindings valid, every plugin resolves, 0 broken, 0 stuck-case dead ends',
+    ],
+    [
+      'Field-level CPR encryption (AES-256)', 'ready',
+      'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext',
+    ],
     ['GDPR audit logging', 'ready', 'Every sensitive access hashed (SHA-256) and logged with purpose'],
     ['Case (sag) lifecycle', 'ready', 'Lawful transitions, frist clock, immutable once closed'],
     ['Evidence trace dashboard', 'ready', 'Per-submission trace across every service contract (this tool)'],
@@ -44,10 +50,19 @@ class ReadinessController extends ControllerBase {
    * live-capable | mock | stub. Source: integration readiness audit.
    */
   protected const INTEGRATIONS = [
-    ['MitID / NemLog-in', 'OIDC', 'live-capable', 'Broker/NemLog-in registration; verified only against the Keycloak mock (#79)'],
-    ['CPR person lookup', 'SF1520', 'mock', 'Real KOMBIT protocol (InvocationContext, OCES3 mTLS) + service agreement (#76)'],
+    [
+      'MitID / NemLog-in', 'OIDC', 'live-capable',
+      'Broker/NemLog-in registration; verified only against the Keycloak mock (#79)',
+    ],
+    [
+      'CPR person lookup', 'SF1520', 'mock',
+      'Real KOMBIT protocol (InvocationContext, OCES3 mTLS) + service agreement (#76)',
+    ],
     ['CVR company lookup', 'SF1530', 'mock', 'Same certificate + protocol work as SF1520 (#76)'],
-    ['Digital Post (MeMo)', 'SF1601', 'mock', 'Real MeMo XML builder + SOAP (library bundled, unwired); cert; idempotency (#73, #77)'],
+    [
+      'Digital Post (MeMo)', 'SF1601', 'mock',
+      'Real MeMo XML builder + SOAP (library bundled, unwired); cert; idempotency (#73, #77)',
+    ],
     ['Fordelingskomponent', 'SF2900', 'stub', 'Full chain: STS SF1512/1514, OCES3-signed SOAP, SFTP, async receipts'],
     ['Case journaling', 'SF1470', 'stub', 'Real SOAP registration + KOMBIT compliancetest (#84-#86)'],
     ['ESDH connectors', '-', 'stub', 'Live HTTP transports for SBSYS/GetOrganized/WorkZone/Acadre (framework is real)'],
@@ -65,14 +80,47 @@ class ReadinessController extends ControllerBase {
    * showing these plainly, not hiding them behind a green demo.
    */
   protected const FINDINGS = [
-    ['MitID gate fails open in demo mode', 'critical', 'allow_mitid_demo_mode is ON - an unverified identity is recorded as "verified" and an anonymous POST can open a real case. Turn OFF for any CPR-touching POC.'],
-    ['Client-supplied workflow_id honoured at login', 'critical', 'The session/bearer id must be server-minted only; today a crafted /mitid/login?workflow_id=… enables session and CPR takeover.'],
-    ['Open redirect in MitID return_url', 'high', 'Backslash paths (\\evil.com) bypass the prefix guard and can leak the session token. Use strict local-path validation.'],
-    ['Anonymous can call the webform API', 'high', 'access webform api is granted to anonymous; the requires_mitid flag is advisory only. Add server-side MitID enforcement on submit.'],
-    ['No rate limit / CSRF on /submit', 'high', 'Each submission synchronously drives the full ECA flow (CPR/CVR/Digital Post). Unthrottled anonymous access is a DoS + external-call cost-amplification vector. Add flood control + origin/CSRF checks.'],
-    ['case_worker submission access is un-scoped', 'high', 'view/edit any webform submission has no tenant scoping - acceptable for a single-tenant POC, not for multi-tenant.'],
-    ['allow_mitid_demo_mode lives only in active config', 'medium', 'It is not in config/sync, so a drush cim before the demo silently flips it off and routes every MitID-gated flow to its deny terminal. Export or verify it before a client session.'],
-    ['5 flows are GREY (parent-approval overlap, stub labels)', 'medium', 'parent_dual_approval_working, parent_submission_simple, caseworker_review_flow, hr_onboarding, association_booking - keep off-screen; demo merudgifter, friplads, klage instead.'],
+    [
+      'MitID gate fails open in demo mode', 'critical',
+      'allow_mitid_demo_mode is ON - an unverified identity is recorded as "verified" and an '
+      . 'anonymous POST can open a real case. Turn OFF for any CPR-touching POC.',
+    ],
+    [
+      'Client-supplied workflow_id honoured at login', 'critical',
+      'The session/bearer id must be server-minted only; today a crafted /mitid/login?workflow_id=… '
+      . 'enables session and CPR takeover.',
+    ],
+    [
+      'Open redirect in MitID return_url', 'high',
+      'Backslash paths (\\evil.com) bypass the prefix guard and can leak the session token. '
+      . 'Use strict local-path validation.',
+    ],
+    [
+      'Anonymous can call the webform API', 'high',
+      'access webform api is granted to anonymous; the requires_mitid flag is advisory only. '
+      . 'Add server-side MitID enforcement on submit.',
+    ],
+    [
+      'No rate limit / CSRF on /submit', 'high',
+      'Each submission synchronously drives the full ECA flow (CPR/CVR/Digital Post). Unthrottled '
+      . 'anonymous access is a DoS + external-call cost-amplification vector. Add flood control '
+      . '+ origin/CSRF checks.',
+    ],
+    [
+      'case_worker submission access is un-scoped', 'high',
+      'view/edit any webform submission has no tenant scoping - acceptable for a single-tenant POC, '
+      . 'not for multi-tenant.',
+    ],
+    [
+      'allow_mitid_demo_mode lives only in active config', 'medium',
+      'It is not in config/sync, so a drush cim before the demo silently flips it off and routes '
+      . 'every MitID-gated flow to its deny terminal. Export or verify it before a client session.',
+    ],
+    [
+      '5 flows are GREY (parent-approval overlap, stub labels)', 'medium',
+      'parent_dual_approval_working, parent_submission_simple, caseworker_review_flow, hr_onboarding, '
+      . 'association_booking - keep off-screen; demo merudgifter, friplads, klage instead.',
+    ],
   ];
 
   /**
@@ -269,7 +317,12 @@ class ReadinessController extends ControllerBase {
       ],
       'table' => [
         '#type' => 'table',
-        '#header' => [$this->t('Integration'), $this->t('Contract'), $this->t('Status'), $this->t('What is needed for production')],
+        '#header' => [
+          $this->t('Integration'),
+          $this->t('Contract'),
+          $this->t('Status'),
+          $this->t('What is needed for production'),
+        ],
         '#rows' => $rows,
         '#attributes' => ['class' => ['af-trace-table']],
       ],
