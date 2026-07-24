@@ -6,6 +6,10 @@ services:
   aabenforms_digital_post.transaction_id_generator:
     class: Drupal\aabenforms_digital_post\Service\TransactionIdGenerator
 
+  # Builds real SF1601 MeMo XML from the DigitalPost DTO (no cert, no network).
+  aabenforms_digital_post.memo_builder:
+    class: Drupal\aabenforms_digital_post\Memo\MemoBuilder
+
   # Certificate locator: file-based default. Factory picks based on config.
   aabenforms_digital_post.certificate_locator.file:
     class: Drupal\aabenforms_digital_post\Certificate\FileCertificateLocator
@@ -29,6 +33,7 @@ services:
       - '@aabenforms_digital_post.transaction_id_generator'
       - '@datetime.time'
       - '@logger.channel.aabenforms_digital_post'
+      - '@aabenforms_digital_post.memo_builder'
 
   aabenforms_digital_post.sf1601_client.wiremock:
     class: Drupal\aabenforms_digital_post\TestMode\WireMockSoapClient
@@ -36,6 +41,7 @@ services:
       - '@http_client'
       - '@config.factory'
       - '@logger.channel.aabenforms_digital_post'
+      - '@aabenforms_digital_post.memo_builder'
 
   aabenforms_digital_post.sf1601_client:
     class: Drupal\aabenforms_digital_post\Service\Sf1601ClientInterface

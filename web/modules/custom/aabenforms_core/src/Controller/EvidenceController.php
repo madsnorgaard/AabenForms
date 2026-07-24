@@ -164,6 +164,7 @@ class EvidenceController extends ControllerBase {
     $build['header'] = $this->buildHeader($sid, $trace, $sf2900);
     $build['summary'] = $this->buildCaseSummary($case, $trace);
     $build['timeline'] = $this->buildTimeline($trace['steps'] ?? [], $sf2900);
+    $build['digitalpost'] = $this->buildDigitalPost($trace);
     $build['audit'] = $this->buildAuditTable($audit);
     return $build;
   }
@@ -333,6 +334,90 @@ class EvidenceController extends ControllerBase {
         'nodes' => $nodes,
       ],
     ];
+  }
+
+  /**
+   * Builds the Digital Post (SF1601 MeMo) panel showing the real message XML.
+   *
+   * aabenforms_digital_post_log has no sid/case_id column, so rows are
+   * correlated to this trace by time (the send runs synchronously in the same
+   * request). Heuristic but reliable for a single-submission trace; labelled as
+   * such in the UI.
+   */
+  protected function buildDigitalPost(array $trace): array {
+    if (!$this->database->schema()->tableExists('aabenforms_digital_post_log')) {
+      return [];
+    }
+    $created = (int) ($trace['created'] ?? 0);
+    $rows = $this->database->select('aabenforms_digital_post_log', 'l')
+      ->fields('l', ['transaction_id', 'subject', 'status', 'payload', 'created'])
+      ->condition('created', [$created - 2, $created + 300], 'BETWEEN')
+      ->orderBy('created', 'ASC')
+      ->range(0, 5)
+      ->execute()
+      ->fetchAll();
+    if (!$rows) {
+      return [];
+    }
+
+    $items = [];
+    foreach ($rows as $row) {
+      $payload = json_decode($row->payload ?? '', TRUE) ?: [];
+      $xml = $payload['memo_xml'] ?? NULL;
+      $pretty = is_string($xml) && $xml !== ''
+        ? $this->prettyXml($xml)
+        : (string) $this->t('(no MeMo XML - JSON summary only)');
+      $items[] = [
+        '#type' => 'container',
+        '#attributes' => ['class' => ['af-trace-memo']],
+        'meta' => [
+          '#type' => 'html_tag',
+          '#tag' => 'div',
+          '#attributes' => ['class' => ['af-trace-memo__meta']],
+          '#value' => $this->t('@subject &middot; tx @tx &middot; @status', [
+            '@subject' => $row->subject,
+            '@tx' => $row->transaction_id,
+            '@status' => $row->status,
+          ]),
+        ],
+        'xml' => [
+          '#type' => 'inline_template',
+          '#template' => '<pre class="af-trace-xml">{{ xml }}</pre>',
+          '#context' => ['xml' => $pretty],
+        ],
+      ];
+    }
+
+    return [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['af-trace-panel']],
+      'heading' => [
+        '#type' => 'html_tag',
+        '#tag' => 'h3',
+        '#value' => $this->t('Digital Post (SF1601 MeMo)'),
+      ],
+      'note' => [
+        '#type' => 'html_tag',
+        '#tag' => 'p',
+        '#attributes' => ['class' => ['af-trace-intro']],
+        '#value' => $this->t('The real MeMo message built for this case (mock transport; correlated by time).'),
+      ],
+      'items' => $items,
+    ];
+  }
+
+  /**
+   * Pretty-prints an XML string, tolerating parse failures.
+   */
+  protected function prettyXml(string $xml): string {
+    $previous = libxml_use_internal_errors(TRUE);
+    $dom = new \DOMDocument();
+    $dom->preserveWhiteSpace = FALSE;
+    $dom->formatOutput = TRUE;
+    $ok = $dom->loadXML($xml);
+    libxml_clear_errors();
+    libxml_use_internal_errors($previous);
+    return $ok ? (string) $dom->saveXML() : $xml;
   }
 
   /**

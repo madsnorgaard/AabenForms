@@ -1,22 +1,17 @@
 {
+  "priority": 1,
   "request": {
     "method": "POST",
     "urlPath": "/service/KombiPostAfsend_1/kombi",
-    "bodyPatterns": [
-      {
-        "matchesJsonPath": "$.meta.force_too_large"
-      }
-    ]
+    "headers": {
+      "X-Force-Too-Large": { "equalTo": "1" }
+    }
   },
   "response": {
     "status": 413,
     "headers": {
-      "Content-Type": "application/json"
+      "Content-Type": "application/xml"
     },
-    "jsonBody": {
-      "status": "rejected",
-      "error_code": "MESSAGE_TOO_LARGE",
-      "message": "Message size exceeds SF1601 maximum of 10 MB"
-    }
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><result><status>rejected</status><errorCode>MESSAGE_TOO_LARGE</errorCode><message>Message size exceeds SF1601 maximum of 10 MB</message></result>"
   }
 }

@@ -202,6 +202,32 @@
   width: 100%;
 }
 
+/* Digital Post MeMo XML block --------------------------------------------- */
+.af-trace-memo {
+  margin-bottom: var(--af-space-3);
+}
+
+.af-trace-memo__meta {
+  font-size: 0.8125rem;
+  color: var(--af-color-text-muted);
+  margin-bottom: var(--af-space-1);
+}
+
+.af-trace-xml {
+  margin: 0;
+  padding: var(--af-space-3);
+  max-height: 24rem;
+  overflow: auto;
+  background: var(--af-color-surface-muted);
+  border: 1px solid var(--af-color-border);
+  border-radius: var(--af-radius-md);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--af-color-text);
+}
+
 /* Readiness board metric row ---------------------------------------------- */
 .af-metric-row {
   display: flex;

@@ -6,6 +6,7 @@ namespace Drupal\aabenforms_digital_post\TestMode;
 
 use Drupal\aabenforms_digital_post\DigitalPost\DigitalPost;
 use Drupal\aabenforms_digital_post\DigitalPost\Result;
+use Drupal\aabenforms_digital_post\Memo\MemoBuilder;
 use Drupal\aabenforms_digital_post\Service\Sf1601ClientInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use GuzzleHttp\ClientInterface;
@@ -13,14 +14,14 @@ use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
 
 /**
- * Posts a Digital Post to a WireMock endpoint for integration tests.
+ * Posts a real MeMo XML Digital Post to a WireMock endpoint for integration.
  *
- * This is NOT a real MeMo XML build. Session 1 ships a JSON body that
- * WireMock matches on URL + method and responds to with a canned receipt.
- * Session 2 replaces this with a real SOAP+MeMo payload via
- * itk-dev/serviceplatformen's SF1601 class. Keeping the JSON shape
- * simple lets us prove the end-to-end wiring tonight without getting
- * bogged down in MeMo XSD-compliance.
+ * Builds the actual SF1601 kombi_request MeMo payload via MemoBuilder and
+ * POSTs it as application/xml to the KombiPostAfsend endpoint - the same XML a
+ * live send would post, minus the certificate/SOAP transport (which lives in
+ * SF1601::kombiPostAfsend and is cert-gated). The WireMock stub matches the
+ * MeMo body via matchesXPath and returns a templated receipt, giving a
+ * cert-free end-to-end integration test of real message construction.
  *
  * WireMock URL defaults to http://wiremock:8080 which matches the DDEV
  * container alias. Set aabenforms_digital_post.settings.wiremock_url to
@@ -32,6 +33,7 @@ final class WireMockSoapClient implements Sf1601ClientInterface {
     private readonly ClientInterface $httpClient,
     private readonly ConfigFactoryInterface $configFactory,
     private readonly LoggerInterface $logger,
+    private readonly MemoBuilder $memoBuilder,
   ) {
   }
 
@@ -50,30 +52,32 @@ final class WireMockSoapClient implements Sf1601ClientInterface {
       );
     }
     $url = rtrim($base, '/') . '/service/KombiPostAfsend_1/kombi';
-    $body = [
-      'transaction_id' => $transactionId,
-      'type' => $post->type,
-      'recipient' => [
-        'type' => $post->recipient->type,
-        'identifier' => $post->recipient->identifier,
-      ],
-      'sender_cvr' => $post->sender->cvr,
-      'sender_name' => $post->sender->name,
-      'subject' => $post->subject,
-      'body' => $post->body,
-      'attachments' => array_map(static fn ($a) => [
-        'filename' => $a->filename,
-        'mime' => $a->mimeType,
-        'size' => $a->sizeBytes,
-      ], $post->attachments),
+    try {
+      $xml = $this->buildXml($post);
+    }
+    catch (\Throwable $e) {
+      $this->logger->error('Digital Post MeMo build failed: @msg', ['@msg' => $e->getMessage()]);
+      return Result::failure(
+        transactionId: $transactionId,
+        reasonCode: Result::REASON_VALIDATION,
+        message: 'MeMo build failed: ' . $e->getMessage(),
+      );
+    }
+    $headers = [
+      'Content-Type' => 'application/xml',
+      'Accept' => 'application/xml',
+      'X-Transaction-Id' => $transactionId,
+      'X-SF1601-Type' => $post->type,
     ];
+    // The size-rejection test scenario is keyed off a header now (the old JSON
+    // meta.force_too_large matcher can't match an XML body).
+    if (!empty($post->meta['force_too_large'])) {
+      $headers['X-Force-Too-Large'] = '1';
+    }
     try {
       $response = $this->httpClient->request('POST', $url, [
-        'json' => $body,
-        'headers' => [
-          'X-Transaction-Id' => $transactionId,
-          'X-SF1601-Type' => $post->type,
-        ],
+        'body' => $xml,
+        'headers' => $headers,
         'http_errors' => FALSE,
         'timeout' => 10,
       ]);
@@ -101,6 +105,20 @@ final class WireMockSoapClient implements Sf1601ClientInterface {
         reasonCode: Result::REASON_TRANSPORT,
         message: 'wiremock transport error: ' . $e->getMessage(),
       );
+    }
+  }
+
+  /**
+   * Builds the MeMo kombi_request XML, silencing vendor load-time deprecations.
+   */
+  private function buildXml(DigitalPost $post): string {
+    $previous = error_reporting();
+    error_reporting($previous & ~E_DEPRECATED);
+    try {
+      return $this->memoBuilder->buildKombiRequestXml($post);
+    }
+    finally {
+      error_reporting($previous);
     }
   }
 
