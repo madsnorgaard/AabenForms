@@ -51,6 +51,19 @@ class ResultTest extends UnitTestCase {
   }
 
   /**
+   * Pending() is accepted-but-not-delivered: pending, and NOT a success.
+   */
+  public function testPendingFactory(): void {
+    $r = Result::pending('tx-p', 'accepted (HTTP 200)', '<receipt/>');
+    $this->assertTrue($r->isPending());
+    $this->assertFalse($r->isSuccess());
+    $this->assertSame(Result::PENDING, $r->status);
+    $this->assertSame('tx-p', $r->transactionId);
+    $this->assertNull($r->reasonCode);
+    $this->assertSame('<receipt/>', $r->rawResponse);
+  }
+
+  /**
    * AuditContext() exposes the four log-safe fields and nothing else.
    */
   public function testAuditContextShape(): void {

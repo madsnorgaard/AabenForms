@@ -14,6 +14,9 @@ aabenforms_digital_post.settings:
     sender_name:
       type: string
       label: 'Sender display name'
+    authority_cvr:
+      type: string
+      label: 'Authority CVR (SF1601 token identity; falls back to sender_cvr)'
     cert_source:
       type: string
       label: 'Certificate source'
@@ -23,6 +26,9 @@ aabenforms_digital_post.settings:
     cert_path:
       type: string
       label: 'Certificate file path (cert_source=file)'
+    cert_key:
+      type: string
+      label: 'Key module entry holding the PKCS#12 (cert_source=key)'
     cert_passphrase_state:
       type: string
       label: 'Passphrase source identifier (env var name or key entity id)'

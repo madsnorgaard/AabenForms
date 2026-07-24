@@ -1,8 +1,13 @@
 test_mode: fake_db
 sender_cvr: ''
 sender_name: ''
+# The CVR the SF1601 SAML token authenticates as (the sending authority).
+# Falls back to sender_cvr when empty.
+authority_cvr: ''
 cert_source: file
 cert_path: ''
+# The drupal:key entry holding the PKCS#12 when cert_source=key.
+cert_key: ''
 cert_passphrase_state: ''
 wiremock_url: 'http://wiremock:8080'
 live_test_endpoint: 'https://exttest.serviceplatformen.dk/service/KombiPostAfsend_1/kombi'
