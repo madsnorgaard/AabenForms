@@ -6,6 +6,35 @@ aabenforms_core.dashboard:
   requirements:
     _permission: 'access aabenforms admin'
 
+aabenforms_core.trace_list:
+  path: '/admin/aabenforms/trace'
+  defaults:
+    _controller: '\Drupal\aabenforms_core\Controller\EvidenceController::list'
+    _title: 'Evidence traces'
+  requirements:
+    _permission: 'access aabenforms admin'
+
+aabenforms_core.trace:
+  path: '/admin/aabenforms/trace/{sid}'
+  defaults:
+    _controller: '\Drupal\aabenforms_core\Controller\EvidenceController::trace'
+    _title: 'Sagsspor'
+  requirements:
+    _permission: 'access aabenforms admin'
+    sid: \d+
+  options:
+    parameters:
+      sid:
+        type: integer
+
+aabenforms_core.readiness:
+  path: '/admin/aabenforms/readiness'
+  defaults:
+    _controller: '\Drupal\aabenforms_core\Controller\ReadinessController::board'
+    _title: 'Readiness board'
+  requirements:
+    _permission: 'access aabenforms admin'
+
 aabenforms_core.landing:
   path: '/aabenforms'
   defaults:

@@ -22,6 +22,16 @@ dashboard:
   dependencies:
     - aabenforms_core/admin
 
+# Evidence trace dashboard (Sagsspor): timeline, panels, pills, badges.
+# Depends on the admin token library for --af-* CSS custom properties.
+trace:
+  version: 1.0.0
+  css:
+    theme:
+      css/trace.css: {}
+  dependencies:
+    - aabenforms_core/admin
+
 # Loaded on every admin page (via hook_toolbar) for users with the
 # dashboard permission. Tiny by design - just the toolbar icon override.
 toolbar:

@@ -33,6 +33,12 @@ services:
   aabenforms_core.workflow_execution_collector:
     class: Drupal\aabenforms_core\Service\WorkflowExecutionCollector
 
+  aabenforms_core.trace_store:
+    class: Drupal\aabenforms_core\Service\TraceStore
+    arguments:
+      - '@database'
+      - '@datetime.time'
+
   aabenforms_core.tenant_resolver:
     class: Drupal\aabenforms_core\Service\TenantResolver
     arguments:

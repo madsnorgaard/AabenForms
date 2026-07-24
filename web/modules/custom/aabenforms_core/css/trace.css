@@ -1,0 +1,235 @@
+/**
+ * Evidence trace dashboard (Sagsspor).
+ *
+ * Uses the shared --af-* design tokens from aabenforms_core/admin. The visual
+ * language: government service contracts read in brand blue, internal case
+ * steps in a muted tone, denials in danger - so the "glass box tying the
+ * service structure together" is legible at a glance.
+ */
+
+.af-trace-intro {
+  color: var(--af-color-text-muted);
+  max-width: 60ch;
+}
+
+/* Header + badges ---------------------------------------------------------- */
+.af-trace-header {
+  margin-bottom: var(--af-space-5);
+}
+
+.af-trace-header h2 {
+  margin: 0 0 var(--af-space-3);
+}
+
+.af-trace-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--af-space-2);
+}
+
+.af-trace-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--af-space-1) var(--af-space-3);
+  border-radius: var(--af-radius-pill);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--af-color-border);
+  background: var(--af-color-surface-muted);
+  color: var(--af-color-text);
+}
+
+.af-trace-badge--brand {
+  background: var(--af-color-brand-tint);
+  border-color: var(--af-color-brand);
+  color: var(--af-color-brand-strong);
+}
+
+.af-trace-badge--success {
+  background: var(--af-color-success-tint);
+  border-color: var(--af-color-success);
+  color: var(--af-color-success);
+}
+
+.af-trace-badge--danger {
+  background: var(--af-color-danger-tint);
+  border-color: var(--af-color-danger);
+  color: var(--af-color-danger);
+}
+
+.af-trace-badge--warning {
+  background: color-mix(in srgb, var(--af-color-warning) 16%, white);
+  border-color: var(--af-color-warning);
+  color: color-mix(in srgb, var(--af-color-warning) 70%, black);
+}
+
+/* Panels ------------------------------------------------------------------- */
+.af-trace-panel {
+  background: var(--af-color-surface);
+  border: 1px solid var(--af-color-border);
+  border-radius: var(--af-radius-lg);
+  padding: var(--af-space-4) var(--af-space-5);
+  margin-bottom: var(--af-space-5);
+  box-shadow: var(--af-shadow-sm);
+}
+
+.af-trace-panel h3 {
+  margin: 0 0 var(--af-space-3);
+  font-size: 1rem;
+}
+
+.af-trace-kv th {
+  text-align: left;
+  width: 16rem;
+  color: var(--af-color-text-muted);
+  font-weight: 600;
+}
+
+/* Timeline ----------------------------------------------------------------- */
+.af-trace-timeline {
+  position: relative;
+  margin-left: var(--af-space-3);
+  padding-left: var(--af-space-5);
+  border-left: 2px solid var(--af-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--af-space-4);
+}
+
+.af-trace-node {
+  position: relative;
+}
+
+.af-trace-node__dot {
+  position: absolute;
+  left: calc(-1 * var(--af-space-5) - 7px);
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--af-color-brand);
+  box-shadow: 0 0 0 3px var(--af-color-surface);
+}
+
+/* Internal (non-government) case steps read muted. */
+.af-trace-node--case .af-trace-node__dot {
+  background: var(--af-color-text-subtle);
+}
+
+.af-trace-node--deny .af-trace-node__dot {
+  background: var(--af-color-danger);
+}
+
+.af-trace-node__body {
+  background: var(--af-color-surface-muted);
+  border: 1px solid var(--af-color-border);
+  border-radius: var(--af-radius-md);
+  padding: var(--af-space-3) var(--af-space-4);
+}
+
+/* A left accent bar reinforces the government-vs-internal distinction. */
+.af-trace-node--identity .af-trace-node__body,
+.af-trace-node--serviceplatform .af-trace-node__body,
+.af-trace-node--esdh .af-trace-node__body,
+.af-trace-node--digitalpost .af-trace-node__body,
+.af-trace-node--distribution .af-trace-node__body {
+  border-left: 3px solid var(--af-color-brand);
+}
+
+.af-trace-node--deny .af-trace-node__body {
+  border-left: 3px solid var(--af-color-danger);
+}
+
+.af-trace-node__top {
+  display: flex;
+  align-items: center;
+  gap: var(--af-space-2);
+  flex-wrap: wrap;
+}
+
+.af-trace-node__label {
+  font-weight: 600;
+}
+
+.af-trace-node__contract {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  font-size: 0.75rem;
+  padding: 1px var(--af-space-2);
+  border-radius: var(--af-radius-sm);
+  background: var(--af-color-brand-tint);
+  color: var(--af-color-brand-strong);
+}
+
+.af-trace-node__desc {
+  margin: var(--af-space-2) 0 0;
+  color: var(--af-color-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Pills -------------------------------------------------------------------- */
+.af-trace-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px var(--af-space-2);
+  border-radius: var(--af-radius-pill);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.af-trace-pill--success {
+  background: var(--af-color-success-tint);
+  color: var(--af-color-success);
+}
+
+.af-trace-pill--danger {
+  background: var(--af-color-danger-tint);
+  color: var(--af-color-danger);
+}
+
+.af-trace-pill--warning {
+  background: color-mix(in srgb, var(--af-color-warning) 16%, white);
+  color: color-mix(in srgb, var(--af-color-warning) 70%, black);
+}
+
+.af-trace-pill--neutral {
+  background: var(--af-color-surface-muted);
+  color: var(--af-color-text-muted);
+}
+
+.af-trace-table {
+  width: 100%;
+}
+
+/* Readiness board metric row ---------------------------------------------- */
+.af-metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--af-space-3);
+  margin-bottom: var(--af-space-5);
+}
+
+.af-metric {
+  flex: 1 1 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--af-space-1);
+  padding: var(--af-space-4);
+  background: var(--af-color-surface);
+  border: 1px solid var(--af-color-border);
+  border-radius: var(--af-radius-lg);
+  box-shadow: var(--af-shadow-sm);
+}
+
+.af-metric__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--af-color-brand-strong);
+  line-height: 1;
+}
+
+.af-metric__label {
+  font-size: 0.8125rem;
+  color: var(--af-color-text-muted);
+}
