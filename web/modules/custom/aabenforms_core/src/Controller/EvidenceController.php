@@ -339,7 +339,7 @@ class EvidenceController extends ControllerBase {
   /**
    * Builds the Digital Post (SF1601 MeMo) panel showing the real message XML.
    *
-   * aabenforms_digital_post_log has no sid/case_id column, so rows are
+   * Aabenforms_digital_post_log has no sid/case_id column, so rows are
    * correlated to this trace by time (the send runs synchronously in the same
    * request). Heuristic but reliable for a single-submission trace; labelled as
    * such in the UI.

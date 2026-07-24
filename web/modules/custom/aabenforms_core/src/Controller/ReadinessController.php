@@ -29,13 +29,22 @@ class ReadinessController extends ControllerBase {
    * [capability, status, evidence].
    */
   protected const CAPABILITIES = [
-    ['Webform → ECA workflow engine', 'ready', 'Audited: 23 flows, all webform bindings valid, every plugin resolves, 0 broken, 0 stuck-case dead ends'],
-    ['Field-level CPR encryption (AES-256)', 'ready', 'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext'],
+    [
+      'Webform → ECA workflow engine', 'ready',
+      'Audited: 23 flows, all webform bindings valid, every plugin resolves, 0 broken, 0 stuck-case dead ends',
+    ],
+    [
+      'Field-level CPR encryption (AES-256)', 'ready',
+      'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext',
+    ],
     ['GDPR audit logging', 'ready', 'Every sensitive access hashed (SHA-256) and logged with purpose'],
     ['Case (sag) lifecycle', 'ready', 'Lawful transitions, frist clock, immutable once closed'],
     ['Evidence trace dashboard', 'ready', 'Per-submission trace across every service contract (this tool)'],
     ['MitID OIDC - protocol layer', 'ready', 'Real PKCE + RS256/JWKS verification + NSIS LoA enforced at login'],
-    ['Multi-tenant data isolation', 'ready', 'Per-tenant access control + query scoping + per-tenant CPR keys; kernel-tested cross-tenant deny (#141)'],
+    [
+      'Multi-tenant data isolation', 'ready',
+      'Per-tenant access control + query scoping + per-tenant CPR keys; kernel-tested cross-tenant deny (#141)',
+    ],
   ];
 
   /**
@@ -45,10 +54,20 @@ class ReadinessController extends ControllerBase {
    * live-capable | mock | stub. Source: integration readiness audit.
    */
   protected const INTEGRATIONS = [
-    ['MitID / NemLog-in', 'OIDC', 'live-capable', 'OIDC crypto is production-grade, but a production KOMMUNE login is OIOSAML 3 (SAML) via NemLog-in, not OIDC; the OIDC rail is demo/private-sector (#79)'],
-    ['CPR person lookup', 'SF1520', 'mock', 'Real KOMBIT protocol (InvocationContext, OCES3 mTLS) + service agreement (#76)'],
+    [
+      'MitID / NemLog-in', 'OIDC', 'live-capable',
+      'OIDC crypto is production-grade, but a production KOMMUNE login is OIOSAML 3 (SAML) via '
+      . 'NemLog-in, not OIDC; the OIDC rail is demo/private-sector (#79)',
+    ],
+    [
+      'CPR person lookup', 'SF1520', 'mock',
+      'Real KOMBIT protocol (InvocationContext, OCES3 mTLS) + service agreement (#76)',
+    ],
     ['CVR company lookup', 'SF1530', 'mock', 'Same certificate + protocol work as SF1520 (#76)'],
-    ['Digital Post (MeMo)', 'SF1601', 'mock', 'Real MeMo XML builder + SOAP (library bundled, unwired); cert; idempotency (#73, #77)'],
+    [
+      'Digital Post (MeMo)', 'SF1601', 'mock',
+      'Real MeMo XML builder + SOAP (library bundled, unwired); cert; idempotency (#73, #77)',
+    ],
     ['Fordelingskomponent', 'SF2900', 'stub', 'Full chain: STS SF1512/1514, OCES3-signed SOAP, SFTP, async receipts'],
     ['Case journaling', 'SF1470', 'stub', 'Real SOAP registration + KOMBIT compliancetest (#84-#86)'],
     ['ESDH connectors', '-', 'stub', 'Live HTTP transports for SBSYS/GetOrganized/WorkZone/Acadre (framework is real)'],
@@ -66,10 +85,26 @@ class ReadinessController extends ControllerBase {
    * showing these plainly, not hiding them behind a green demo.
    */
   protected const FINDINGS = [
-    ['Production kommune login needs OIOSAML 3', 'high', 'The OIDC/MitID rail is demo/private-sector. A real kommune citizen login is OIOSAML 3 (SAML) via NemLog-in at NSIS Substantial; needs the aabenforms_nemlogin SP + broker registration (#79).'],
-    ['Assurance enforced at login, not at the workflow gate', 'medium', 'NSIS level is enforced at the OIDC callback, but MitIdValidateAction treats any live session as verified, so a per-flow "requires High" cannot be enforced (#157).'],
-    ['Government transports run on mock rails', 'medium', 'CPR/CVR (SF1520/1530), Digital Post (SF1601, real MeMo built), SF2900, SF1470, ESDH and eIndkomst need OCES3 certs + a serviceaftale to go live (#76, #77, #84-#86).'],
-    ['Audit + trace not tenant-scoped', 'medium', 'aabenforms_audit_log and aabenforms_trace have no tenant_id (operator-visible only, so reporting segregation not a caseworker leak) (#174).'],
+    [
+      'Production kommune login needs OIOSAML 3', 'high',
+      'The OIDC/MitID rail is demo/private-sector. A real kommune citizen login is OIOSAML 3 (SAML) '
+      . 'via NemLog-in at NSIS Substantial; needs the aabenforms_nemlogin SP + broker registration (#79).',
+    ],
+    [
+      'Assurance enforced at login, not at the workflow gate', 'medium',
+      'NSIS level is enforced at the OIDC callback, but MitIdValidateAction treats any live session '
+      . 'as verified, so a per-flow "requires High" cannot be enforced (#157).',
+    ],
+    [
+      'Government transports run on mock rails', 'medium',
+      'CPR/CVR (SF1520/1530), Digital Post (SF1601, real MeMo built), SF2900, SF1470, ESDH and '
+      . 'eIndkomst need OCES3 certs + a serviceaftale to go live (#76, #77, #84-#86).',
+    ],
+    [
+      'Audit + trace not tenant-scoped', 'medium',
+      'aabenforms_audit_log and aabenforms_trace have no tenant_id (operator-visible only, so '
+      . 'reporting segregation not a caseworker leak) (#174).',
+    ],
   ];
 
   /**
@@ -266,7 +301,12 @@ class ReadinessController extends ControllerBase {
       ],
       'table' => [
         '#type' => 'table',
-        '#header' => [$this->t('Integration'), $this->t('Contract'), $this->t('Status'), $this->t('What is needed for production')],
+        '#header' => [
+          $this->t('Integration'),
+          $this->t('Contract'),
+          $this->t('Status'),
+          $this->t('What is needed for production'),
+        ],
         '#rows' => $rows,
         '#attributes' => ['class' => ['af-trace-table']],
       ],

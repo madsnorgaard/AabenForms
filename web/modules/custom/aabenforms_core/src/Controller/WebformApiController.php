@@ -111,21 +111,6 @@ class WebformApiController extends ControllerBase {
   }
 
   /**
-   * Whether any active ECA flow bound to this webform gates on MitID.
-   *
-   * The flow is the source of truth: a form requires MitID login exactly when
-   * a flow listening to its submissions runs the aabenforms_mitid_validate
-   * action. The SPA reads this flag and demands a MitID session before it
-   * renders the form, so the identity gate is declared once (in the flow) and
-   * enforced everywhere.
-   *
-   * @param string $webform_id
-   *   The webform machine name.
-   *
-   * @return bool
-   *   TRUE when a bound flow validates MitID.
-   */
-  /**
    * Replaces masked or empty CPR values with the CPR from the MitID session.
    *
    * The session endpoint only ever hands the SPA a masked CPR (250692-XXXX),
@@ -177,6 +162,21 @@ class WebformApiController extends ControllerBase {
     return $submission_data;
   }
 
+  /**
+   * Whether any active ECA flow bound to this webform gates on MitID.
+   *
+   * The flow is the source of truth: a form requires MitID login exactly when
+   * a flow listening to its submissions runs the aabenforms_mitid_validate
+   * action. The SPA reads this flag and demands a MitID session before it
+   * renders the form, so the identity gate is declared once (in the flow) and
+   * enforced everywhere.
+   *
+   * @param string $webform_id
+   *   The webform machine name.
+   *
+   * @return bool
+   *   TRUE when a bound flow validates MitID.
+   */
   protected function webformRequiresMitId(string $webform_id): bool {
     try {
       $storage = $this->entityTypeManager()->getStorage('eca');

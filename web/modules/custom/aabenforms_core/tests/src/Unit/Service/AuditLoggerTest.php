@@ -92,7 +92,7 @@ class AuditLoggerTest extends UnitTestCase {
     $this->requestStack->method('getCurrentRequest')->willReturn($request);
 
     // Single-tenant context: no active tenant, so tenant_id is empty.
-    $tenantResolver = $this->getMockBuilder(\Drupal\aabenforms_core\Service\TenantResolver::class)
+    $tenantResolver = $this->getMockBuilder(TenantResolver::class)
       ->disableOriginalConstructor()
       ->onlyMethods(['getCurrentTenantId'])
       ->getMock();
