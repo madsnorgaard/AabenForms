@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_mitid\Service;
 
+use Drupal\aabenforms_core\Identity\IdentityProviderInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use GuzzleHttp\ClientInterface;
@@ -22,7 +23,12 @@ use Psr\Log\LoggerInterface;
  * Keycloak mock supports it; turning it off only makes sense for
  * legacy IdPs that pre-date RFC 7636.
  */
-class MitIdOidcClient {
+class MitIdOidcClient implements IdentityProviderInterface {
+
+  /**
+   * The stable provider id for the MitID OIDC rail.
+   */
+  public const PROVIDER_ID = 'mitid_oidc';
 
   /**
    * The config factory.
@@ -96,6 +102,13 @@ class MitIdOidcClient {
     $this->cprExtractor = $cpr_extractor;
     $this->sessionManager = $session_manager;
     $this->tokenVerifier = $token_verifier;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getProviderId(): string {
+    return self::PROVIDER_ID;
   }
 
   /**

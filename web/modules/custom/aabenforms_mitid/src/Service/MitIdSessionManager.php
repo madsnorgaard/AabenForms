@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_mitid\Service;
 
+use Drupal\aabenforms_core\Identity\SessionManagerInterface;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_mitid\DemoPersonas;
 use Drupal\Component\Datetime\TimeInterface;
@@ -26,7 +27,7 @@ use Psr\Log\LoggerInterface;
  * domain saw a fresh anonymous session and couldn't find the entry).
  * The workflow_id is generated with random_bytes so it's unguessable.
  */
-class MitIdSessionManager {
+class MitIdSessionManager implements SessionManagerInterface {
 
   /**
    * Session expiration time (15 minutes).
