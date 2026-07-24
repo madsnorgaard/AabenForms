@@ -63,6 +63,13 @@ function aabenforms_core_schema() {
         'not null' => FALSE,
         'description' => 'Additional context data as JSON.',
       ],
+      'tenant_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The tenant (domain/kommune) the action occurred for; empty in single-tenant mode.',
+      ],
       'timestamp' => [
         'type' => 'int',
         'unsigned' => TRUE,
@@ -76,6 +83,7 @@ function aabenforms_core_schema() {
       'uid' => ['uid'],
       'timestamp' => ['timestamp'],
       'identifier_hash' => ['identifier_hash'],
+      'tenant_id' => ['tenant_id'],
     ],
   ];
 
@@ -151,6 +159,13 @@ function aabenforms_core_trace_schema_definition(): array {
         'not null' => FALSE,
         'description' => 'The full step list as JSON.',
       ],
+      'tenant_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The tenant (domain/kommune) the submission belonged to; empty in single-tenant mode.',
+      ],
       'created' => [
         'type' => 'int',
         'unsigned' => TRUE,
@@ -163,6 +178,7 @@ function aabenforms_core_trace_schema_definition(): array {
       'sid' => ['sid'],
       'case_id' => ['case_id'],
       'created' => ['created'],
+      'tenant_id' => ['tenant_id'],
     ],
   ];
 }
@@ -276,6 +292,29 @@ function aabenforms_core_update_11003(): string {
     return 'created aabenforms_trace table';
   }
   return 'no changes - aabenforms_trace already present';
+}
+
+/**
+ * Adds tenant_id to aabenforms_audit_log and aabenforms_trace (isolation #141).
+ */
+function aabenforms_core_update_11004(): string {
+  $schema = \Drupal::database()->schema();
+  $spec = [
+    'type' => 'varchar',
+    'length' => 64,
+    'not null' => TRUE,
+    'default' => '',
+    'description' => 'The tenant (domain/kommune); empty in single-tenant mode.',
+  ];
+  $changed = [];
+  foreach (['aabenforms_audit_log', 'aabenforms_trace'] as $table) {
+    if ($schema->tableExists($table) && !$schema->fieldExists($table, 'tenant_id')) {
+      $schema->addField($table, 'tenant_id', $spec);
+      $schema->addIndex($table, 'tenant_id', ['tenant_id'], ['fields' => ['tenant_id' => $spec]]);
+      $changed[] = $table;
+    }
+  }
+  return $changed ? 'Added tenant_id to: ' . implode(', ', $changed) : 'tenant_id already present.';
 }
 
 /**

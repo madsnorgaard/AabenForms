@@ -30,6 +30,7 @@ services:
       - '@request_stack'
       - '@datetime.time'
       - '@logger.factory'
+      - '@aabenforms_core.tenant_resolver'
 
   aabenforms_core.workflow_execution_collector:
     class: Drupal\aabenforms_core\Service\WorkflowExecutionCollector
@@ -39,6 +40,7 @@ services:
     arguments:
       - '@database'
       - '@datetime.time'
+      - '@aabenforms_core.tenant_resolver'
 
   aabenforms_core.tenant_resolver:
     class: Drupal\aabenforms_core\Service\TenantResolver
