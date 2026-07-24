@@ -47,7 +47,7 @@ actions:
     label: 'Bind HR submitter identity from login'
     plugin: aabenforms_resolve_employee
     configuration:
-      submitted_employee_id_token: '[webform_submission:values:hr_submitter_email:raw]'
+      submitted_employee_id_token: '[current-user:mail]'
       result_token: hr_employee_id
     successors:
       -
