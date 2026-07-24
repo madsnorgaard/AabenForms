@@ -9,3 +9,4 @@ dependencies:
   - aabenforms_core:aabenforms_core
   - aabenforms_case:aabenforms_case
   - eca:eca
+  - drupal:key
