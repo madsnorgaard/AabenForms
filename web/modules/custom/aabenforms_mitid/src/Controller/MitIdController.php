@@ -78,14 +78,24 @@ class MitIdController extends ControllerBase {
    *   Redirect to MitID authorization.
    */
   public function login(Request $request): TrustedRedirectResponse {
-    // Get workflow ID from query params or generate. The generated ID is the
-    // bearer capability for the session payload, so it must be unguessable -
-    // bin2hex(random_bytes(...)) gives 32 hex chars (128 bits of entropy).
-    $workflowId = $request->query->get('workflow_id') ?? 'wf_' . bin2hex(random_bytes(16));
+    // Always server-mint the workflow ID. It is the bearer capability for the
+    // session payload (the session is stored under it), so a client must never
+    // be allowed to choose it - honoring a ?workflow_id= would let a caller fix
+    // the session key and later read another user's session / CPR. 32 hex chars
+    // = 128 bits of entropy.
+    $workflowId = 'wf_' . bin2hex(random_bytes(16));
 
     // Get redirect URL (where to return after auth).
     // Validate that it's an internal path to prevent open redirect attacks.
     $returnUrl = $request->query->get('return_url') ?? '/';
+
+    // Reject backslashes outright: browsers normalise "/\" and "\/" to "//"
+    // (protocol-relative), so a value like "/\evil.com" that looks local here
+    // would redirect off-site after the session id is appended in callback().
+    if (str_contains($returnUrl, '\\')) {
+      $this->getLogger('aabenforms_mitid')->warning('Rejected return_url with backslash: @url', ['@url' => $returnUrl]);
+      $returnUrl = '/';
+    }
 
     // Strip any external URLs - only allow internal paths or trusted frontend origins.
     if (preg_match('#^https?://#i', $returnUrl)) {

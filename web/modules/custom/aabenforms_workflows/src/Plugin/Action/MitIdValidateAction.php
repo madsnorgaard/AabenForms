@@ -149,9 +149,14 @@ class MitIdValidateAction extends AabenFormsActionBase {
    */
   protected function recordNoSession(string $context): void {
     if ($this->demoModeAllowed()) {
-      $this->log('MitID validation: ' . $context . ' - demo mode (allow_mitid_demo_mode on)', [], 'info');
-      $this->setTokenValue($this->configuration['result_token'], TRUE);
-      $this->setResultStatus('verified');
+      // Demo mode lets a workflow run without a real session, but it must NEVER
+      // claim a verified identity: the status scalar the gates read stays
+      // non-verified ('demo_unverified'), and the legacy boolean is FALSE, so no
+      // gate comparing == 'verified' can be fooled into treating an unverified
+      // demo submission as authenticated. The audit trail records the truth.
+      $this->log('MitID validation: ' . $context . ' - demo mode (allow_mitid_demo_mode on), identity NOT verified', [], 'info');
+      $this->setTokenValue($this->configuration['result_token'], FALSE);
+      $this->setResultStatus('demo_unverified');
       $this->recordStep('MitID Identity Validation', 'Demo mode: identity was NOT verified (no MitID session)', 'completed');
       return;
     }
