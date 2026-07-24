@@ -19,6 +19,7 @@ services:
     class: Drupal\aabenforms_core\Service\CprAccess
     arguments:
       - '@aabenforms_core.encryption_service'
+      - '@aabenforms_core.tenant_resolver'
       - '@logger.factory'
 
   aabenforms_core.audit_logger:

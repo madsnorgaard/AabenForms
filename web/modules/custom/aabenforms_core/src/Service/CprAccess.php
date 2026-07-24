@@ -19,9 +19,19 @@ use Psr\Log\LoggerInterface;
 class CprAccess {
 
   /**
-   * Marker prefixing an encrypted CPR so it can be recognised on read.
+   * Legacy marker: single-key ciphertext, decrypted with the default profile.
    */
   protected const PREFIX = 'AFENC1:';
+
+  /**
+   * Per-tenant marker: format AFENC2:<tenant>:<base64>, per-tenant profile.
+   */
+  protected const PREFIX_TENANT = 'AFENC2:';
+
+  /**
+   * The default (single-tenant / legacy) encryption profile id.
+   */
+  protected const DEFAULT_PROFILE = 'aabenforms_aes256';
 
   /**
    * The encryption service.
@@ -29,6 +39,13 @@ class CprAccess {
    * @var \Drupal\aabenforms_core\Service\EncryptionService
    */
   protected EncryptionService $encryption;
+
+  /**
+   * The tenant resolver.
+   *
+   * @var \Drupal\aabenforms_core\Service\TenantResolver
+   */
+  protected TenantResolver $tenantResolver;
 
   /**
    * The logger.
@@ -42,11 +59,14 @@ class CprAccess {
    *
    * @param \Drupal\aabenforms_core\Service\EncryptionService $encryption
    *   The encryption service.
+   * @param \Drupal\aabenforms_core\Service\TenantResolver $tenant_resolver
+   *   The tenant resolver (selects a per-tenant key when a tenant is active).
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory.
    */
-  public function __construct(EncryptionService $encryption, LoggerChannelFactoryInterface $logger_factory) {
+  public function __construct(EncryptionService $encryption, TenantResolver $tenant_resolver, LoggerChannelFactoryInterface $logger_factory) {
     $this->encryption = $encryption;
+    $this->tenantResolver = $tenant_resolver;
     $this->logger = $logger_factory->get('aabenforms_core');
   }
 
@@ -57,10 +77,17 @@ class CprAccess {
    *   The value to test.
    *
    * @return bool
-   *   TRUE if the value carries the encryption prefix.
+   *   TRUE if the value carries either encryption prefix.
    */
   public function isProtected(string $value): bool {
-    return str_starts_with($value, self::PREFIX);
+    return str_starts_with($value, self::PREFIX) || str_starts_with($value, self::PREFIX_TENANT);
+  }
+
+  /**
+   * The per-tenant encryption profile id for a tenant.
+   */
+  protected function tenantProfile(string $tenant): string {
+    return self::DEFAULT_PROFILE . '_' . preg_replace('/[^a-z0-9_]/', '', strtolower($tenant));
   }
 
   /**
@@ -87,6 +114,14 @@ class CprAccess {
       return $cpr;
     }
     try {
+      $tenant = $this->tenantResolver->getCurrentTenantId();
+      if (is_string($tenant) && $tenant !== '') {
+        // Multi-tenant: encrypt with this tenant's own key so another tenant's
+        // key cannot decrypt it. The tenant id is embedded for null-context
+        // reads (drush/cron) but same-context reads use the current tenant.
+        return self::PREFIX_TENANT . $tenant . ':' . base64_encode($this->encryption->encrypt($cpr, $this->tenantProfile($tenant)));
+      }
+      // Single-tenant: unchanged legacy format + default profile.
       return self::PREFIX . base64_encode($this->encryption->encrypt($cpr));
     }
     catch (\Throwable $e) {
@@ -108,16 +143,38 @@ class CprAccess {
    *   The plaintext CPR, or '' if decryption fails.
    */
   public function reveal(string $value): string {
-    if (!$this->isProtected($value)) {
-      return $value;
+    if (str_starts_with($value, self::PREFIX_TENANT)) {
+      $rest = substr($value, strlen(self::PREFIX_TENANT));
+      $sep = strpos($rest, ':');
+      if ($sep === FALSE) {
+        return '';
+      }
+      $embedded = substr($rest, 0, $sep);
+      $ciphertext = base64_decode(substr($rest, $sep + 1));
+      // Decrypt with the CURRENT tenant's key when a tenant context exists, so
+      // one kommune cannot reveal another's CPR (the wrong key fails). In a
+      // null context (drush/cron) fall back to the embedded tenant's key.
+      $current = $this->tenantResolver->getCurrentTenantId();
+      $profileTenant = (is_string($current) && $current !== '') ? $current : $embedded;
+      try {
+        return $this->encryption->decrypt($ciphertext, $this->tenantProfile($profileTenant));
+      }
+      catch (\Throwable $e) {
+        $this->logger->error('CPR decryption failed (tenant): {error}', ['error' => $e->getMessage()]);
+        return '';
+      }
     }
-    try {
-      return $this->encryption->decrypt(base64_decode(substr($value, strlen(self::PREFIX))));
+    if (str_starts_with($value, self::PREFIX)) {
+      try {
+        return $this->encryption->decrypt(base64_decode(substr($value, strlen(self::PREFIX))));
+      }
+      catch (\Throwable $e) {
+        $this->logger->error('CPR decryption failed: {error}', ['error' => $e->getMessage()]);
+        return '';
+      }
     }
-    catch (\Throwable $e) {
-      $this->logger->error('CPR decryption failed: {error}', ['error' => $e->getMessage()]);
-      return '';
-    }
+    // Not encrypted (e.g. a session-sourced or already-plaintext CPR).
+    return $value;
   }
 
 }
