@@ -280,7 +280,7 @@ class NemloginSamlAuthenticator implements IdentityProviderInterface {
     $parts = array_filter([
       $this->first($attributes, self::ATTR_FIRST_NAME),
       $this->first($attributes, self::ATTR_LAST_NAME),
-    ], 'strlen');
+    ], static fn (string $part): bool => $part !== '');
     return $parts === [] ? NULL : implode(' ', $parts);
   }
 
