@@ -3,6 +3,7 @@
 namespace Drupal\Tests\aabenforms_core\Unit\Service;
 
 use Drupal\aabenforms_core\Service\AuditLogger;
+use Drupal\aabenforms_core\Service\TenantResolver;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\StatementInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
