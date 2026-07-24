@@ -1,0 +1,8 @@
+name: 'AabenForms NemLog-in (OIOSAML 3)'
+type: module
+description: 'Production kommune citizen login: a NemLog-in OIOSAML 3 SAML Service Provider that terminates in the shared verified-identity session store.'
+package: 'ÅbenForms'
+core_version_requirement: ^11
+dependencies:
+  - aabenforms_core:aabenforms_core
+  - key:key

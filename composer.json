@@ -37,7 +37,8 @@
         "drupal/smtp": "^1.4",
         "drupal/webform": "^6.3@dev",
         "drush/drush": "^13.7",
-        "itk-dev/serviceplatformen": "^1.8"
+        "itk-dev/serviceplatformen": "^1.8",
+        "onelogin/php-saml": "^4"
     },
     "conflict": {
         "drupal/drupal": "*"
