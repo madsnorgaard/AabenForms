@@ -1,0 +1,9 @@
+name: 'AabenForms Digital Post - Beskedfordeler receipts'
+type: module
+description: 'Asynchronous SF1461/Beskedfordeler delivery receipts: reconciles a pending Digital Post send to delivered/failed on its case. Optional - the core send never depends on it.'
+package: 'ÅbenForms'
+core_version_requirement: ^11
+dependencies:
+  - aabenforms_digital_post:aabenforms_digital_post
+  - aabenforms_case:aabenforms_case
+  - eca:eca
