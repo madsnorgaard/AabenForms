@@ -216,7 +216,7 @@ class SendDigitalPostAction extends AabenFormsActionBase {
         status: 'skipped',
       );
       $this->log('Digital Post skipped: recipient empty');
-      $this->setResultToken(success: FALSE, transactionId: '', reasonCode: 'RECIPIENT_EMPTY', message: 'Recipient not resolved.');
+      $this->setResultToken(status: 'failed', transactionId: '', reasonCode: 'RECIPIENT_EMPTY', message: 'Recipient not resolved.');
       return;
     }
 
@@ -230,28 +230,50 @@ class SendDigitalPostAction extends AabenFormsActionBase {
         ? new Sender(cvr: $senderCvrOverride)
         : Sender::fromConfig($this->configFactory);
 
+      // Idempotency: derive a stable, PII-free transaction id from the
+      // submission so a re-fired flow reuses the same id. The live transport's
+      // transaction_id unique key + pre-send lookup then prevent a duplicate
+      // official letter. Off-submission (no context), fall back to a generated
+      // id (the sender does this when meta carries none).
+      $submission = $this->getSubmission();
+      $meta = [];
+      if ($submission !== NULL) {
+        $stableKey = $submission->uuid() . ':' . $this->getPluginId() . ':' . (string) $this->configuration['result_token'];
+        $meta['transaction_id'] = 'dp_' . substr(hash('sha256', $stableKey), 0, 40);
+      }
+
       $post = new DigitalPost(
         recipient: $recipient,
         sender: $sender,
         subject: $this->renderTemplate((string) $this->configuration['subject_template']),
         body: $this->renderTemplate((string) $this->configuration['body_template']),
         type: (string) $this->configuration['type'],
+        meta: $meta,
       );
 
       $result = $this->sender->send($post);
 
+      // Map the three-valued Result. A live send that was ACCEPTED (pending) is
+      // NOT a failure: it advances the flow, and the async Beskedfordeler
+      // receipt reconciles delivery later.
+      $status = $result->isSuccess() ? 'success' : ($result->isPending() ? 'pending' : 'failed');
       $mode = $this->sender->testMode();
       $demo = in_array($mode, ['fake_db', 'wiremock'], TRUE);
       $description = $demo
         ? sprintf('Demo: Digital Post simuleret (%s).', $mode)
         : ($result->message ?: 'Digital Post afsendt.');
+      $stepLabels = [
+        'success' => 'Digital Post sent',
+        'pending' => 'Digital Post accepted (awaiting receipt)',
+        'failed' => 'Digital Post failed',
+      ];
       $this->recordStep(
-        label: $result->isSuccess() ? 'Digital Post sent' : 'Digital Post failed',
+        label: $stepLabels[$status],
         description: $description,
-        status: $result->isSuccess() ? 'completed' : 'failed',
+        status: $status === 'failed' ? 'failed' : 'completed',
       );
       $this->setResultToken(
-        success: $result->isSuccess(),
+        status: $status,
         transactionId: $result->transactionId,
         reasonCode: $result->reasonCode,
         message: $result->message,
@@ -260,7 +282,7 @@ class SendDigitalPostAction extends AabenFormsActionBase {
     catch (\Throwable $e) {
       $this->handleError($e, 'SendDigitalPostAction');
       $this->setResultToken(
-        success: FALSE,
+        status: 'failed',
         transactionId: '',
         reasonCode: 'VALIDATION',
         message: $e->getMessage(),
@@ -373,24 +395,40 @@ class SendDigitalPostAction extends AabenFormsActionBase {
   /**
    * Writes the typed Result back into the configured ECA token.
    *
-   * Keys: success (bool), transaction_id, reason_code, message.
+   * The `_status` companion carries the real three-valued outcome so a flow can
+   * branch correctly: `success` (delivered via a mock rail), `pending` (a live
+   * send was ACCEPTED by Serviceplatformen but not yet delivered - the case
+   * should advance to await the async receipt, NOT be treated as failed), or
+   * `failed`. Keys on the DTO token: success (bool), pending (bool), status,
+   * transaction_id, reason_code, message.
+   *
+   * @param string $status
+   *   One of 'success', 'pending', 'failed'.
+   * @param string $transactionId
+   *   The send transaction id.
+   * @param string|null $reasonCode
+   *   The failure reason code, or NULL.
+   * @param string $message
+   *   A human-readable message.
    */
-  private function setResultToken(bool $success, string $transactionId, ?string $reasonCode, string $message): void {
+  private function setResultToken(string $status, string $transactionId, ?string $reasonCode, string $message): void {
     $name = (string) $this->configuration['result_token'];
     if ($name === '') {
       return;
     }
     $this->setTokenValue($name, [
-      'success' => $success,
+      'success' => $status === 'success',
+      'pending' => $status === 'pending',
+      'status' => $status,
       'transaction_id' => $transactionId,
       'reason_code' => $reasonCode,
       'message' => $message,
     ]);
     // Status-token companion so an eca_scalar gate can branch on the outcome
-    // (a DTO token cannot be compared directly). A flow MUST route the case
-    // close only on '[<result_token>_status]' == 'success'; anything else
-    // leaves the case open. See the status-token contract.
-    $this->setTokenValue($name . '_status', $success ? 'success' : 'failed');
+    // (a DTO token cannot be compared directly). A flow routes the case close
+    // on '[<result_token>_status]' == 'success', records the Digital Post
+    // reference on 'success' OR 'pending', and treats 'failed' as an error.
+    $this->setTokenValue($name . '_status', $status);
   }
 
 }

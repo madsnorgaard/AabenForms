@@ -44,16 +44,30 @@ final class DigitalPostSender implements DigitalPostSenderInterface {
       '@m' => $this->client->modeLabel(),
     ]);
     $result = $this->client->send($post, $transactionId);
+    // Three-valued audit outcome. A live 2xx is `pending` (accepted, not
+    // delivered) - it must NOT be audited as a failure, or the trace/dashboard
+    // shows every accepted live send as failed and the flow looks stuck.
+    $outcome = $result->isSuccess() ? 'success' : ($result->isPending() ? 'pending' : 'failure');
+    $eventTypes = [
+      'success' => 'digital_post_sent',
+      'pending' => 'digital_post_pending',
+      'failure' => 'digital_post_failed',
+    ];
+    $labels = [
+      'success' => 'Digital Post sent',
+      'pending' => 'Digital Post accepted (awaiting receipt)',
+      'failure' => 'Digital Post failed',
+    ];
     $this->audit->emit(
-      eventType: $result->isSuccess() ? 'digital_post_sent' : 'digital_post_failed',
+      eventType: $eventTypes[$outcome],
       identifier: $post->recipient->identifierHash(),
       message: sprintf(
         '%s via %s: %s',
-        $result->isSuccess() ? 'Digital Post sent' : 'Digital Post failed',
+        $labels[$outcome],
         $this->client->modeLabel(),
         $result->message,
       ),
-      status: $result->isSuccess() ? 'success' : 'failure',
+      status: $outcome,
       context: array_merge($result->auditContext(), [
         'subject' => $post->subject,
         'recipient_type' => $post->recipient->type,

@@ -13,6 +13,11 @@ services:
       - '@logger.factory'
       - '@aabenforms_core.audit_logger'
 
+  # The provider-neutral aabenforms_identity.session_manager alias now lives in
+  # aabenforms_core, so aabenforms_nemlogin depends on core alone - not on this
+  # demo/OIDC module. MitIdSessionManager writes to the SAME keyvalue collection
+  # as the core store, so MitID and SAML sessions are mutually readable.
+
   aabenforms_mitid.token_verifier:
     class: Drupal\aabenforms_mitid\Service\MitIdTokenVerifier
     arguments:

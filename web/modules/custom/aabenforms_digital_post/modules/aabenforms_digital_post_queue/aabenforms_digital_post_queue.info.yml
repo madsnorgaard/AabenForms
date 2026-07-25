@@ -1,0 +1,10 @@
+name: 'AabenForms Digital Post - Queue engine'
+type: module
+description: 'Resilience engine: enqueues Digital Post sends onto a self-draining advancedqueue with retry/backoff and dead-letter, so the citizen submit is decoupled from Serviceplatformen uptime while the ECA flow, idempotency and async-receipt reconciliation are all honoured.'
+package: 'ÅbenForms'
+core_version_requirement: ^11
+dependencies:
+  - advancedqueue:advancedqueue
+  - aabenforms_digital_post:aabenforms_digital_post
+  - aabenforms_case:aabenforms_case
+  - aabenforms_digital_post:aabenforms_digital_post_beskedfordeler

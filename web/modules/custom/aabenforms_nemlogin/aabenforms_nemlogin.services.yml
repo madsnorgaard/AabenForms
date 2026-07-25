@@ -1,0 +1,14 @@
+services:
+  aabenforms_nemlogin.settings_builder:
+    class: Drupal\aabenforms_nemlogin\Service\NemloginSettingsBuilder
+    arguments:
+      - '@config.factory'
+      - '@key.repository'
+
+  aabenforms_nemlogin.authenticator:
+    class: Drupal\aabenforms_nemlogin\Service\NemloginSamlAuthenticator
+    arguments:
+      - '@aabenforms_identity.session_manager'
+      - '@aabenforms_nemlogin.settings_builder'
+      - '@config.factory'
+      - '@logger.factory'

@@ -192,8 +192,21 @@ class MitIdValidateAction extends AabenFormsActionBase {
       'workflow_id_token' => 'workflow_id',
       'result_token' => 'mitid_valid',
       'session_data_token' => 'mitid_session',
+      // Per-flow minimum NSIS assurance level ('low'|'substantial'|'high').
+      // Empty means no per-flow requirement (any valid session passes); a flow
+      // handling sensitive data sets 'substantial' or 'high'. Login already
+      // enforces the global minimum; this enforces it again at the gate.
+      'required_assurance_level' => '',
     ] + parent::defaultConfiguration();
   }
+
+  /**
+   * NSIS assurance ranking (unknown < low < substantial < high, fail-closed).
+   *
+   * Mirrors MitIdOidcClient::enforceAssuranceLevel so the gate applies the same
+   * ordering the login does.
+   */
+  protected const ASSURANCE_RANKS = ['unknown' => 0, 'low' => 1, 'substantial' => 2, 'high' => 3];
 
   /**
    * {@inheritdoc}
@@ -266,6 +279,28 @@ class MitIdValidateAction extends AabenFormsActionBase {
         $this->setResultStatus('failed');
         $this->recordStep('MitID Identity Validation', 'Session expired - re-authentication required', 'failed');
         return;
+      }
+
+      // Per-flow assurance gate: a live session is not enough if this flow
+      // demands a higher NSIS level than the citizen authenticated at. Login
+      // enforces the global minimum; this re-asserts a per-flow minimum so a
+      // 'substantial' session cannot satisfy a flow that requires 'high'.
+      $requiredLevel = strtolower((string) ($this->configuration['required_assurance_level'] ?? ''));
+      if ($requiredLevel !== '') {
+        $sessionLevel = strtolower((string) ($sessionData['assurance_level'] ?? 'unknown'));
+        $have = self::ASSURANCE_RANKS[$sessionLevel] ?? 0;
+        $need = self::ASSURANCE_RANKS[$requiredLevel] ?? 2;
+        if ($have < $need) {
+          $this->log('MitID validation failed: assurance {have} below required {need} for {wf}', [
+            'have' => $sessionLevel,
+            'need' => $requiredLevel,
+            'wf' => $workflowId,
+          ], 'warning');
+          $this->setTokenValue($this->configuration['result_token'], FALSE);
+          $this->setResultStatus('failed');
+          $this->recordStep('MitID Identity Validation', sprintf('Sikringsniveau "%s" er lavere end det krævede "%s"', $sessionLevel, $requiredLevel), 'failed');
+          return;
+        }
       }
 
       // Session is valid.

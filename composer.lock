@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e1e0090021870f46b40799b48ddc9210",
+    "content-hash": "17dc17b82a5cecc7b4c27a5b0d9d8c4f",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1158,6 +1158,94 @@
                 }
             ],
             "time": "2025-10-31T18:51:33+00:00"
+        },
+        {
+            "name": "drupal/advancedqueue",
+            "version": "1.6.0",
+            "source": {
+                "type": "git",
+                "url": "https://git.drupalcode.org/project/advancedqueue.git",
+                "reference": "8.x-1.6"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://ftp.drupal.org/files/projects/advancedqueue-8.x-1.6.zip",
+                "reference": "8.x-1.6",
+                "shasum": "7ee19f1041ebbd9ba7c0946da08b89afa3f012fc"
+            },
+            "require": {
+                "drupal/core": "^10.2 || ^11"
+            },
+            "require-dev": {
+                "drupal/plugin": "^2"
+            },
+            "type": "drupal-module",
+            "extra": {
+                "drupal": {
+                    "version": "8.x-1.6",
+                    "datestamp": "1770974217",
+                    "security-coverage": {
+                        "status": "covered",
+                        "message": "Covered by Drupal's security advisory policy"
+                    }
+                },
+                "drush": {
+                    "services": {
+                        "drush.services.yml": "^11"
+                    }
+                }
+            },
+            "notification-url": "https://packages.drupal.org/8/downloads",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "authors": [
+                {
+                    "name": "alexpott",
+                    "homepage": "https://www.drupal.org/user/157725"
+                },
+                {
+                    "name": "amitaibu",
+                    "homepage": "https://www.drupal.org/user/57511"
+                },
+                {
+                    "name": "bojanz",
+                    "homepage": "https://www.drupal.org/user/86106"
+                },
+                {
+                    "name": "damien tournoud",
+                    "homepage": "https://www.drupal.org/user/22211"
+                },
+                {
+                    "name": "dawehner",
+                    "homepage": "https://www.drupal.org/user/99340"
+                },
+                {
+                    "name": "jcnventura",
+                    "homepage": "https://www.drupal.org/user/122464"
+                },
+                {
+                    "name": "jsacksick",
+                    "homepage": "https://www.drupal.org/user/972218"
+                },
+                {
+                    "name": "mglaman",
+                    "homepage": "https://www.drupal.org/user/2416470"
+                },
+                {
+                    "name": "pjcdawkins",
+                    "homepage": "https://www.drupal.org/user/1025236"
+                },
+                {
+                    "name": "rszrama",
+                    "homepage": "https://www.drupal.org/user/49344"
+                }
+            ],
+            "description": "Provides a better Queue API.",
+            "homepage": "https://www.drupal.org/project/advancedqueue",
+            "support": {
+                "source": "https://git.drupalcode.org/project/advancedqueue"
+            }
         },
         {
             "name": "drupal/bpmn_io",
@@ -4477,6 +4565,70 @@
             "time": "2025-12-06T11:56:16+00:00"
         },
         {
+            "name": "onelogin/php-saml",
+            "version": "4.3.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SAML-Toolkits/php-saml.git",
+                "reference": "26b3a47349415e5b7aa300ba4ab7fc316c65f19e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SAML-Toolkits/php-saml/zipball/26b3a47349415e5b7aa300ba4ab7fc316c65f19e",
+                "reference": "26b3a47349415e5b7aa300ba4ab7fc316c65f19e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.3",
+                "robrichards/xmlseclibs": "^3.1.5"
+            },
+            "require-dev": {
+                "pdepend/pdepend": "^2.8.0",
+                "php-coveralls/php-coveralls": "^2.0",
+                "phploc/phploc": "^4.0 || ^5.0 || ^6.0 || ^7.0",
+                "phpunit/phpunit": "^9.5",
+                "sebastian/phpcpd": "^4.0 || ^5.0 || ^6.0 ",
+                "squizlabs/php_codesniffer": "^3.5.8"
+            },
+            "suggest": {
+                "ext-curl": "Install curl lib to be able to use the IdPMetadataParser for parsing remote XMLs",
+                "ext-dom": "Install xml lib",
+                "ext-openssl": "Install openssl lib in order to handle with x509 certs (require to support sign and encryption)",
+                "ext-zlib": "Install zlib"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "OneLogin\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "PHP SAML Toolkit",
+            "homepage": "https://github.com/SAML-Toolkits/php-saml",
+            "keywords": [
+                "Federation",
+                "SAML2",
+                "SSO",
+                "identity",
+                "saml"
+            ],
+            "support": {
+                "email": "sixto.martin.garcia@gmail.com",
+                "issues": "https://github.com/onelogin/SAML-Toolkits/issues",
+                "source": "https://github.com/onelogin/SAML-Toolkits/"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/SAML-Toolkits",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-05-07T22:38:04+00:00"
+        },
+        {
             "name": "paragonie/random_compat",
             "version": "v9.99.100",
             "source": {
@@ -5836,6 +5988,48 @@
                 "source": "https://github.com/revoltphp/event-loop/tree/v1.0.9"
             },
             "time": "2026-05-16T17:55:38+00:00"
+        },
+        {
+            "name": "robrichards/xmlseclibs",
+            "version": "3.1.5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/robrichards/xmlseclibs.git",
+                "reference": "03062be78178cbb5e8f605cd255dc32a14981f92"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/robrichards/xmlseclibs/zipball/03062be78178cbb5e8f605cd255dc32a14981f92",
+                "reference": "03062be78178cbb5e8f605cd255dc32a14981f92",
+                "shasum": ""
+            },
+            "require": {
+                "ext-openssl": "*",
+                "php": ">= 5.4"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "RobRichards\\XMLSecLibs\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "A PHP library for XML Security",
+            "homepage": "https://github.com/robrichards/xmlseclibs",
+            "keywords": [
+                "security",
+                "signature",
+                "xml",
+                "xmldsig"
+            ],
+            "support": {
+                "issues": "https://github.com/robrichards/xmlseclibs/issues",
+                "source": "https://github.com/robrichards/xmlseclibs/tree/3.1.5"
+            },
+            "time": "2026-03-13T10:31:56+00:00"
         },
         {
             "name": "sebastian/diff",

@@ -1,0 +1,10 @@
+aabenforms_digital_post_beskedfordeler.receipt:
+  path: '/api/digital-post/receipt'
+  defaults:
+    _controller: '\Drupal\aabenforms_digital_post_beskedfordeler\Controller\ReceiptController::receive'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+    _csrf_token: 'FALSE'

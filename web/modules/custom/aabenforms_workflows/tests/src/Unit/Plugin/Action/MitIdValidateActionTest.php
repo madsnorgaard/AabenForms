@@ -561,6 +561,61 @@ class MitIdValidateActionTest extends UnitTestCase {
 
     $this->assertArrayHasKey('session_data_token', $defaults);
     $this->assertEquals('mitid_session', $defaults['session_data_token']);
+
+    $this->assertArrayHasKey('required_assurance_level', $defaults);
+    $this->assertSame('', $defaults['required_assurance_level'], 'No per-flow assurance requirement by default.');
+  }
+
+  /**
+   * A session below the flow's required assurance level is denied at the gate.
+   *
+   * @covers ::execute
+   */
+  public function testAssuranceBelowRequiredIsDenied(): void {
+    $workflowId = 'wf_low_assurance';
+    $this->tokenStorage['workflow_id'] = $workflowId;
+    $this->sessionManager->method('getSession')->with($workflowId)->willReturn([
+      'cpr' => '0101001234',
+      'assurance_level' => 'substantial',
+      'expires_at' => time() + 600,
+    ]);
+    $this->setActionConfig('required_assurance_level', 'high');
+
+    $this->logger->expects($this->once())->method('warning');
+    $this->action->execute();
+
+    $this->assertFalse($this->tokenStorage['mitid_valid'], 'A substantial session must not satisfy a high-assurance flow.');
+  }
+
+  /**
+   * A session at or above the required assurance level passes the gate.
+   *
+   * @covers ::execute
+   */
+  public function testAssuranceMeetsRequirement(): void {
+    $workflowId = 'wf_high_assurance';
+    $this->tokenStorage['workflow_id'] = $workflowId;
+    $this->sessionManager->method('getSession')->with($workflowId)->willReturn([
+      'cpr' => '0101001234',
+      'assurance_level' => 'high',
+      'expires_at' => time() + 600,
+    ]);
+    $this->setActionConfig('required_assurance_level', 'substantial');
+
+    $this->action->execute();
+
+    $this->assertTrue($this->tokenStorage['mitid_valid'], 'A high session satisfies a substantial-assurance flow.');
+  }
+
+  /**
+   * Sets a single configuration value on the action under test.
+   */
+  private function setActionConfig(string $key, $value): void {
+    $property = (new \ReflectionClass($this->action))->getProperty('configuration');
+    $property->setAccessible(TRUE);
+    $config = $property->getValue($this->action);
+    $config[$key] = $value;
+    $property->setValue($this->action, $config);
   }
 
 }

@@ -5,3 +5,21 @@ aabenforms_esdh.settings:
     active_connector:
       type: string
       label: 'Active ESDH connector'
+    sbsys_base_url:
+      type: string
+      label: 'SBSIP base URL'
+    sbsys_token_url:
+      type: string
+      label: 'SBSIP OAuth2 token URL (defaults to base URL + /api/token)'
+    sbsys_client_id:
+      type: string
+      label: 'SBSIP OAuth2 client id'
+    sbsys_client_secret_key:
+      type: string
+      label: 'Key module entry holding the SBSIP client secret'
+    sbsys_templates:
+      type: sequence
+      label: 'Per-case-type SBSIP template ids'
+      sequence:
+        type: string
+        label: 'Template id'

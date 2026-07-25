@@ -40,7 +40,11 @@ class ReadinessController extends ControllerBase {
     ['GDPR audit logging', 'ready', 'Every sensitive access hashed (SHA-256) and logged with purpose'],
     ['Case (sag) lifecycle', 'ready', 'Lawful transitions, frist clock, immutable once closed'],
     ['Evidence trace dashboard', 'ready', 'Per-submission trace across every service contract (this tool)'],
-    ['MitID OIDC - protocol layer', 'ready', 'Real PKCE + RS256/JWKS verification + NSIS LoA enforcement'],
+    ['MitID OIDC - protocol layer', 'ready', 'Real PKCE + RS256/JWKS verification + NSIS LoA enforced at login'],
+    [
+      'Multi-tenant data isolation', 'ready',
+      'Per-tenant access control + query scoping + per-tenant CPR keys; kernel-tested cross-tenant deny (#141)',
+    ],
   ];
 
   /**
@@ -52,7 +56,8 @@ class ReadinessController extends ControllerBase {
   protected const INTEGRATIONS = [
     [
       'MitID / NemLog-in', 'OIDC', 'live-capable',
-      'Broker/NemLog-in registration; verified only against the Keycloak mock (#79)',
+      'OIDC crypto is production-grade, but a production KOMMUNE login is OIOSAML 3 (SAML) via '
+      . 'NemLog-in, not OIDC; the OIDC rail is demo/private-sector (#79)',
     ],
     [
       'CPR person lookup', 'SF1520', 'mock',
@@ -81,45 +86,24 @@ class ReadinessController extends ControllerBase {
    */
   protected const FINDINGS = [
     [
-      'MitID gate fails open in demo mode', 'critical',
-      'allow_mitid_demo_mode is ON - an unverified identity is recorded as "verified" and an '
-      . 'anonymous POST can open a real case. Turn OFF for any CPR-touching POC.',
+      'Production kommune login needs OIOSAML 3', 'high',
+      'The OIDC/MitID rail is demo/private-sector. A real kommune citizen login is OIOSAML 3 (SAML) '
+      . 'via NemLog-in at NSIS Substantial; needs the aabenforms_nemlogin SP + broker registration (#79).',
     ],
     [
-      'Client-supplied workflow_id honoured at login', 'critical',
-      'The session/bearer id must be server-minted only; today a crafted /mitid/login?workflow_id=… '
-      . 'enables session and CPR takeover.',
+      'Assurance enforced at login, not at the workflow gate', 'medium',
+      'NSIS level is enforced at the OIDC callback, but MitIdValidateAction treats any live session '
+      . 'as verified, so a per-flow "requires High" cannot be enforced (#157).',
     ],
     [
-      'Open redirect in MitID return_url', 'high',
-      'Backslash paths (\\evil.com) bypass the prefix guard and can leak the session token. '
-      . 'Use strict local-path validation.',
+      'Government transports run on mock rails', 'medium',
+      'CPR/CVR (SF1520/1530), Digital Post (SF1601, real MeMo built), SF2900, SF1470, ESDH and '
+      . 'eIndkomst need OCES3 certs + a serviceaftale to go live (#76, #77, #84-#86).',
     ],
     [
-      'Anonymous can call the webform API', 'high',
-      'access webform api is granted to anonymous; the requires_mitid flag is advisory only. '
-      . 'Add server-side MitID enforcement on submit.',
-    ],
-    [
-      'No rate limit / CSRF on /submit', 'high',
-      'Each submission synchronously drives the full ECA flow (CPR/CVR/Digital Post). Unthrottled '
-      . 'anonymous access is a DoS + external-call cost-amplification vector. Add flood control '
-      . '+ origin/CSRF checks.',
-    ],
-    [
-      'case_worker submission access is un-scoped', 'high',
-      'view/edit any webform submission has no tenant scoping - acceptable for a single-tenant POC, '
-      . 'not for multi-tenant.',
-    ],
-    [
-      'allow_mitid_demo_mode lives only in active config', 'medium',
-      'It is not in config/sync, so a drush cim before the demo silently flips it off and routes '
-      . 'every MitID-gated flow to its deny terminal. Export or verify it before a client session.',
-    ],
-    [
-      '5 flows are GREY (parent-approval overlap, stub labels)', 'medium',
-      'parent_dual_approval_working, parent_submission_simple, caseworker_review_flow, hr_onboarding, '
-      . 'association_booking - keep off-screen; demo merudgifter, friplads, klage instead.',
+      'Audit + trace not tenant-scoped', 'medium',
+      'aabenforms_audit_log and aabenforms_trace have no tenant_id (operator-visible only, so '
+      . 'reporting segregation not a caseworker leak) (#174).',
     ],
   ];
 
@@ -184,7 +168,7 @@ class ReadinessController extends ControllerBase {
       'note' => [
         '#type' => 'html_tag',
         '#tag' => 'p',
-        '#value' => $this->t('The encryption, audit and OIDC-crypto layers passed. These are the open items an adversarial test surfaced - most are demo affordances that must be locked down for production.'),
+        '#value' => $this->t('The POC security holes an adversarial test found have been closed (demo-mode fail-open, client-supplied workflow_id, open-redirect, unthrottled submit, and cross-tenant data access are all fixed and tested). These are the open items on the path to a real kommune pilot.'),
         '#attributes' => ['class' => ['af-trace-intro']],
       ],
       'table' => [

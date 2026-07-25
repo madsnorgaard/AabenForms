@@ -16,6 +16,7 @@
     ],
     "require": {
         "composer/installers": "^2.3",
+        "drupal/advancedqueue": "^1.6",
         "drupal/bpmn_io": "^3.0",
         "drupal/core-composer-scaffold": "^11.3",
         "drupal/core-project-message": "^11.3",
@@ -37,7 +38,8 @@
         "drupal/smtp": "^1.4",
         "drupal/webform": "^6.3@dev",
         "drush/drush": "^13.7",
-        "itk-dev/serviceplatformen": "^1.8"
+        "itk-dev/serviceplatformen": "^1.8",
+        "onelogin/php-saml": "^4"
     },
     "conflict": {
         "drupal/drupal": "*"

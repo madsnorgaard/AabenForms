@@ -76,18 +76,27 @@ class AuditLogger {
    * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
    *   The logger factory.
    */
+  /**
+   * The tenant resolver.
+   *
+   * @var \Drupal\aabenforms_core\Service\TenantResolver
+   */
+  protected TenantResolver $tenantResolver;
+
   public function __construct(
     Connection $database,
     AccountProxyInterface $current_user,
     RequestStack $request_stack,
     TimeInterface $time,
     LoggerChannelFactoryInterface $logger_factory,
+    TenantResolver $tenant_resolver,
   ) {
     $this->database = $database;
     $this->currentUser = $current_user;
     $this->requestStack = $request_stack;
     $this->time = $time;
     $this->logger = $logger_factory->get('aabenforms_audit');
+    $this->tenantResolver = $tenant_resolver;
   }
 
   /**
@@ -165,6 +174,7 @@ class AuditLogger {
       'status' => $status,
       'ip_address' => $ip_address,
       'context' => json_encode($context),
+      'tenant_id' => $this->tenantResolver->getCurrentTenantId() ?? '',
       'timestamp' => $this->time->getRequestTime(),
     ];
 

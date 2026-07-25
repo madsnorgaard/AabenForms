@@ -1,0 +1,40 @@
+aabenforms_nemlogin.settings:
+  type: config_object
+  label: 'NemLog-in OIOSAML 3 settings'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Enable the NemLog-in login rail'
+    strict:
+      type: boolean
+      label: 'Strict SAML validation (signatures, conditions, destination)'
+    sp_entity_id:
+      type: string
+      label: 'SP entityId'
+    acs_url:
+      type: string
+      label: 'Assertion Consumer Service URL'
+    slo_url:
+      type: string
+      label: 'Single Logout Service URL'
+    idp_entity_id:
+      type: string
+      label: 'IdP entityId'
+    idp_sso_url:
+      type: string
+      label: 'IdP Single Sign-On URL'
+    idp_slo_url:
+      type: string
+      label: 'IdP Single Logout URL'
+    idp_cert:
+      type: string
+      label: 'IdP signing certificate (PEM body)'
+    sp_cert_key:
+      type: string
+      label: 'Key module entry holding the SP certificate'
+    sp_private_key_key:
+      type: string
+      label: 'Key module entry holding the SP private key'
+    required_assurance_level:
+      type: string
+      label: 'Minimum NSIS assurance level'

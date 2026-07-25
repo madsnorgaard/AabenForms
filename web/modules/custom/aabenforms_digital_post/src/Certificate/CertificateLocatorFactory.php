@@ -10,15 +10,16 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 /**
  * Selects the concrete CertificateLocator based on config.cert_source.
  *
- * Today only "file" is shipped. Future session: register "key" (drupal:key
- * contrib) and "os2web_key" (via optional bridge submodule) services and
- * pick them here by string match.
+ * Ships "file" (path + env-var passphrase) and "key" (PKCS#12 held in a
+ * drupal:key entry). A future "os2web_key" bridge submodule would register its
+ * own locator and be picked here by string match.
  */
 final class CertificateLocatorFactory {
 
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
     private readonly FileCertificateLocator $fileLocator,
+    private readonly KeyCertificateLocator $keyLocator,
   ) {
   }
 
@@ -34,8 +35,9 @@ final class CertificateLocatorFactory {
       ->get('cert_source');
     return match ($source) {
       'file', '' => $this->fileLocator,
+      'key' => $this->keyLocator,
       default => throw new CertificateException(sprintf(
-        'cert_source "%s" is not supported in this build. Available: file.',
+        'cert_source "%s" is not supported in this build. Available: file, key.',
         $source
       )),
     };
