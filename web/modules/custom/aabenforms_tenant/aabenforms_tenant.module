@@ -7,8 +7,149 @@
  * Provides multi-tenancy support and employee role provisioning.
  */
 
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Database\Query\AlterableInterface;
+use Drupal\Core\Database\Query\SelectInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\user\UserInterface;
+
+/**
+ * The entity types whose rows are owned by a tenant (kommune) and isolated.
+ */
+const AABENFORMS_TENANT_SCOPED_ENTITY_TYPES = ['aabenforms_case', 'webform_submission'];
+
+/**
+ * Implements hook_entity_base_field_info().
+ *
+ * Adds a queryable `tenant_id` to the tenant-owned entities without coupling
+ * those modules to the tenancy concept (mirrors aabenforms_esdh's esdh_ref).
+ * Empty in single-tenant mode, so isolation is a no-op until domains exist.
+ */
+function aabenforms_tenant_entity_base_field_info(EntityTypeInterface $entity_type): array {
+  if (!in_array($entity_type->id(), AABENFORMS_TENANT_SCOPED_ENTITY_TYPES, TRUE)) {
+    return [];
+  }
+  $field = BaseFieldDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Tenant (kommune)'))
+    ->setDescription(new TranslatableMarkup('The domain/tenant that owns this record. Empty in single-tenant mode.'))
+    ->setSetting('max_length', 64)
+    ->setDefaultValue('')
+    ->setDisplayConfigurable('view', TRUE);
+  if ($entity_type->isRevisionable()) {
+    $field->setRevisionable(TRUE);
+  }
+  return ['tenant_id' => $field];
+}
+
+/**
+ * Implements hook_entity_presave().
+ *
+ * Stamps the current tenant onto a new case/submission so no save path can
+ * leave it empty. Once set it is never overwritten (a case keeps its owner).
+ */
+function aabenforms_tenant_entity_presave(EntityInterface $entity): void {
+  if (!$entity instanceof ContentEntityInterface
+    || !in_array($entity->getEntityTypeId(), AABENFORMS_TENANT_SCOPED_ENTITY_TYPES, TRUE)
+    || !$entity->hasField('tenant_id')) {
+    return;
+  }
+  if ((string) $entity->get('tenant_id')->value !== '') {
+    return;
+  }
+  $tenant = \Drupal::service('aabenforms_core.tenant_resolver')->getCurrentTenantId();
+  if (is_string($tenant) && $tenant !== '') {
+    $entity->set('tenant_id', $tenant);
+  }
+}
+
+/**
+ * Implements hook_entity_access().
+ *
+ * Denies cross-tenant access to a tenant-owned entity. A forbidden result here
+ * overrides the coarse `view any webform submission` grant, which is the root
+ * of the cross-tenant leak. Only enforced when the row is stamped AND a current
+ * tenant is known, so single-tenant / drush / cron contexts are unaffected.
+ */
+function aabenforms_tenant_entity_access(EntityInterface $entity, $operation, AccountInterface $account): AccessResultInterface {
+  if (!$entity instanceof ContentEntityInterface
+    || !in_array($entity->getEntityTypeId(), AABENFORMS_TENANT_SCOPED_ENTITY_TYPES, TRUE)
+    || !$entity->hasField('tenant_id')) {
+    return AccessResult::neutral();
+  }
+  $owner = (string) $entity->get('tenant_id')->value;
+  if ($owner === '' || $account->hasPermission('bypass tenant isolation')) {
+    return AccessResult::neutral()->cachePerPermissions();
+  }
+  $current = \Drupal::service('aabenforms_core.tenant_resolver')->getCurrentTenantId();
+  if ($current !== NULL && $owner !== $current) {
+    return AccessResult::forbidden('Cross-tenant access denied.')
+      ->cachePerPermissions()
+      ->addCacheContexts(['url.site'])
+      ->addCacheableDependency($entity);
+  }
+  return AccessResult::neutral()
+    ->cachePerPermissions()
+    ->addCacheContexts(['url.site'])
+    ->addCacheableDependency($entity);
+}
+
+/**
+ * Implements hook_query_TAG_alter() for aabenforms_case entity-access queries.
+ */
+function aabenforms_tenant_query_aabenforms_case_access_alter(AlterableInterface $query): void {
+  _aabenforms_tenant_scope_query($query, 'aabenforms_case');
+}
+
+/**
+ * Implements hook_query_TAG_alter() for webform_submission entity-access queries.
+ */
+function aabenforms_tenant_query_webform_submission_access_alter(AlterableInterface $query): void {
+  _aabenforms_tenant_scope_query($query, 'webform_submission');
+}
+
+/**
+ * Adds a tenant condition to an entity-access query (listings, JSON:API).
+ *
+ * Belt-and-suspenders alongside hook_entity_access: keeps other tenants' rows
+ * out of collection queries entirely, so their UUIDs never even reach the
+ * JSON:API meta.omitted stage. Same-tenant and unstamped (single-tenant) rows
+ * remain visible.
+ */
+function _aabenforms_tenant_scope_query(AlterableInterface $query, string $entity_type_id): void {
+  if (!$query instanceof SelectInterface) {
+    return;
+  }
+  if (\Drupal::currentUser()->hasPermission('bypass tenant isolation')) {
+    return;
+  }
+  $current = \Drupal::service('aabenforms_core.tenant_resolver')->getCurrentTenantId();
+  if ($current === NULL) {
+    return;
+  }
+  $base = \Drupal::entityTypeManager()->getStorage($entity_type_id)->getEntityType()->getBaseTable();
+  $alias = NULL;
+  foreach ($query->getTables() as $a => $info) {
+    if (($info['table'] ?? NULL) === $base) {
+      $alias = $a;
+      break;
+    }
+  }
+  if ($alias === NULL) {
+    return;
+  }
+  $group = $query->orConditionGroup()
+    ->condition("$alias.tenant_id", $current)
+    ->condition("$alias.tenant_id", '')
+    ->isNull("$alias.tenant_id");
+  $query->condition($group);
+}
 
 /**
  * Implements hook_help().

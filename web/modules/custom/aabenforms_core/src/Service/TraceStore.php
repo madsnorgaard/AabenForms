@@ -26,11 +26,17 @@ class TraceStore {
   protected TimeInterface $time;
 
   /**
+   * The tenant resolver.
+   */
+  protected TenantResolver $tenantResolver;
+
+  /**
    * Constructs the trace store.
    */
-  public function __construct(Connection $database, TimeInterface $time) {
+  public function __construct(Connection $database, TimeInterface $time, TenantResolver $tenant_resolver) {
     $this->database = $database;
     $this->time = $time;
+    $this->tenantResolver = $tenant_resolver;
   }
 
   /**
@@ -62,6 +68,7 @@ class TraceStore {
         'step_count' => $execution['step_count'] ?? count($steps),
         'mitid_verified' => $this->mitidVerified($steps) ? 1 : 0,
         'steps' => json_encode($steps),
+        'tenant_id' => $this->tenantResolver->getCurrentTenantId() ?? '',
         'created' => $this->time->getRequestTime(),
       ])
       ->execute();

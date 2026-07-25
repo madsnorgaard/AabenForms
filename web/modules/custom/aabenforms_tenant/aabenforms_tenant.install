@@ -1,0 +1,36 @@
+<?php
+
+/**
+ * @file
+ * Install and update functions for the AabenForms Tenant module.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Installs the tenant_id base field on the tenant-owned entities.
+ *
+ * The field is declared in hook_entity_base_field_info(); on an already-enabled
+ * site it must be installed explicitly so the storage column is created.
+ */
+function aabenforms_tenant_update_11001(): string {
+  $edum = \Drupal::entityDefinitionUpdateManager();
+  $installed = [];
+  foreach (AABENFORMS_TENANT_SCOPED_ENTITY_TYPES as $entity_type_id) {
+    $definition = \Drupal::entityTypeManager()->getDefinition($entity_type_id, FALSE);
+    if (!$definition) {
+      continue;
+    }
+    if ($edum->getFieldStorageDefinition('tenant_id', $entity_type_id)) {
+      continue;
+    }
+    $fields = aabenforms_tenant_entity_base_field_info($definition);
+    if (isset($fields['tenant_id'])) {
+      $edum->installFieldStorageDefinition('tenant_id', $entity_type_id, 'aabenforms_tenant', $fields['tenant_id']);
+      $installed[] = $entity_type_id;
+    }
+  }
+  return $installed
+    ? 'Installed tenant_id on: ' . implode(', ', $installed)
+    : 'tenant_id already present on all tenant-scoped entities.';
+}

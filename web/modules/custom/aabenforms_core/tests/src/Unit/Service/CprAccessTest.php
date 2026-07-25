@@ -4,6 +4,7 @@ namespace Drupal\Tests\aabenforms_core\Unit\Service;
 
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_core\Service\EncryptionService;
+use Drupal\aabenforms_core\Service\TenantResolver;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\Tests\UnitTestCase;
@@ -45,7 +46,14 @@ class CprAccessTest extends UnitTestCase {
     $loggerFactory = $this->createMock(LoggerChannelFactoryInterface::class);
     $loggerFactory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
 
-    $this->cprAccess = new CprAccess($this->encryption, $loggerFactory);
+    // Single-tenant context: no active tenant, so the legacy AFENC1 path runs.
+    $tenantResolver = $this->getMockBuilder(TenantResolver::class)
+      ->disableOriginalConstructor()
+      ->onlyMethods(['getCurrentTenantId'])
+      ->getMock();
+    $tenantResolver->method('getCurrentTenantId')->willReturn(NULL);
+
+    $this->cprAccess = new CprAccess($this->encryption, $tenantResolver, $loggerFactory);
   }
 
   /**

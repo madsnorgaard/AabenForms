@@ -1,0 +1,4 @@
+bypass tenant isolation:
+  title: 'Bypass tenant (kommune) data isolation'
+  description: 'View and query cases and submissions across all tenants. Grant only to platform operators; never to a kommune caseworker.'
+  restrict access: true

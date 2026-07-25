@@ -3,6 +3,7 @@
 namespace Drupal\Tests\aabenforms_core\Unit\Service;
 
 use Drupal\aabenforms_core\Service\AuditLogger;
+use Drupal\aabenforms_core\Service\TenantResolver;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Database\StatementInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -91,13 +92,21 @@ class AuditLoggerTest extends UnitTestCase {
     $request->method('getClientIp')->willReturn('192.168.1.100');
     $this->requestStack->method('getCurrentRequest')->willReturn($request);
 
+    // Single-tenant context: no active tenant, so tenant_id is empty.
+    $tenantResolver = $this->getMockBuilder(TenantResolver::class)
+      ->disableOriginalConstructor()
+      ->onlyMethods(['getCurrentTenantId'])
+      ->getMock();
+    $tenantResolver->method('getCurrentTenantId')->willReturn(NULL);
+
     // Create service.
     $this->auditLogger = new AuditLogger(
       $this->database,
       $this->currentUser,
       $this->requestStack,
       $this->time,
-      $loggerFactory
+      $loggerFactory,
+      $tenantResolver
     );
   }
 
