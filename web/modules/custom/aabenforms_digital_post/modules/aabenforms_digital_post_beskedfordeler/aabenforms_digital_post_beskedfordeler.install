@@ -1,0 +1,90 @@
+<?php
+
+/**
+ * @file
+ * Install/update hooks for the Digital Post Beskedfordeler receipt submodule.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Installs the delivery-tracking base fields on the case entity.
+ *
+ * Base fields contributed to another module's entity type are not always
+ * created automatically on a config-import-driven enable, so install them
+ * explicitly and idempotently. Mirrors aabenforms_esdh.
+ */
+function _aabenforms_digital_post_beskedfordeler_install_case_fields(): void {
+  $update_manager = \Drupal::entityDefinitionUpdateManager();
+  $entity_type = \Drupal::entityTypeManager()->getDefinition('aabenforms_case');
+  $fields = aabenforms_digital_post_beskedfordeler_entity_base_field_info($entity_type);
+  foreach ($fields as $name => $definition) {
+    if ($update_manager->getFieldStorageDefinition($name, 'aabenforms_case') === NULL) {
+      $update_manager->installFieldStorageDefinition($name, 'aabenforms_case', 'aabenforms_digital_post_beskedfordeler', $definition);
+    }
+  }
+}
+
+/**
+ * Adds the receipt columns to the Digital Post log table (idempotent).
+ */
+function _aabenforms_digital_post_beskedfordeler_install_log_columns(): void {
+  $schema = Database::getConnection()->schema();
+  $table = 'aabenforms_digital_post_log';
+  $columns = [
+    'receipt_status' => [
+      'type' => 'varchar',
+      'length' => 16,
+      'not null' => FALSE,
+      'description' => 'Asynchronous delivery outcome: pending, delivered, failed.',
+    ],
+    'delivered_at' => [
+      'type' => 'int',
+      'unsigned' => TRUE,
+      'not null' => FALSE,
+      'description' => 'Unix timestamp the receipt confirmed delivery.',
+    ],
+    'receipt_reason' => [
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => FALSE,
+      'description' => 'Human-readable receipt reason (transient/permanent failure detail).',
+    ],
+  ];
+  foreach ($columns as $name => $spec) {
+    if (!$schema->fieldExists($table, $name)) {
+      $schema->addField($table, $name, $spec);
+    }
+  }
+}
+
+/**
+ * Implements hook_install().
+ */
+function aabenforms_digital_post_beskedfordeler_install(): void {
+  _aabenforms_digital_post_beskedfordeler_install_case_fields();
+  _aabenforms_digital_post_beskedfordeler_install_log_columns();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function aabenforms_digital_post_beskedfordeler_uninstall(): void {
+  $update_manager = \Drupal::entityDefinitionUpdateManager();
+  foreach (['digital_post_tx', 'digital_post_receipt_status', 'digital_post_delivered_at'] as $name) {
+    $definition = $update_manager->getFieldStorageDefinition($name, 'aabenforms_case');
+    if ($definition !== NULL) {
+      $update_manager->uninstallFieldStorageDefinition($definition);
+    }
+  }
+}
+
+/**
+ * Ensures fields + columns exist on sites enabled before the install hook.
+ */
+function aabenforms_digital_post_beskedfordeler_update_10001(): void {
+  _aabenforms_digital_post_beskedfordeler_install_case_fields();
+  _aabenforms_digital_post_beskedfordeler_install_log_columns();
+}

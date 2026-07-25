@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * @file
+ * Hooks for the Digital Post Beskedfordeler receipt submodule.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+
+/**
+ * Implements hook_entity_base_field_info().
+ *
+ * Adds the Digital Post delivery-tracking fields to the case entity without
+ * coupling aabenforms_case to Digital Post - delivery stays an optional add-on.
+ * Delivery is orthogonal to the case lifecycle status (a receipt never drives a
+ * modtaget/oplyst transition), so it lives on its own queryable, revisionable
+ * fields. digital_post_tx is written at send time and is what an inbound
+ * asynchronous receipt correlates on. Mirrors the esdh_ref pattern.
+ */
+function aabenforms_digital_post_beskedfordeler_entity_base_field_info(EntityTypeInterface $entity_type): array {
+  if ($entity_type->id() !== 'aabenforms_case') {
+    return [];
+  }
+
+  $fields = [];
+  $fields['digital_post_tx'] = BaseFieldDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Digital Post transaction id'))
+    ->setDescription(new TranslatableMarkup('The SF1601 send transaction id, correlated against an asynchronous delivery receipt.'))
+    ->setRevisionable(TRUE)
+    ->setSetting('max_length', 64)
+    ->setDisplayConfigurable('view', TRUE);
+
+  $fields['digital_post_receipt_status'] = BaseFieldDefinition::create('string')
+    ->setLabel(new TranslatableMarkup('Digital Post delivery status'))
+    ->setDescription(new TranslatableMarkup('pending, delivered or failed - reconciled from the Beskedfordeler receipt.'))
+    ->setRevisionable(TRUE)
+    ->setSetting('max_length', 16)
+    ->setDisplayConfigurable('view', TRUE);
+
+  $fields['digital_post_delivered_at'] = BaseFieldDefinition::create('timestamp')
+    ->setLabel(new TranslatableMarkup('Digital Post delivered at'))
+    ->setDescription(new TranslatableMarkup('When the delivery receipt confirmed delivery.'))
+    ->setRevisionable(TRUE)
+    ->setDisplayConfigurable('view', TRUE);
+
+  return $fields;
+}

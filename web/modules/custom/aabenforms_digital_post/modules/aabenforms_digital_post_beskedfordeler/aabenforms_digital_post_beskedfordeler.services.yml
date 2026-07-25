@@ -1,0 +1,13 @@
+services:
+  logger.channel.aabenforms_digital_post_beskedfordeler:
+    parent: logger.channel_base
+    arguments: ['aabenforms_digital_post_beskedfordeler']
+
+  aabenforms_digital_post_beskedfordeler.receipt_handler:
+    class: Drupal\aabenforms_digital_post_beskedfordeler\Service\DigitalPostReceiptHandler
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@datetime.time'
+      - '@aabenforms_core.audit_logger'
+      - '@logger.channel.aabenforms_digital_post_beskedfordeler'

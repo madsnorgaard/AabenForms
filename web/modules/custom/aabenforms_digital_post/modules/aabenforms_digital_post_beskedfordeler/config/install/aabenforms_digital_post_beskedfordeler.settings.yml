@@ -1,0 +1,6 @@
+# Beskedfordeler receipt intake settings.
+#
+# The receipt endpoint (/api/digital-post/receipt) is open, so it is gated by a
+# shared secret held in a drupal:key entry named here. Empty means the endpoint
+# rejects everything (fail-closed) until an operator configures it.
+receipt_secret_key: ''
