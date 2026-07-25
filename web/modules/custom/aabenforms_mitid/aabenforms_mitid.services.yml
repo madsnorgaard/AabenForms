@@ -13,14 +13,10 @@ services:
       - '@logger.factory'
       - '@aabenforms_core.audit_logger'
 
-  # Provider-neutral id for the verified-identity session store. Both identity
-  # rails (MitID OIDC and NemLog-in OIOSAML 3) and every downstream reader
-  # depend on this alias, not the concrete MitID service, so the store can
-  # outlive the aabenforms_mitid module.
-  aabenforms_identity.session_manager:
-    alias: aabenforms_mitid.session_manager
-  Drupal\aabenforms_core\Identity\SessionManagerInterface:
-    alias: aabenforms_mitid.session_manager
+  # The provider-neutral aabenforms_identity.session_manager alias now lives in
+  # aabenforms_core, so aabenforms_nemlogin depends on core alone - not on this
+  # demo/OIDC module. MitIdSessionManager writes to the SAME keyvalue collection
+  # as the core store, so MitID and SAML sessions are mutually readable.
 
   aabenforms_mitid.token_verifier:
     class: Drupal\aabenforms_mitid\Service\MitIdTokenVerifier

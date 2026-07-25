@@ -32,6 +32,21 @@ services:
       - '@logger.factory'
       - '@aabenforms_core.tenant_resolver'
 
+  # Provider-neutral verified-identity session store. Lives in core so both the
+  # MitID OIDC rail and the NemLog-in OIOSAML 3 rail depend only on core, not on
+  # each other. Both rails share this store's keyvalue collection.
+  aabenforms_core.identity_session_manager:
+    class: Drupal\aabenforms_core\Service\IdentitySessionManager
+    arguments:
+      - '@keyvalue.expirable'
+      - '@datetime.time'
+      - '@logger.factory'
+      - '@aabenforms_core.audit_logger'
+  aabenforms_identity.session_manager:
+    alias: aabenforms_core.identity_session_manager
+  Drupal\aabenforms_core\Identity\SessionManagerInterface:
+    alias: aabenforms_core.identity_session_manager
+
   aabenforms_core.workflow_execution_collector:
     class: Drupal\aabenforms_core\Service\WorkflowExecutionCollector
 

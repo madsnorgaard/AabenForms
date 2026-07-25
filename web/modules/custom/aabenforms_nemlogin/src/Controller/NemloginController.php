@@ -79,14 +79,18 @@ class NemloginController extends ControllerBase {
     $workflowId = 'wf_' . bin2hex(random_bytes(16));
     $returnUrl = $this->safeReturnUrl($request);
 
-    // RelayState is an opaque token; the sensitive values live server-side in
-    // tempstore keyed by it, so nothing meaningful travels via the IdP.
+    // RelayState is an opaque 128-bit token; the sensitive values live
+    // server-side keyed by it. It is held in a keyvalue-expirable store (NOT a
+    // session-bound PrivateTempStore): the ACS is a cross-site top-level POST
+    // from nemlog-in.dk, so with a SameSite=Lax cookie the session is not sent
+    // and a session-bound store would always miss. The token is the sole key
+    // and is unguessable, so this is safe. TTL 10 minutes.
     $relayState = bin2hex(random_bytes(16));
-    $this->tempStore()->set('relay_' . $relayState, [
+    $this->relayStore()->setWithExpire('relay_' . $relayState, [
       'workflow_id' => $workflowId,
       'return_url' => $returnUrl,
       'created' => time(),
-    ]);
+    ], 600);
 
     try {
       $auth = new SamlAuth($this->settingsBuilder->buildSettings());
@@ -117,12 +121,12 @@ class NemloginController extends ControllerBase {
     }
 
     $relayState = (string) $request->request->get('RelayState', '');
-    $stateData = $relayState !== '' ? $this->tempStore()->get('relay_' . $relayState) : NULL;
+    $stateData = $relayState !== '' ? $this->relayStore()->get('relay_' . $relayState) : NULL;
     if (!$stateData) {
       $this->getLogger('aabenforms_nemlogin')->error('NemLog-in ACS: unknown or missing RelayState.');
       return new JsonResponse(['error' => 'Invalid or expired login state'], 400);
     }
-    $this->tempStore()->delete('relay_' . $relayState);
+    $this->relayStore()->delete('relay_' . $relayState);
 
     $samlResponse = (string) $request->request->get('SAMLResponse', '');
     if ($samlResponse === '') {
@@ -204,13 +208,17 @@ class NemloginController extends ControllerBase {
   }
 
   /**
-   * Returns the module's private tempstore.
+   * Returns the token-keyed RelayState store (NOT session-bound).
    *
-   * @return \Drupal\Core\TempStore\PrivateTempStore
-   *   The tempstore.
+   * A keyvalue-expirable collection, so the cross-site ACS POST can read the
+   * state by its opaque RelayState token without the browser sending a session
+   * cookie.
+   *
+   * @return \Drupal\Core\KeyValueStore\KeyValueStoreExpirableInterface
+   *   The expirable store.
    */
-  protected function tempStore() {
-    return \Drupal::service('tempstore.private')->get('aabenforms_nemlogin');
+  protected function relayStore() {
+    return \Drupal::service('keyvalue.expirable')->get('aabenforms_nemlogin_relay');
   }
 
   /**
