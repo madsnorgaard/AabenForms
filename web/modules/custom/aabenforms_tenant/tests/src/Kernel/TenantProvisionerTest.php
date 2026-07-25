@@ -73,6 +73,10 @@ class TenantProvisionerTest extends KernelTestBase {
    * Provisioning creates the Domain, key and profile with the exact ids.
    */
   public function testProvisionCreatesArtifacts(): void {
+    // Ensure a clean env for the "warns when key unset" assertion below; a
+    // local multi-tenant demo may export this variable into the test process.
+    putenv('AABENFORMS_CPR_KEY_AARHUS_MTM');
+    $this->envVars[] = 'AABENFORMS_CPR_KEY_AARHUS_MTM';
     $result = $this->provisioner->provision(
       'aarhus_mtm',
       'Aarhus - Teknik og Miljoe',

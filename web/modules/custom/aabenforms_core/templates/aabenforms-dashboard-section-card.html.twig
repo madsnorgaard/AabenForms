@@ -9,6 +9,7 @@
  * - hero_metric: { label, value } | null  (mutually exclusive with badge)
  * - secondary_metrics: [ { label, value } ]
  * - main_link: { label, url }
+ * - secondary_link: { label, url } | null  (optional second CTA)
  */
 #}
 <article class="af-card" data-section="{{ section_id }}">
@@ -45,6 +46,11 @@
       <a href="{{ main_link.url }}" class="af-card__cta">
         {{ main_link.label }} <span aria-hidden="true">→</span>
       </a>
+      {% if secondary_link.url %}
+        <a href="{{ secondary_link.url }}" class="af-card__cta af-card__cta--secondary">
+          {{ secondary_link.label }} <span aria-hidden="true">→</span>
+        </a>
+      {% endif %}
     </footer>
   {% endif %}
 </article>

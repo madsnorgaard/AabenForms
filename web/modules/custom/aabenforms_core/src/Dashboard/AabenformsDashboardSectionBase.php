@@ -72,6 +72,13 @@ abstract class AabenformsDashboardSectionBase extends PluginBase implements Aabe
   /**
    * {@inheritdoc}
    */
+  public function getSecondaryLink(): array {
+    return [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getCacheTags(): array {
     return [];
   }

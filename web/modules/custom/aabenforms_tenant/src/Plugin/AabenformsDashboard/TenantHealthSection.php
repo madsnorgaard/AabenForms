@@ -106,6 +106,28 @@ class TenantHealthSection extends AabenformsDashboardSectionBase {
    * {@inheritdoc}
    */
   public function getMainLink(): array {
+    // "See tenants" is the Domain list where all tenants are visible. Fall back
+    // to the provision form if the viewer cannot administer domains, so the
+    // card always has a working primary link.
+    $seeTenants = Url::fromRoute('domain.admin');
+    if ($seeTenants->access()) {
+      return ['label' => $this->t('See tenants'), 'url' => $seeTenants];
+    }
+    return [
+      'label' => $this->t('Provision tenant'),
+      'url' => Url::fromRoute('aabenforms_tenant.provision'),
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getSecondaryLink(): array {
+    // Only offer "Provision tenant" as the second CTA when the primary is the
+    // tenant list (avoid duplicating it when it is already the main link).
+    if (!Url::fromRoute('domain.admin')->access()) {
+      return [];
+    }
     return [
       'label' => $this->t('Provision tenant'),
       'url' => Url::fromRoute('aabenforms_tenant.provision'),

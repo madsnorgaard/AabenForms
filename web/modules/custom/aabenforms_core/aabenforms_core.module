@@ -112,6 +112,7 @@ function aabenforms_core_theme(): array {
         'hero_metric' => NULL,
         'secondary_metrics' => [],
         'main_link' => [],
+        'secondary_link' => [],
       ],
     ],
     'aabenforms_dashboard_landing' => [

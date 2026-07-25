@@ -73,4 +73,13 @@ interface AabenformsDashboardSectionInterface extends PluginInspectionInterface,
    */
   public function getMainLink(): array;
 
+  /**
+   * Optional second footer CTA, shown after the main link.
+   *
+   * @return array
+   *   ['label' => string|TranslatableMarkup, 'url' => \Drupal\Core\Url], or an
+   *   empty array for no secondary link.
+   */
+  public function getSecondaryLink(): array;
+
 }

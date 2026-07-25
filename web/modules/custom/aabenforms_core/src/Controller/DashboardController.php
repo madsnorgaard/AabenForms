@@ -127,6 +127,7 @@ class DashboardController extends ControllerBase {
       '#hero_metric' => $this->safeAccessor($id, 'getHeroMetric', fn () => $section->getHeroMetric()),
       '#secondary_metrics' => $this->safeAccessor($id, 'getSecondaryMetrics', fn () => $section->getSecondaryMetrics(), []),
       '#main_link' => $this->safeAccessor($id, 'getMainLink', fn () => $section->getMainLink(), []),
+      '#secondary_link' => $this->safeAccessor($id, 'getSecondaryLink', fn () => $section->getSecondaryLink(), []),
     ];
 
     // If everything bombed (no badge, no metric, no link) tag the card
