@@ -1,0 +1,6 @@
+services:
+  aabenforms_digital_post_queue.dispatcher:
+    class: Drupal\aabenforms_digital_post_queue\Service\DigitalPostQueueDispatcher
+    arguments:
+      - '@entity_type.manager'
+      - '@aabenforms_core.cpr_access'

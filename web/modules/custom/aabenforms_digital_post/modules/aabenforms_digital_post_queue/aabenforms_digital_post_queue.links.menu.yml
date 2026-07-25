@@ -1,0 +1,6 @@
+aabenforms_digital_post_queue.jobs:
+  title: 'Digital Post queue'
+  description: 'Robust asynchronous Digital Post delivery: in-flight, retried, and dead-lettered sends.'
+  route_name: entity.advancedqueue_queue.collection
+  parent: aabenforms_core.dashboard
+  weight: 20

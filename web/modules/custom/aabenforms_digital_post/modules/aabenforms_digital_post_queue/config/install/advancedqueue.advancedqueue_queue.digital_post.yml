@@ -1,0 +1,19 @@
+langcode: en
+status: true
+dependencies:
+  enforced:
+    module:
+      - aabenforms_digital_post_queue
+id: digital_post
+label: 'Digital Post send'
+# Database backend supports retries + a lease; durability is the whole point.
+backend: database
+backend_configuration:
+  lease_time: 300
+# processor: cron -> the queue drains itself on every cron run via
+# advancedqueue_cron(). No daemon required; a daemon (drush
+# advancedqueue:queue:process) can be added for lower latency.
+processor: cron
+processing_time: 90
+locked: false
+stop_when_empty: false
