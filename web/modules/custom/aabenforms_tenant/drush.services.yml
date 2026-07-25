@@ -1,0 +1,7 @@
+services:
+  aabenforms_tenant.drush_commands:
+    class: Drupal\aabenforms_tenant\Drush\TenantCommands
+    arguments:
+      - '@aabenforms_tenant.tenant_provisioner'
+    tags:
+      - { name: drush.command }

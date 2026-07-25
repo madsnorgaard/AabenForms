@@ -5,3 +5,11 @@ aabenforms_tenant.settings:
     _title: 'AabenForms tenant settings'
   requirements:
     _permission: 'administer site configuration'
+
+aabenforms_tenant.provision:
+  path: '/admin/config/aabenforms/tenant/provision'
+  defaults:
+    _form: '\Drupal\aabenforms_tenant\Form\ProvisionTenantForm'
+    _title: 'Provision tenant'
+  requirements:
+    _permission: 'administer site configuration'

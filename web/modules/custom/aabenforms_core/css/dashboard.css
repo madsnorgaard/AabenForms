@@ -177,6 +177,10 @@
   margin-top: auto;
   padding-top: var(--af-space-3);
   border-top: 1px solid var(--af-color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--af-space-2) var(--af-space-4);
+  align-items: center;
 }
 
 .af-card__cta {
@@ -184,6 +188,11 @@
   font-weight: 500;
   color: var(--af-color-brand-strong);
   text-decoration: none;
+}
+
+.af-card__cta--secondary {
+  font-weight: 400;
+  color: var(--af-color-text-muted);
 }
 
 .af-card__cta:hover,

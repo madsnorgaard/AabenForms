@@ -1,0 +1,5 @@
+aabenforms_tenant.provision:
+  title: 'Provision tenant'
+  route_name: aabenforms_tenant.provision
+  appears_on:
+    - aabenforms_tenant.settings
