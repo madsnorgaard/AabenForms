@@ -7,12 +7,16 @@ namespace Drupal\aabenforms_digital_post\DigitalPost;
 /**
  * Immutable result of a Digital Post send attempt.
  *
- * Either success with a transaction id, or failure with a typed reason
- * code.
+ * One of three outcomes: success, pending, or failure with a typed reason
+ * code. `pending` exists for the live transport: a 2xx from
+ * kombiPostAfsend() means the message was ACCEPTED for delivery, not that it
+ * was delivered - the real delivery/failure arrives asynchronously as a
+ * Beskedfordeler receipt. A live send therefore never returns success.
  */
 final class Result {
 
   public const SUCCESS = 'success';
+  public const PENDING = 'pending';
   public const FAILURE = 'failure';
 
   // Reason codes (failures only).
@@ -47,6 +51,22 @@ final class Result {
   }
 
   /**
+   * Builds a pending Result: accepted for delivery, outcome not yet known.
+   *
+   * The live transport returns this on a 2xx from Serviceplatformen. The final
+   * delivered/failed state is reconciled later from the asynchronous receipt.
+   */
+  public static function pending(string $transactionId, string $message = '', ?string $rawResponse = NULL): self {
+    return new self(
+      status: self::PENDING,
+      transactionId: $transactionId,
+      reasonCode: NULL,
+      message: $message,
+      rawResponse: $rawResponse,
+    );
+  }
+
+  /**
    * Builds a failure Result with a typed reason code.
    */
   public static function failure(string $transactionId, string $reasonCode, string $message, ?string $rawResponse = NULL): self {
@@ -64,6 +84,13 @@ final class Result {
    */
   public function isSuccess(): bool {
     return $this->status === self::SUCCESS;
+  }
+
+  /**
+   * Whether this Result is pending (accepted, awaiting an async receipt).
+   */
+  public function isPending(): bool {
+    return $this->status === self::PENDING;
   }
 
   /**
