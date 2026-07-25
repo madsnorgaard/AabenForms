@@ -1,0 +1,35 @@
+aabenforms_nemlogin.login:
+  path: '/nemlogin/login'
+  defaults:
+    _controller: '\Drupal\aabenforms_nemlogin\Controller\NemloginController::login'
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
+aabenforms_nemlogin.acs:
+  path: '/nemlogin/acs'
+  defaults:
+    _controller: '\Drupal\aabenforms_nemlogin\Controller\NemloginController::acs'
+  methods: [POST]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+    _csrf_token: 'FALSE'
+
+aabenforms_nemlogin.slo:
+  path: '/nemlogin/slo'
+  defaults:
+    _controller: '\Drupal\aabenforms_nemlogin\Controller\NemloginController::slo'
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: 'TRUE'
+
+aabenforms_nemlogin.metadata:
+  path: '/nemlogin/metadata'
+  defaults:
+    _controller: '\Drupal\aabenforms_nemlogin\Controller\NemloginController::metadata'
+  requirements:
+    _access: 'TRUE'
