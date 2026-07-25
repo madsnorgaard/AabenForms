@@ -1,0 +1,6 @@
+services:
+  aabenforms_tenant.tenant_provisioner:
+    class: Drupal\aabenforms_tenant\Service\TenantProvisioner
+    arguments:
+      - '@entity_type.manager'
+      - '@logger.factory'

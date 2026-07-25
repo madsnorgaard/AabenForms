@@ -79,21 +79,31 @@ serviceplatformen:
 
 ### 3. Multi-Tenancy (Optional)
 
-If using Domain module for multi-tenancy:
+A tenant is a Domain plus its own CPR encryption key and profile, so cases and
+CPR are isolated per tenant. A tenant does not have to be a whole kommune: in a
+magistratsstyre like Aarhus, give each magistrat its own subdomain and provision
+it as its own tenant. Stand one up in a single command:
 
 ```bash
-# Install domain module
-ddev composer require drupal/domain
-ddev drush pm:enable domain domain_access -y
+ddev drush pm:enable aabenforms_tenant -y
 
-# Create tenant domains
-ddev drush domain:create aarhus.aabenforms.ddev.site "Aarhus Kommune"
-ddev drush domain:create odense.aabenforms.ddev.site "Odense Kommune"
+# Provision a magistrat as a tenant (Domain + per-tenant CPR key + profile).
+ddev drush aabenforms:tenant:provision aarhus_mtm "Aarhus - Teknik og Miljoe" \
+  --hostname=mtm.aarhus.aabenforms.ddev.site
+
+# Preview without changing anything.
+ddev drush aabenforms:tenant:provision aarhus_mtm "Aarhus - Teknik og Miljoe" --dry-run
 ```
 
-Tenant-specific configuration is stored at:
-- `aabenforms_core.tenant.aarhus`
-- `aabenforms_core.tenant.odense`
+The per-tenant CPR key uses the `env` provider, so provisioning creates only
+config; the command reports the environment variable to set (base64 of 32
+random bytes) before CPR can be stored for the tenant, e.g.
+`AABENFORMS_CPR_KEY_AARHUS_MTM`. Set it in the host environment and restart.
+Re-running the command is safe (idempotent).
+
+Optional tenant-specific integration configuration is stored at:
+- `aabenforms_core.tenant.aarhus_mtm`
+- `aabenforms_core.tenant.aarhus_mbu`
 
 ## Usage
 

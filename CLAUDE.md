@@ -256,12 +256,19 @@ git commit -m "Update webform to 6.3.1"
 
 ### 3. Testing Multi-Tenancy
 ```bash
-# Create test tenant domains
-ddev drush domain:create aarhus.aabenforms.ddev.site "Aarhus Kommune"
-ddev drush domain:create odense.aabenforms.ddev.site "Odense Kommune"
+# Provision tenants (Domain + per-tenant CPR key + encryption profile) in one
+# command each. A tenant can be a whole kommune or a single magistrat.
+ddev drush aabenforms:tenant:provision aarhus_mtm "Aarhus - Teknik og Miljoe" \
+  --hostname=mtm.aarhus.aabenforms.ddev.site
+ddev drush aabenforms:tenant:provision odense "Odense Kommune" \
+  --hostname=odense.aabenforms.ddev.site
+
+# Each tenant's CPR key uses the env provider; set its variable (base64 of 32
+# random bytes) and restart before storing CPR, e.g.:
+#   AABENFORMS_CPR_KEY_AARHUS_MTM, AABENFORMS_CPR_KEY_ODENSE
 
 # Add to /etc/hosts (or DDEV auto-manages with use_dns_when_possible)
-# 127.0.0.1 aarhus.aabenforms.ddev.site
+# 127.0.0.1 mtm.aarhus.aabenforms.ddev.site
 # 127.0.0.1 odense.aabenforms.ddev.site
 ```
 
