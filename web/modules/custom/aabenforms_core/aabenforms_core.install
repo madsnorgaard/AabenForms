@@ -79,7 +79,92 @@ function aabenforms_core_schema() {
     ],
   ];
 
+  $schema['aabenforms_trace'] = aabenforms_core_trace_schema_definition();
+
   return $schema;
+}
+
+/**
+ * Schema for the persisted workflow execution trace.
+ *
+ * The WorkflowExecutionCollector builds a per-request step list that was, until
+ * now, only echoed back in the submission response and then lost. This table
+ * persists one trace row per submission so a case can be traced, debugged and
+ * demonstrated after the fact - the evidence spine of the "glass box".
+ *
+ * @return array
+ *   The Drupal schema definition for the aabenforms_trace table.
+ */
+function aabenforms_core_trace_schema_definition(): array {
+  return [
+    'description' => 'Persisted workflow execution trace, one row per webform submission.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Primary key.',
+      ],
+      'sid' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'The {webform_submission}.sid this trace belongs to.',
+      ],
+      'webform_id' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'The webform machine name.',
+      ],
+      'case_id' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => FALSE,
+        'description' => 'The {aabenforms_case}.id opened from this submission, if any.',
+      ],
+      'status' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => 'completed',
+        'description' => 'Overall execution status: completed or failed.',
+      ],
+      'step_count' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Number of steps in the trace.',
+      ],
+      'mitid_verified' => [
+        'type' => 'int',
+        'size' => 'tiny',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Whether a MitID identity was verified (1) or the gate was demo/failed (0).',
+      ],
+      'steps' => [
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => FALSE,
+        'description' => 'The full step list as JSON.',
+      ],
+      'created' => [
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'description' => 'Unix timestamp when the trace was recorded.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'sid' => ['sid'],
+      'case_id' => ['case_id'],
+      'created' => ['created'],
+    ],
+  ];
 }
 
 /**
@@ -179,6 +264,18 @@ function aabenforms_core_update_11002(): string {
   }
 
   return $changes ? implode('; ', $changes) : 'no changes - key and profile already present';
+}
+
+/**
+ * Create the aabenforms_trace table (persisted workflow execution trace).
+ */
+function aabenforms_core_update_11003(): string {
+  $schema = \Drupal::database()->schema();
+  if (!$schema->tableExists('aabenforms_trace')) {
+    $schema->createTable('aabenforms_trace', aabenforms_core_trace_schema_definition());
+    return 'created aabenforms_trace table';
+  }
+  return 'no changes - aabenforms_trace already present';
 }
 
 /**

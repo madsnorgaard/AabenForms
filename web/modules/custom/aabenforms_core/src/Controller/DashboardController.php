@@ -225,9 +225,17 @@ class DashboardController extends ControllerBase {
   protected function buildQuickActions(): array {
     $candidates = [
       [
+        'label' => $this->t('Evidence traces'),
+        'route' => 'aabenforms_core.trace_list',
+        'primary' => TRUE,
+      ],
+      [
+        'label' => $this->t('Readiness board'),
+        'route' => 'aabenforms_core.readiness',
+      ],
+      [
         'label' => $this->t('New workflow'),
         'route' => 'aabenforms_workflows.template_browser',
-        'primary' => TRUE,
       ],
       [
         'label' => $this->t('Send test Digital Post'),
@@ -254,7 +262,7 @@ class DashboardController extends ControllerBase {
         ];
       }
       catch (RouteNotFoundException) {
-        // Skip — module providing the route isn't enabled.
+        // Skip - module providing the route isn't enabled.
       }
     }
     return $actions;

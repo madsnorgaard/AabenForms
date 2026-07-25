@@ -6,6 +6,7 @@ namespace Drupal\aabenforms_digital_post\TestMode;
 
 use Drupal\aabenforms_digital_post\DigitalPost\DigitalPost;
 use Drupal\aabenforms_digital_post\DigitalPost\Result;
+use Drupal\aabenforms_digital_post\Memo\MemoBuilder;
 use Drupal\aabenforms_digital_post\Service\Sf1601ClientInterface;
 use Drupal\aabenforms_digital_post\Service\TransactionIdGenerator;
 use Drupal\Component\Datetime\TimeInterface;
@@ -34,6 +35,7 @@ final class FakeSendDatabaseLogger implements Sf1601ClientInterface {
     private readonly TransactionIdGenerator $transactionIdGenerator,
     private readonly TimeInterface $time,
     private readonly LoggerInterface $logger,
+    private readonly MemoBuilder $memoBuilder,
   ) {
   }
 
@@ -60,6 +62,10 @@ final class FakeSendDatabaseLogger implements Sf1601ClientInterface {
       ], $post->attachments),
       'total_attachment_bytes' => $post->totalAttachmentBytes(),
       'meta' => $post->meta,
+      // The real SF1601 MeMo wire payload (kombi_request XML). This is what a
+      // live send would post; storing it makes the evidence dashboard show
+      // genuine message construction rather than the JSON summary above.
+      'memo_xml' => $this->buildMemoXml($post),
     ];
     try {
       $this->database->insert('aabenforms_digital_post_log')
@@ -96,6 +102,29 @@ final class FakeSendDatabaseLogger implements Sf1601ClientInterface {
         reasonCode: Result::REASON_TRANSPORT,
         message: 'fake_db write failed: ' . $e->getMessage(),
       );
+    }
+  }
+
+  /**
+   * Builds the MeMo kombi_request XML, tolerating build failures.
+   *
+   * The evidence is nice-to-have: a build failure must never fail the send
+   * (the case must still reach lukket), so it logs a warning and returns NULL.
+   * The vendored MeMo classes emit PHP 8.4 implicit-nullable deprecations at
+   * load time; those are silenced around the build to keep the log clean.
+   */
+  private function buildMemoXml(DigitalPost $post): ?string {
+    $previous = error_reporting();
+    error_reporting($previous & ~E_DEPRECATED);
+    try {
+      return $this->memoBuilder->buildKombiRequestXml($post);
+    }
+    catch (\Throwable $e) {
+      $this->logger->warning('MeMo build failed (logging JSON summary only): @msg', ['@msg' => $e->getMessage()]);
+      return NULL;
+    }
+    finally {
+      error_reporting($previous);
     }
   }
 

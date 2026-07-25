@@ -98,7 +98,7 @@ actions:
       amount_field: amount
       currency: DKK
       payment_method: nets_easy
-      description_field: booking_purpose
+      description_field: facility_or_purpose
       store_payment_id_in: payment_id
       store_status_in: payment_status
     successors:

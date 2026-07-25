@@ -9,3 +9,19 @@ aabenforms_core.dashboard:
   menu_name: admin
   parent: system.admin
   weight: -100
+
+aabenforms_core.trace_list:
+  title: 'Evidence traces'
+  description: 'Trace a submission through every Danish service contract it touched.'
+  route_name: aabenforms_core.trace_list
+  menu_name: admin
+  parent: aabenforms_core.dashboard
+  weight: -90
+
+aabenforms_core.readiness:
+  title: 'Readiness board'
+  description: 'Honest scorecard: what is production-grade, mock, or roadmap.'
+  route_name: aabenforms_core.readiness
+  menu_name: admin
+  parent: aabenforms_core.dashboard
+  weight: -80

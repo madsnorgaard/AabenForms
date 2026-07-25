@@ -1,19 +1,26 @@
 {
   "request": {
     "method": "POST",
-    "urlPath": "/service/KombiPostAfsend_1/kombi"
+    "urlPath": "/service/KombiPostAfsend_1/kombi",
+    "headers": {
+      "Content-Type": { "contains": "application/xml" }
+    },
+    "bodyPatterns": [
+      {
+        "matchesXPath": {
+          "expression": "//memo:MessageHeader/memo:messageType/text()",
+          "xPathNamespaces": { "memo": "https://DigitalPost.dk/MeMo-1" },
+          "contains": "DIGITALPOST"
+        }
+      }
+    ]
   },
   "response": {
     "status": 200,
     "headers": {
-      "Content-Type": "application/json"
+      "Content-Type": "application/xml"
     },
-    "jsonBody": {
-      "status": "accepted",
-      "received_at": "{{now offset='0 seconds'}}",
-      "transaction_id": "{{request.headers.X-Transaction-Id}}",
-      "note": "WireMock stub for SF1601.kombiPostAfsend. Session 1 uses JSON bodies; session 2 will ship a real SOAP envelope matcher."
-    },
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><result><transactionId>{{request.headers.X-Transaction-Id}}</transactionId><status>OK</status><receivedAt>{{now offset='0 seconds'}}</receivedAt></result>",
     "transformers": ["response-template"]
   }
 }
