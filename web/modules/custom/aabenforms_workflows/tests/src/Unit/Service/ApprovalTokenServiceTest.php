@@ -76,8 +76,8 @@ class ApprovalTokenServiceTest extends UnitTestCase {
    * A token older than TOKEN_EXPIRATION fails the expiry check.
    */
   public function testExpiredTokenRejected(): void {
-    // 7 days + 1 second ago - past TOKEN_EXPIRATION (604800).
-    $token = $this->service->generateToken(42, 1, time() - 604801);
+    // TOKEN_EXPIRATION + 1 second ago - just past the window.
+    $token = $this->service->generateToken(42, 1, time() - ApprovalTokenService::TOKEN_EXPIRATION - 1);
     $this->assertFalse($this->service->validateToken(42, 1, $token));
   }
 
@@ -178,7 +178,7 @@ class ApprovalTokenServiceTest extends UnitTestCase {
    */
   public function testIsTokenExpiredSemantics(): void {
     // Genuinely-past well-formed token → TRUE.
-    $past = $this->service->generateToken(42, 1, time() - 604801);
+    $past = $this->service->generateToken(42, 1, time() - ApprovalTokenService::TOKEN_EXPIRATION - 1);
     $this->assertTrue($this->service->isTokenExpired($past));
 
     // Fresh well-formed token → FALSE.

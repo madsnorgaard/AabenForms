@@ -39,6 +39,8 @@ services:
       - '@aabenforms_core.audit_logger'
       - '@logger.factory'
       - '@aabenforms_core.cpr_access'
+      - '@aabenforms_core.family_lookup'
+      - '@config.factory'
 
   aabenforms_workflows.appeal_ownership_verifier:
     class: Drupal\aabenforms_workflows\Service\AppealOwnershipVerifier

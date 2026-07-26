@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\aabenforms_workflows\Unit\Service;
 
+use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
 use Drupal\aabenforms_workflows\Service\ParentCprVerifier;
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\ImmutableConfig;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\webform\WebformInterface;
 use Drupal\webform\WebformSubmissionInterface;
 use Drupal\Tests\UnitTestCase;
 use Psr\Log\LoggerInterface;
@@ -56,6 +60,20 @@ class ParentCprVerifierTest extends UnitTestCase {
   protected $logger;
 
   /**
+   * Mock family/custody lookup.
+   *
+   * @var \Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface|\PHPUnit\Framework\MockObject\MockObject
+   */
+  protected $familyLookup;
+
+  /**
+   * Webform ids the custody gate applies to in the current test.
+   *
+   * @var array
+   */
+  protected array $custodyGatedForms = [];
+
+  /**
    * {@inheritdoc}
    */
   protected function setUp(): void {
@@ -75,11 +93,24 @@ class ParentCprVerifierTest extends UnitTestCase {
       static fn (string $v): string => str_starts_with($v, 'AFENC1:') ? substr($v, 7) : $v
     );
 
+    $this->familyLookup = $this->createMock(FamilyRelationsLookupInterface::class);
+
+    // Config factory: custody_gated_forms reads $this->custodyGatedForms so
+    // individual tests can switch the gate on for a form id.
+    $settings = $this->createMock(ImmutableConfig::class);
+    $settings->method('get')->willReturnCallback(
+      fn ($key) => $key === 'custody_gated_forms' ? $this->custodyGatedForms : NULL
+    );
+    $configFactory = $this->createMock(ConfigFactoryInterface::class);
+    $configFactory->method('get')->willReturn($settings);
+
     $this->verifier = new ParentCprVerifier(
       $this->sessionManager,
       $this->auditLogger,
       $logger_factory,
       $cprAccess,
+      $this->familyLookup,
+      $configFactory,
     );
   }
 
@@ -284,6 +315,93 @@ class ParentCprVerifierTest extends UnitTestCase {
     $this->assertSame('mismatch', ParentCprVerifier::RESULT_MISMATCH);
     $this->assertSame('missing_mitid_cpr', ParentCprVerifier::RESULT_MISSING_MITID_CPR);
     $this->assertSame('missing_expected_cpr', ParentCprVerifier::RESULT_MISSING_EXPECTED_CPR);
+  }
+
+  /**
+   * Builds a submission mock for a custody-gated form with a child CPR.
+   */
+  protected function custodySubmission(string $webformId, ?string $childCpr, string $parentCpr = '0101001234'): WebformSubmissionInterface {
+    $webform = $this->createMock(WebformInterface::class);
+    $webform->method('id')->willReturn($webformId);
+    $submission = $this->createMock(WebformSubmissionInterface::class);
+    $submission->method('getElementData')
+      ->willReturnCallback(static function (string $field) use ($childCpr, $parentCpr) {
+        return match ($field) {
+          'parent1_cpr' => $parentCpr,
+          'child_cpr' => $childCpr,
+          default => NULL,
+        };
+      });
+    $submission->method('getWebform')->willReturn($webform);
+    $submission->method('id')->willReturn(77);
+    $submission->method('uuid')->willReturn('sub-uuid-custody');
+    return $submission;
+  }
+
+  /**
+   * A gated form blocks a matching approver without registered custody.
+   *
+   * @covers ::verify
+   */
+  public function testCustodyGateBlocksNonCustodyHolder(): void {
+    $this->custodyGatedForms = ['school_transfer'];
+    $this->sessionManager->method('getCprFromSession')->willReturn('0101001234');
+    $this->familyLookup->method('hasCustody')
+      ->with('0101001234', '0109182345')
+      ->willReturn(FALSE);
+
+    $this->assertSame(
+      ParentCprVerifier::RESULT_NO_CUSTODY,
+      $this->verifier->verify($this->custodySubmission('school_transfer', '0109182345'), 1, 'wf-custody'),
+    );
+  }
+
+  /**
+   * A gated form passes a registered custody holder through to MATCH.
+   *
+   * @covers ::verify
+   */
+  public function testCustodyGatePassesCustodyHolder(): void {
+    $this->custodyGatedForms = ['school_transfer'];
+    $this->sessionManager->method('getCprFromSession')->willReturn('0101001234');
+    $this->familyLookup->method('hasCustody')->willReturn(TRUE);
+
+    $this->assertSame(
+      ParentCprVerifier::RESULT_MATCH,
+      $this->verifier->verify($this->custodySubmission('school_transfer', '0109182345'), 1, 'wf-custody'),
+    );
+  }
+
+  /**
+   * Non-gated forms never consult the custody registry.
+   *
+   * @covers ::verify
+   */
+  public function testNonGatedFormSkipsCustodyCheck(): void {
+    $this->custodyGatedForms = ['some_other_form'];
+    $this->sessionManager->method('getCprFromSession')->willReturn('0101001234');
+    $this->familyLookup->expects($this->never())->method('hasCustody');
+
+    $this->assertSame(
+      ParentCprVerifier::RESULT_MATCH,
+      $this->verifier->verify($this->custodySubmission('school_transfer', '0109182345'), 1, 'wf-custody'),
+    );
+  }
+
+  /**
+   * A gated form without a child CPR on the submission skips the gate.
+   *
+   * @covers ::verify
+   */
+  public function testGatedFormWithoutChildCprSkipsGate(): void {
+    $this->custodyGatedForms = ['school_transfer'];
+    $this->sessionManager->method('getCprFromSession')->willReturn('0101001234');
+    $this->familyLookup->expects($this->never())->method('hasCustody');
+
+    $this->assertSame(
+      ParentCprVerifier::RESULT_MATCH,
+      $this->verifier->verify($this->custodySubmission('school_transfer', NULL), 1, 'wf-custody'),
+    );
   }
 
 }

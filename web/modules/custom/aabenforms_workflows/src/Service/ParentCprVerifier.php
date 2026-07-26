@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_workflows\Service;
 
+use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
+use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Drupal\webform\WebformSubmissionInterface;
 use Psr\Log\LoggerInterface;
@@ -56,6 +58,18 @@ class ParentCprVerifier {
   public const RESULT_MISSING_EXPECTED_CPR = 'missing_expected_cpr';
 
   /**
+   * The CPRs match, but the approver holds no registered custody.
+   *
+   * Only returned for forms listed in the custody_gated_forms setting whose
+   * submission carries a child_cpr field: the approver proved they are the
+   * person named on the form, but the CPR registry does not list them as a
+   * custody holder of the child the request concerns. Fail-closed security
+   * outcome (FOB 2025-9 territory: school decisions require the actual
+   * custody holders).
+   */
+  public const RESULT_NO_CUSTODY = 'no_custody';
+
+  /**
    * The MitID session manager.
    *
    * @var \Drupal\aabenforms_mitid\Service\MitIdSessionManager
@@ -94,12 +108,18 @@ class ParentCprVerifier {
    *   The logger factory.
    * @param \Drupal\aabenforms_core\Service\CprAccess $cpr_access
    *   The CPR access helper, used to decrypt the stored parent CPR.
+   * @param \Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface $familyLookup
+   *   The family/custody registry lookup (custody gate).
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
+   *   The config factory (custody_gated_forms setting).
    */
   public function __construct(
     MitIdSessionManager $session_manager,
     AuditLogger $audit_logger,
     LoggerChannelFactoryInterface $logger_factory,
     CprAccess $cpr_access,
+    protected FamilyRelationsLookupInterface $familyLookup,
+    protected ConfigFactoryInterface $configFactory,
   ) {
     $this->sessionManager = $session_manager;
     $this->auditLogger = $audit_logger;
@@ -202,6 +222,16 @@ class ParentCprVerifier {
       return self::RESULT_MISMATCH;
     }
 
+    // Custody gate (opt-in per form): the CPR match proves "the approver is
+    // the person named on the form"; for custody-gated forms we additionally
+    // require "the approver holds registered custody of the child". Only
+    // enforced when the form is listed in custody_gated_forms AND the
+    // submission carries a child_cpr - so existing flows are untouched.
+    $custodyResult = $this->verifyCustody($submission, $asserted, $parent_number, $workflow_id);
+    if ($custodyResult !== NULL) {
+      return $custodyResult;
+    }
+
     $this->logger->info(
       'Parent approval CPR verified for submission @sid, parent @parent',
       [
@@ -220,6 +250,75 @@ class ParentCprVerifier {
       ]
     );
     return self::RESULT_MATCH;
+  }
+
+  /**
+   * Runs the registry custody check for custody-gated forms.
+   *
+   * @param \Drupal\webform\WebformSubmissionInterface $submission
+   *   The submission being approved.
+   * @param string $assertedCpr
+   *   The normalised MitID-asserted CPR.
+   * @param int $parent_number
+   *   The parent number (audit context).
+   * @param string $workflow_id
+   *   The MitID workflow id (audit context).
+   *
+   * @return string|null
+   *   RESULT_NO_CUSTODY when the gate applies and fails, NULL when the gate
+   *   does not apply or passes (verification continues to RESULT_MATCH).
+   */
+  protected function verifyCustody(WebformSubmissionInterface $submission, string $assertedCpr, int $parent_number, string $workflow_id): ?string {
+    $gatedForms = $this->configFactory->get('aabenforms_workflows.settings')->get('custody_gated_forms') ?? [];
+    if ($gatedForms === []) {
+      return NULL;
+    }
+    $webformId = (string) $submission->getWebform()->id();
+    if (!in_array($webformId, $gatedForms, TRUE)) {
+      return NULL;
+    }
+
+    $childCpr = $this->normaliseCpr($this->cprAccess->reveal((string) ($submission->getElementData('child_cpr') ?? '')));
+    if ($childCpr === '') {
+      // Gated form without a child CPR: nothing to check against. The form
+      // schema decides whether child_cpr is required; the gate only enforces
+      // custody when a child is actually identified.
+      return NULL;
+    }
+
+    if ($this->familyLookup->hasCustody($assertedCpr, $childCpr)) {
+      $this->auditLogger->logCprLookup(
+        $assertedCpr,
+        'parent_approval_custody_confirmed',
+        'success',
+        [
+          'submission_uuid' => (string) ($submission->uuid() ?? ''),
+          'parent_number' => $parent_number,
+          'workflow_id' => $workflow_id,
+        ]
+      );
+      return NULL;
+    }
+
+    $this->logger->warning(
+      'Parent approval blocked: no registered custody for submission @sid, parent @parent',
+      [
+        '@sid' => (int) $submission->id(),
+        '@parent' => $parent_number,
+      ]
+    );
+    $this->auditLogger->logCprLookup(
+      $assertedCpr,
+      'parent_approval_no_custody',
+      'failure',
+      [
+        'submission_uuid' => (string) ($submission->uuid() ?? ''),
+        'parent_number' => $parent_number,
+        'workflow_id' => $workflow_id,
+        'child_cpr_hash' => hash('sha256', $childCpr),
+      ]
+    );
+    return self::RESULT_NO_CUSTODY;
   }
 
   /**
