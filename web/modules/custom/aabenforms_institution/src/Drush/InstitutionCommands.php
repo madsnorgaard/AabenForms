@@ -66,6 +66,14 @@ final class InstitutionCommands extends DrushCommands {
     $updated = 0;
 
     while (($row = fgetcsv($handle, escape: '\\')) !== FALSE) {
+      // Skip blank lines (fgetcsv yields [NULL]) and ragged rows instead of
+      // crashing mid-import and losing the whole parent-linking pass.
+      if ($row === [NULL] || count($row) !== count($header)) {
+        if ($row !== [NULL]) {
+          $this->logger()->warning(sprintf('Skipped ragged CSV row (%d columns, expected %d).', count($row), count($header)));
+        }
+        continue;
+      }
       $data = array_combine($header, $row);
       $number = trim((string) $data['institution_number']);
       if ($number === '') {
@@ -92,6 +100,12 @@ final class InstitutionCommands extends DrushCommands {
       $parentNumber = trim((string) ($data['parent_number'] ?? ''));
       if ($parentNumber !== '') {
         $parentLinks[$number] = $parentNumber;
+      }
+      else {
+        // A re-import whose row no longer names a parent must clear a stale
+        // link, not silently keep the old hierarchy.
+        $institution->set('parent_institution', NULL);
+        $institution->save();
       }
     }
     fclose($handle);

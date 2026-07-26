@@ -51,15 +51,23 @@ class Sf6006FamilyLookup implements FamilyRelationsLookupInterface {
     }
 
     if ($this->demoMode()) {
-      $this->logger->info('Family lookup ran in demo mode (no Serviceplatformen certificate).');
+      $this->logger->warning('Family lookup ran in demo mode (no Serviceplatformen certificate).');
       return $this->demoFamilies->childrenOf($parentCpr);
     }
 
-    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $parentCpr]);
+    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $parentCpr], ['no_cache' => TRUE]);
     $children = [];
     foreach ($result['children'] ?? [] as $child) {
-      foreach ($child['guardians'] ?? [] as $guardian) {
-        if ($guardian['cpr'] === $parentCpr && GuardianType::isCustodial((int) $guardian['type'])) {
+      // The interface promises guardians = custody holders ONLY; the raw
+      // feed may carry non-custodial relation codes, which must never reach
+      // co-sign flows that pick "the other guardian" from this list.
+      $custodial = array_values(array_filter(
+        $child['guardians'] ?? [],
+        static fn (array $g): bool => GuardianType::isCustodial((int) ($g['type'] ?? 0)),
+      ));
+      foreach ($custodial as $guardian) {
+        if ($guardian['cpr'] === $parentCpr) {
+          $child['guardians'] = $custodial;
           $children[] = $child;
           break;
         }
@@ -78,11 +86,11 @@ class Sf6006FamilyLookup implements FamilyRelationsLookupInterface {
     }
 
     if ($this->demoMode()) {
-      $this->logger->info('Family lookup ran in demo mode (no Serviceplatformen certificate).');
+      $this->logger->warning('Family lookup ran in demo mode (no Serviceplatformen certificate).');
       return $this->demoFamilies->guardiansOf($childCpr);
     }
 
-    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $childCpr]);
+    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $childCpr], ['no_cache' => TRUE]);
     $guardians = [];
     foreach ($result['guardians'] ?? [] as $guardian) {
       if (GuardianType::isCustodial((int) ($guardian['type'] ?? 0))) {
@@ -128,7 +136,7 @@ class Sf6006FamilyLookup implements FamilyRelationsLookupInterface {
       return $this->demoFamilies->birthDateOf($childCpr);
     }
 
-    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $childCpr]);
+    $result = $this->client->request('SF6006', 'FamilyLookup', ['cpr' => $childCpr], ['no_cache' => TRUE]);
     $date = $result['person']['birth_date'] ?? NULL;
     if (!is_string($date) || $date === '') {
       return NULL;
@@ -139,6 +147,13 @@ class Sf6006FamilyLookup implements FamilyRelationsLookupInterface {
     catch (\Exception) {
       return NULL;
     }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function isDemoMode(): bool {
+    return $this->demoMode();
   }
 
   /**

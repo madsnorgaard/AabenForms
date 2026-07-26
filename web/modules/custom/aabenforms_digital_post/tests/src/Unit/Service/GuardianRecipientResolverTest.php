@@ -101,6 +101,35 @@ class GuardianRecipientResolverTest extends UnitTestCase {
   }
 
   /**
+   * The birthday boundary holds in the first hours of the day.
+   *
+   * Regression: registry birth dates are calendar dates; when constructed in
+   * the ambient timezone (UTC on CLI/queue workers) while "today" is Danish
+   * local time, diff() undercounted the age by one during the first hours of
+   * the 15th birthday and letters went to the guardians instead of the pupil.
+   *
+   * @covers ::resolveForChild
+   */
+  public function testBirthdayBoundaryAtMidnightDanishTime(): void {
+    // 00:30 Danish summer time on the 15th birthday = 22:30 UTC the day
+    // before. The resolver must still count 15 years.
+    $time = $this->createMock(TimeInterface::class);
+    $time->method('getRequestTime')->willReturn((int) (new \DateTimeImmutable('2026-07-26T00:30:00+02:00'))->format('U'));
+    $loggerFactory = $this->createMock(LoggerChannelFactoryInterface::class);
+    $loggerFactory->method('get')->willReturn($this->createMock(LoggerChannelInterface::class));
+    $resolver = new GuardianRecipientResolver($this->familyLookup, $time, $loggerFactory);
+
+    // Birth date deliberately constructed in UTC, as birthDateOf() does on a
+    // UTC-default worker.
+    $this->familyLookup->method('birthDateOf')
+      ->willReturn(new \DateTimeImmutable('2011-07-26', new \DateTimeZone('UTC')));
+
+    $resolution = $resolver->resolveForChild('2607112345');
+
+    $this->assertSame(RecipientResolution::RULE_PUPIL, $resolution->rule);
+  }
+
+  /**
    * One day before the 15th birthday, guardians still receive the post.
    *
    * @covers ::resolveForChild

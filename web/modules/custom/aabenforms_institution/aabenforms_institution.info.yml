@@ -6,5 +6,6 @@ core_version_requirement: ^11
 php: ^8.3
 
 dependencies:
+  - drupal:options
   - aabenforms_core:aabenforms_core
   - aabenforms_workflows:aabenforms_workflows

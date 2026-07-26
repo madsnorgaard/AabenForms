@@ -389,18 +389,23 @@ class ParentCprVerifierTest extends UnitTestCase {
   }
 
   /**
-   * A gated form without a child CPR on the submission skips the gate.
+   * A gated form without a child CPR fails closed (no silent skip).
    *
    * @covers ::verify
    */
-  public function testGatedFormWithoutChildCprSkipsGate(): void {
+  public function testGatedFormWithoutChildCprFailsClosed(): void {
     $this->custodyGatedForms = ['school_transfer'];
     $this->sessionManager->method('getCprFromSession')->willReturn('0101001234');
     $this->familyLookup->expects($this->never())->method('hasCustody');
 
     $this->assertSame(
-      ParentCprVerifier::RESULT_MATCH,
+      ParentCprVerifier::RESULT_NO_CUSTODY,
       $this->verifier->verify($this->custodySubmission('school_transfer', NULL), 1, 'wf-custody'),
+    );
+    // A digit-less child CPR is equally unusable and must also fail closed.
+    $this->assertSame(
+      ParentCprVerifier::RESULT_NO_CUSTODY,
+      $this->verifier->verify($this->custodySubmission('school_transfer', 'N/A'), 1, 'wf-custody'),
     );
   }
 

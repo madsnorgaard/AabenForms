@@ -133,7 +133,10 @@ class CustodyVerifyAction extends AabenFormsActionBase {
     $this->setTokenValue($this->configuration['result_token'], $hasCustody ? 'true' : 'false');
 
     if ($hasCustody) {
-      $this->recordStep('Custody Verification', 'Custody confirmed against the CPR registry (SF6006)');
+      // Honest labelling: never claim a registry confirmation for demo data.
+      $this->recordStep('Custody Verification', $this->familyLookup->isDemoMode()
+        ? 'Demo: custody confirmed against test data. Real SF6006 checks require a Serviceplatformen client certificate.'
+        : 'Custody confirmed against the CPR registry (SF6006)');
     }
     else {
       $this->log('Custody verification: adult is not a registered custody holder', [], 'warning');

@@ -143,8 +143,15 @@ class GuardianRecipientResolver {
    *   The age in whole years, in Danish local time.
    */
   protected function ageAt(\DateTimeImmutable $birthDate): int {
+    $copenhagen = new \DateTimeZone('Europe/Copenhagen');
     $today = (new \DateTimeImmutable('@' . $this->time->getRequestTime()))
-      ->setTimezone(new \DateTimeZone('Europe/Copenhagen'));
+      ->setTimezone($copenhagen);
+    // Rebuild the birth date as midnight DANISH time: registry birth dates
+    // are calendar dates, but DateTimeImmutable pins a date-only string to
+    // the ambient PHP timezone (often UTC on CLI/queue workers), and diff()
+    // honours both offsets - which made a pupil count as 14 during the first
+    // hours of their 15th birthday.
+    $birthDate = new \DateTimeImmutable($birthDate->format('Y-m-d'), $copenhagen);
     return $birthDate->diff($today)->y;
   }
 

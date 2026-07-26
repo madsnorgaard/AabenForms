@@ -79,6 +79,18 @@ interface FamilyRelationsLookupInterface {
   public function hasCustody(string $adultCpr, string $childCpr): bool;
 
   /**
+   * Whether lookups are currently answered from demo data, not the registry.
+   *
+   * Consumers MUST use this to label their outputs honestly: a workflow step
+   * or audit row claiming "confirmed against the CPR registry" when the
+   * answer came from demo fixtures would fabricate an evidence trail.
+   *
+   * @return bool
+   *   TRUE when demo data is in use.
+   */
+  public function isDemoMode(): bool;
+
+  /**
    * Returns the child's birth date, or NULL when unknown.
    *
    * Used by recipient resolution (Digital Post under-15 rule) so the age

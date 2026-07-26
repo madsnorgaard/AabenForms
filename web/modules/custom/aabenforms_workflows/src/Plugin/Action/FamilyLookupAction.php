@@ -125,13 +125,16 @@ class FamilyLookupAction extends AabenFormsActionBase {
       $this->log('Family lookup found {count} children with registered custody', [
         'count' => count($children),
       ]);
-      $this->recordStep('Family Relations Lookup', 'Custody-verified family relations retrieved from the CPR registry (SF6006)');
+      // Honest labelling: never claim a registry confirmation for demo data.
+      $this->recordStep('Family Relations Lookup', $this->familyLookup->isDemoMode()
+        ? 'Demo: family relations simulated with test data. Real SF6006 lookups require a Serviceplatformen client certificate.'
+        : 'Custody-verified family relations retrieved from the CPR registry (SF6006)');
     }
     catch (\Exception $e) {
       $this->log('Family lookup failed: {message}', ['message' => $e->getMessage()], 'error');
       $this->setTokenValue($this->configuration['result_token'], NULL);
       $this->setResultStatus('error');
-      $this->recordStep('Family Relations Lookup', 'Familieopslaget er midlertidigt utilgaengeligt. Prov igen senere.', 'failed');
+      $this->recordStep('Family Relations Lookup', 'The family registry lookup is temporarily unavailable', 'failed');
     }
   }
 

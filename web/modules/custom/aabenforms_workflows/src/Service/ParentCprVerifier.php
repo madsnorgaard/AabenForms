@@ -280,10 +280,29 @@ class ParentCprVerifier {
 
     $childCpr = $this->normaliseCpr($this->cprAccess->reveal((string) ($submission->getElementData('child_cpr') ?? '')));
     if ($childCpr === '') {
-      // Gated form without a child CPR: nothing to check against. The form
-      // schema decides whether child_cpr is required; the gate only enforces
-      // custody when a child is actually identified.
-      return NULL;
+      // Fail closed: a form was explicitly opted into the custody gate, so a
+      // missing or digit-less child_cpr must block the approval, not skip the
+      // check. Otherwise a headless submission that blanks the field (or a
+      // gated form whose child element is misnamed) silently bypasses the
+      // registry check the gate exists to enforce.
+      $this->logger->warning(
+        'Parent approval blocked: custody-gated form @form has no usable child_cpr on submission @sid',
+        [
+          '@form' => $webformId,
+          '@sid' => (int) $submission->id(),
+        ]
+      );
+      $this->auditLogger->logCprLookup(
+        $assertedCpr,
+        'parent_approval_custody_missing_child_cpr',
+        'failure',
+        [
+          'submission_uuid' => (string) ($submission->uuid() ?? ''),
+          'parent_number' => $parent_number,
+          'workflow_id' => $workflow_id,
+        ]
+      );
+      return self::RESULT_NO_CUSTODY;
     }
 
     if ($this->familyLookup->hasCustody($assertedCpr, $childCpr)) {
@@ -295,6 +314,9 @@ class ParentCprVerifier {
           'submission_uuid' => (string) ($submission->uuid() ?? ''),
           'parent_number' => $parent_number,
           'workflow_id' => $workflow_id,
+          // Honest evidence: an audit row must never assert a registry
+          // confirmation when the answer came from demo fixtures.
+          'demo_mode' => $this->familyLookup->isDemoMode(),
         ]
       );
       return NULL;
