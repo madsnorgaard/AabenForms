@@ -1,0 +1,126 @@
+uuid: 5e0a7b2c-9d4f-4a6c-9e1b-3c5d0f2a4b6c
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_esdh
+    - aabenforms_institution
+    - aabenforms_kombit
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: underretning_professional_flow
+id: underretning_professional_flow
+weight: null
+template: null
+events:
+  on_submission:
+    plugin: 'content_entity:insert'
+    configuration:
+      type: 'webform_submission underretning_professional'
+    successors:
+      -
+        id: resolve_employee
+        condition: ''
+conditions:
+  gate_employee_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[und_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_employee_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[und_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  resolve_employee:
+    label: 'Bind fagperson fra login'
+    plugin: aabenforms_resolve_employee
+    configuration:
+      submitted_employee_id_token: '[current-user:mail]'
+      result_token: und_employee_id
+    successors:
+      -
+        id: institution_lookup
+        condition: gate_employee_ok
+      -
+        id: deny_external
+        condition: gate_employee_deny
+  deny_external:
+    label: 'Afvis: brug borgerindgangen'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: underretning_professional_denied
+      step_label: 'Kun for fagpersoner'
+      message: 'Denne indgang er til fagpersoner med skærpet underretningspligt. Borgere kan underrette via den almindelige underretningsformular.'
+    successors: {  }
+  institution_lookup:
+    label: 'Slå institution op (institutionsregister)'
+    plugin: aabenforms_institution_lookup
+    configuration:
+      institution_number_token: '[webform_submission:values:institution_number:raw]'
+      result_token: und_institution
+    successors:
+      -
+        id: open_case
+        condition: ''
+  open_case:
+    label: 'Åbn sag (underretning, 24-timers frist)'
+    plugin: aabenforms_case_open
+    configuration:
+      case_type: underretning
+      case_id_token: case_id
+    successors:
+      -
+        id: journal_case
+        condition: ''
+  journal_case:
+    label: 'Journalisér sag (SF1470)'
+    plugin: aabenforms_case_journal
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: esdh_journal
+        condition: ''
+  esdh_journal:
+    label: 'Arkivér i ESDH (familieafdelingens indgang)'
+    plugin: aabenforms_case_esdh_journal
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: sf2900_distribute
+        condition: ''
+  sf2900_distribute:
+    label: 'Fordel til familieafdelingen (SF2900)'
+    plugin: aabenforms_case_sf2900_distribute
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: audit_received
+        condition: ''
+  audit_received:
+    label: 'Underretning modtaget og fordelt'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: underretning_professional_received
+      additional_data_token: '[und_institution_leader_email]'
+      message_template: 'Underretning fra fagperson modtaget, journaliseret og fordelt til familieafdelingen (ingen DUBU-API findes; ESDH/fordeling er den korrekte landingszone). Forældre orienteres ikke af underretteren. 24-timers fristen løber.'
+      status: success
+    successors: {  }

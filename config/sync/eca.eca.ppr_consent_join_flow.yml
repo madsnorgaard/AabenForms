@@ -1,0 +1,99 @@
+uuid: 1a6c3d8e-5f0b-4c2e-9a7d-9e1f6b8c0d2e
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_digital_post_eca
+    - aabenforms_kombit
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: ppr_consent_join_flow
+id: ppr_consent_join_flow
+weight: null
+template: null
+events:
+  on_update:
+    plugin: 'content_entity:update'
+    configuration:
+      type: 'webform_submission ppr_referral'
+    successors:
+      -
+        id: find_case
+        condition: gate_join_both
+      -
+        id: find_case
+        condition: gate_join_sole
+conditions:
+  gate_join_both:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:parent1_status:raw][webform_submission:values:parent2_status:raw]'
+      right: completecomplete
+      operator: equal
+      type: value
+      case: false
+  gate_join_sole:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:parent1_status:raw][webform_submission:values:parent2_cpr:raw]'
+      right: complete
+      operator: equal
+      type: value
+      case: false
+  gate_transition_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[ppr_join_transition]'
+      right: success
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  find_case:
+    label: 'Find sagen for indstillingen'
+    plugin: aabenforms_case_find
+    configuration:
+      result_token: ppr_case_id
+    successors:
+      -
+        id: transition_oplyst
+        condition: ''
+  transition_oplyst:
+    label: 'Oplys sag (alle samtykker modtaget)'
+    plugin: aabenforms_case_transition
+    configuration:
+      case_id_token: '[ppr_case_id]'
+      target_status: oplyst
+      log_message: 'Alle forældremyndighedsindehavere har samtykket med MitID (forældremyndighed kontrolleret i CPR-registret).'
+      result_token: ppr_join_transition
+    successors:
+      -
+        id: sf2900_distribute
+        condition: gate_transition_ok
+  sf2900_distribute:
+    label: 'Fordel til PPR (SF2900 fordelingskomponent)'
+    plugin: aabenforms_case_sf2900_distribute
+    configuration:
+      case_id_token: '[ppr_case_id]'
+    successors:
+      -
+        id: audit_distributed
+        condition: ''
+  audit_distributed:
+    label: 'Indstilling sendt til PPR'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: ppr_referral_distributed
+      additional_data_token: ''
+      message_template: 'Samtykke komplet. Indstillingen er fordelt til PPR via fordelingskomponenten; kopi går til Børn og Familie (tværgående mønster).'
+      status: success
+    successors: {  }

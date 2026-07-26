@@ -38,6 +38,7 @@ class TransitionCaseAction extends CaseActionBase {
       'case_id_token' => 'case_id',
       'target_status' => '',
       'log_message' => 'Status ændret.',
+      'result_token' => '',
     ] + parent::defaultConfiguration();
   }
 
@@ -68,6 +69,13 @@ class TransitionCaseAction extends CaseActionBase {
       '#required' => TRUE,
     ];
 
+    $form['result_token'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Result token name (optional)'),
+      '#description' => $this->t("When set, the token receives 'success' or 'failed' so a flow can gate follow-up actions on the transition actually happening (idempotent joins)."),
+      '#default_value' => $this->configuration['result_token'],
+    ];
+
     return parent::buildConfigurationForm($form, $form_state);
   }
 
@@ -78,6 +86,7 @@ class TransitionCaseAction extends CaseActionBase {
     $this->configuration['case_id_token'] = $form_state->getValue('case_id_token');
     $this->configuration['target_status'] = $form_state->getValue('target_status');
     $this->configuration['log_message'] = $form_state->getValue('log_message');
+    $this->configuration['result_token'] = (string) $form_state->getValue('result_token');
     parent::submitConfigurationForm($form, $form_state);
   }
 
@@ -91,6 +100,7 @@ class TransitionCaseAction extends CaseActionBase {
       $logMessage = (string) ($this->configuration['log_message'] ?? 'Status ændret.');
 
       if ($caseId === '' || $target === '') {
+        $this->setOutcome('failed');
         $this->recordStep('Sagsovergang', 'Mangler sags-id eller målstatus.', 'failed');
         return;
       }
@@ -98,6 +108,7 @@ class TransitionCaseAction extends CaseActionBase {
       $storage = $this->entityTypeManager->getStorage('aabenforms_case');
       $case = $storage->load($caseId);
       if (!$case instanceof AabenformsCase) {
+        $this->setOutcome('failed');
         $this->recordStep('Sagsovergang', sprintf('Sag #%s ikke fundet.', $caseId), 'failed');
         return;
       }
@@ -110,6 +121,7 @@ class TransitionCaseAction extends CaseActionBase {
           'to' => $target,
           'id' => $caseId,
         ], 'warning');
+        $this->setOutcome('failed');
         $this->recordStep(
           'Sagsovergang afvist',
           sprintf('Ulovlig overgang %s -> %s.', $current, $target),
@@ -126,6 +138,7 @@ class TransitionCaseAction extends CaseActionBase {
       $case->setRevisionUserId((int) $this->currentUser->id());
       $case->save();
 
+      $this->setOutcome('success');
       $this->recordStep('Sagsovergang', sprintf('Sag #%s: %s -> %s.', $caseId, $current, $target));
       $this->auditLogger->log(
         'case_transition',
@@ -136,7 +149,21 @@ class TransitionCaseAction extends CaseActionBase {
       );
     }
     catch (\Throwable $e) {
+      $this->setOutcome('failed');
       $this->handleError($e, 'Transition case');
+    }
+  }
+
+  /**
+   * Writes the transition outcome to the optional result token.
+   *
+   * @param string $outcome
+   *   Either 'success' or 'failed'.
+   */
+  protected function setOutcome(string $outcome): void {
+    $resultToken = (string) ($this->configuration['result_token'] ?? '');
+    if ($resultToken !== '') {
+      $this->setTokenValue($resultToken, $outcome);
     }
   }
 

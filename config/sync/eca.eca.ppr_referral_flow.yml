@@ -1,0 +1,193 @@
+uuid: 0f5b2c7d-4e9a-4b1d-8f6c-8d0e5a7b9c1d
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_digital_post_eca
+    - aabenforms_institution
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: ppr_referral_flow
+id: ppr_referral_flow
+weight: null
+template: null
+events:
+  on_submission:
+    plugin: 'content_entity:insert'
+    configuration:
+      type: 'webform_submission ppr_referral'
+    successors:
+      -
+        id: resolve_employee
+        condition: ''
+conditions:
+  gate_employee_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[ppr_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_employee_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[ppr_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_guardians_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[ppr_guardians_status]'
+      right: guardians
+      operator: equal
+      type: value
+      case: false
+  gate_guardians_fail:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[ppr_guardians_status]'
+      right: guardians
+      operator: equal
+      type: value
+      case: false
+  gate_two_guardians:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[ppr_guardians_count]'
+      right: '2'
+      operator: equal
+      type: numeric
+      case: false
+  gate_one_guardian:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[ppr_guardians_count]'
+      right: '2'
+      operator: equal
+      type: numeric
+      case: false
+gateways: {  }
+actions:
+  resolve_employee:
+    label: 'Bind fagperson fra login'
+    plugin: aabenforms_resolve_employee
+    configuration:
+      submitted_employee_id_token: '[current-user:mail]'
+      result_token: ppr_employee_id
+    successors:
+      -
+        id: institution_lookup
+        condition: gate_employee_ok
+      -
+        id: deny_external
+        condition: gate_employee_deny
+  deny_external:
+    label: 'Afvis: kun for fagpersoner'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: ppr_referral_denied
+      step_label: 'Kun for fagpersoner'
+      message: 'Indstilling til PPR kan kun indsendes af registrerede fagpersoner. Forældre henvises til at kontakte skolen eller dagtilbuddet.'
+    successors: {  }
+  institution_lookup:
+    label: 'Slå institution op (institutionsregister)'
+    plugin: aabenforms_institution_lookup
+    configuration:
+      institution_number_token: '[webform_submission:values:institution_number:raw]'
+      result_token: ppr_institution
+    successors:
+      -
+        id: resolve_guardians
+        condition: ''
+  resolve_guardians:
+    label: 'Find forældremyndighedsindehavere (CPR-registret)'
+    plugin: aabenforms_resolve_guardians
+    configuration:
+      child_cpr_token: '[webform_submission:values:child_cpr:raw]'
+      result_token: ppr_guardians
+    successors:
+      -
+        id: open_case
+        condition: gate_guardians_ok
+      -
+        id: deny_no_guardians
+        condition: gate_guardians_fail
+  deny_no_guardians:
+    label: 'Afvis: forældremyndighed kunne ikke fastlægges'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: ppr_referral_no_guardians
+      step_label: 'Forældremyndighed ikke fastlagt'
+      message: 'Forældremyndighedsindehaverne kunne ikke fastlægges i CPR-registret. Indstillingen kan ikke behandles digitalt - kontakt PPR direkte.'
+    successors: {  }
+  open_case:
+    label: 'Åbn sag (PPR-indstilling)'
+    plugin: aabenforms_case_open
+    configuration:
+      case_type: ppr_referral
+      case_id_token: case_id
+    successors:
+      -
+        id: journal_case
+        condition: ''
+  journal_case:
+    label: 'Journalisér sag (SF1470)'
+    plugin: aabenforms_case_journal
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: consent_invite_1
+        condition: ''
+  consent_invite_1:
+    label: 'Samtykke: indehaver 1 (parallel, Digital Post)'
+    plugin: aabenforms_send_cosign_invitation
+    configuration:
+      parent_number: '1'
+      cpr_field: parent1_cpr
+      email_field: parent1_email
+      child_name_field: child_name
+      subject_template: 'Samtykke: indstilling af dit barn til PPR'
+    successors:
+      -
+        id: consent_invite_2
+        condition: gate_two_guardians
+      -
+        id: audit_awaiting
+        condition: gate_one_guardian
+  consent_invite_2:
+    label: 'Samtykke: indehaver 2 (parallel, Digital Post)'
+    plugin: aabenforms_send_cosign_invitation
+    configuration:
+      parent_number: '2'
+      cpr_field: parent2_cpr
+      email_field: parent2_email
+      child_name_field: child_name
+      subject_template: 'Samtykke: indstilling af dit barn til PPR'
+    successors:
+      -
+        id: audit_awaiting
+        condition: ''
+  audit_awaiting:
+    label: 'Afventer forældresamtykke'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: ppr_awaiting_consent
+      additional_data_token: '[ppr_guardians_count]'
+      message_template: 'Parallelle samtykkeanmodninger sendt til forældremyndighedsindehaverne via Digital Post. Indstillingen sendes til PPR, når alle har samtykket.'
+      status: success
+    successors: {  }
