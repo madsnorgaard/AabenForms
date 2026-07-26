@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\aabenforms_digital_post_eca\Unit\Plugin\Action;
 
+use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_core\Service\WorkflowExecutionCollector;
 use Drupal\aabenforms_digital_post\DigitalPost\DigitalPost;
@@ -96,6 +97,16 @@ class CosignInvitationActionTest extends UnitTestCase {
       public ?WebformSubmissionInterface $testSubmission = NULL;
 
       /**
+       * Replaces the plugin configuration for a test case.
+       *
+       * @param array $configuration
+       *   The configuration to apply.
+       */
+      public function setTestConfiguration(array $configuration): void {
+        $this->configuration = $configuration;
+      }
+
+      /**
        * {@inheritdoc}
        */
       protected function buildApprovalUrl(int $slot, int $submissionId, string $token): string {
@@ -139,6 +150,8 @@ class CosignInvitationActionTest extends UnitTestCase {
     $configFactory = $this->createMock(ConfigFactoryInterface::class);
     $configFactory->method('get')->willReturn($settings);
     $this->action->setConfigFactory($configFactory);
+
+    $this->action->setFamilyLookup($this->createMock(FamilyRelationsLookupInterface::class));
   }
 
   /**
@@ -254,6 +267,106 @@ class CosignInvitationActionTest extends UnitTestCase {
     $this->collector->expects($this->once())
       ->method('addStep')
       ->with($this->anything(), $this->anything(), $this->anything(), 'failed');
+
+    $this->action->execute();
+  }
+
+  /**
+   * A recipient outside the registered custody-holder set is blocked.
+   *
+   * Without this guard a citizen could make the municipality send Digital
+   * Post naming their child to any CPR - including their own, to self-approve.
+   *
+   * @covers ::execute
+   * @covers ::recipientHoldsCustody
+   */
+  public function testNonCustodyRecipientIsBlocked(): void {
+    $this->action->setTestConfiguration([
+      'parent_number' => '2',
+      'cpr_field' => 'parent2_cpr',
+      'email_field' => 'parent2_email',
+      'child_name_field' => 'child_name',
+      'child_cpr_field' => 'child_cpr',
+      'subject_template' => 'Anmodning om medunderskrift',
+    ]);
+    $this->action->testSubmission = $this->submission([
+      'parent2_cpr' => '1502856234',
+      'parent2_email' => 'stranger@example.dk',
+      'child_cpr' => '0109182345',
+    ]);
+
+    $familyLookup = $this->createMock(FamilyRelationsLookupInterface::class);
+    $familyLookup->method('hasCustody')->willReturn(FALSE);
+    $this->action->setFamilyLookup($familyLookup);
+
+    $this->sender->expects($this->never())->method('send');
+    $this->mailManager->expects($this->never())->method('mail');
+    $this->collector->expects($this->once())
+      ->method('addStep')
+      ->with($this->anything(), $this->anything(), $this->anything(), 'failed');
+
+    $this->action->execute();
+  }
+
+  /**
+   * A registered custody holder still receives the invitation.
+   *
+   * @covers ::execute
+   * @covers ::recipientHoldsCustody
+   */
+  public function testCustodyHolderRecipientIsAllowed(): void {
+    $this->action->setTestConfiguration([
+      'parent_number' => '2',
+      'cpr_field' => 'parent2_cpr',
+      'email_field' => 'parent2_email',
+      'child_name_field' => 'child_name',
+      'child_cpr_field' => 'child_cpr',
+      'subject_template' => 'Anmodning om medunderskrift',
+    ]);
+    $this->action->testSubmission = $this->submission([
+      'parent2_cpr' => '0803755210',
+      'parent2_email' => 'lars@example.dk',
+      'child_cpr' => '0109182345',
+    ]);
+
+    $familyLookup = $this->createMock(FamilyRelationsLookupInterface::class);
+    $familyLookup->expects($this->once())
+      ->method('hasCustody')
+      ->with('0803755210', '0109182345')
+      ->willReturn(TRUE);
+    $this->action->setFamilyLookup($familyLookup);
+
+    $this->sender->expects($this->once())->method('send')->willReturn(Result::success('tx-9'));
+
+    $this->action->execute();
+  }
+
+  /**
+   * A registry failure during the custody check blocks the send.
+   *
+   * @covers ::recipientHoldsCustody
+   */
+  public function testCustodyCheckFailsClosedOnRegistryError(): void {
+    $this->action->setTestConfiguration([
+      'parent_number' => '2',
+      'cpr_field' => 'parent2_cpr',
+      'email_field' => 'parent2_email',
+      'child_name_field' => 'child_name',
+      'child_cpr_field' => 'child_cpr',
+      'subject_template' => 'Anmodning om medunderskrift',
+    ]);
+    $this->action->testSubmission = $this->submission([
+      'parent2_cpr' => '0803755210',
+      'parent2_email' => 'lars@example.dk',
+      'child_cpr' => '0109182345',
+    ]);
+
+    $familyLookup = $this->createMock(FamilyRelationsLookupInterface::class);
+    $familyLookup->method('hasCustody')->willThrowException(new \RuntimeException('registry down'));
+    $this->action->setFamilyLookup($familyLookup);
+
+    $this->sender->expects($this->never())->method('send');
+    $this->mailManager->expects($this->never())->method('mail');
 
     $this->action->execute();
   }

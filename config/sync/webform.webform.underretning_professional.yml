@@ -36,10 +36,14 @@ elements: |
     '#type': textfield
     '#title': 'Barnets navn'
     '#required': true
-  child_birthdate_or_cpr:
+  child_cpr:
+    '#type': cpr_field
+    '#title': 'Barnets CPR-nummer'
+    '#description': 'Krypteres ved modtagelse. Udfyldes hvis kendt.'
+  child_birthdate:
     '#type': textfield
-    '#title': 'Barnets fødselsdato eller CPR-nummer'
-    '#required': true
+    '#title': 'Barnets fødselsdato (hvis CPR ikke kendes)'
+    '#description': 'Format: DD-MM-ÅÅÅÅ.'
   concern:
     '#type': textarea
     '#title': 'Hvad er du bekymret for?'

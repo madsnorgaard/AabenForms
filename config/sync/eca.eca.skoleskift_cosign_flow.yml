@@ -19,12 +19,20 @@ events:
     plugin: 'content_entity:custom'
     configuration:
       event_id: parent2_approved
-      type: 'webform_submission school_transfer'
     successors:
       -
         id: find_case
-        condition: ''
+        condition: gate_this_form
 conditions:
+  gate_this_form:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:webform:id]'
+      right: school_transfer
+      operator: equal
+      type: value
+      case: false
   gate_case_found:
     plugin: eca_scalar
     configuration:

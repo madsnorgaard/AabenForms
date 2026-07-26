@@ -53,12 +53,21 @@ conditions:
       operator: equal
       type: value
       case: false
-  gate_guardians_fail:
+  gate_guardians_pupil:
     plugin: eca_scalar
     configuration:
-      negate: true
+      negate: false
       left: '[ppr_guardians_status]'
-      right: guardians
+      right: pupil
+      operator: equal
+      type: value
+      case: false
+  gate_guardians_none:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[ppr_guardians_status]'
+      right: none
       operator: equal
       type: value
       case: false
@@ -119,13 +128,25 @@ actions:
     configuration:
       child_cpr_token: '[webform_submission:values:child_cpr:raw]'
       result_token: ppr_guardians
+      persist_count_field: guardian_count
     successors:
       -
         id: open_case
         condition: gate_guardians_ok
       -
+        id: deny_pupil_15
+        condition: gate_guardians_pupil
+      -
         id: deny_no_guardians
-        condition: gate_guardians_fail
+        condition: gate_guardians_none
+  deny_pupil_15:
+    label: 'Afvis: den unge er fyldt 15 (eget samtykke)'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: ppr_referral_pupil_15
+      step_label: 'Digital samtykkeindhentning ikke understøttet'
+      message: 'Den unge er fyldt 15 år og modtager selv Digital Post. Samtykke til PPR skal indhentes direkte hos den unge - kontakt PPR om den videre proces.'
+    successors: {  }
   deny_no_guardians:
     label: 'Afvis: forældremyndighed kunne ikke fastlægges'
     plugin: aabenforms_workflow_deny

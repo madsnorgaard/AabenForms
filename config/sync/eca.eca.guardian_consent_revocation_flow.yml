@@ -40,6 +40,6 @@ actions:
     configuration:
       event_type: guardian_consent_withdrawn
       additional_data_token: '[webform_submission:values:topic:raw]'
-      message_template: 'Samtykket er trukket tilbage på indehaverens anmodning. Tilbagetrækningen er dokumenteret med tidspunkt, og institutionen skal ophøre med den samtykkebaserede behandling.'
+      message_template: 'Samtykket er trukket tilbage (registreres ved hver gemning, mens status er trukket tilbage - loggen er tilfoejende bevis, ikke en taeller) på indehaverens anmodning. Tilbagetrækningen er dokumenteret med tidspunkt, og institutionen skal ophøre med den samtykkebaserede behandling.'
       status: success
     successors: {  }

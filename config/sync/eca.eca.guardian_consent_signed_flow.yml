@@ -18,12 +18,20 @@ events:
     plugin: 'content_entity:custom'
     configuration:
       event_id: parent1_approved
-      type: 'webform_submission guardian_consent'
     successors:
       -
         id: audit_signed
-        condition: ''
-conditions: {  }
+        condition: gate_this_form
+conditions:
+  gate_this_form:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:webform:id]'
+      right: guardian_consent
+      operator: equal
+      type: value
+      case: false
 gateways: {  }
 actions:
   audit_signed:

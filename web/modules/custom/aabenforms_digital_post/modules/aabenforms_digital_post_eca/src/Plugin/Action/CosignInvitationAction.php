@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_digital_post_eca\Plugin\Action;
 
+use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_digital_post\DigitalPost\DigitalPost;
 use Drupal\aabenforms_digital_post\DigitalPost\Recipient;
@@ -83,6 +84,13 @@ class CosignInvitationAction extends AabenFormsActionBase {
   protected ConfigFactoryInterface $configFactory;
 
   /**
+   * The family/custody registry lookup.
+   *
+   * @var \Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface
+   */
+  protected FamilyRelationsLookupInterface $familyLookup;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
@@ -92,7 +100,17 @@ class CosignInvitationAction extends AabenFormsActionBase {
     $instance->setCprAccess($container->get('aabenforms_core.cpr_access'));
     $instance->setMailManager($container->get('plugin.manager.mail'));
     $instance->setConfigFactory($container->get('config.factory'));
+    $instance->setFamilyLookup($container->get('aabenforms_core.family_lookup'));
     return $instance;
+  }
+
+  /**
+   * Setter injection for the family/custody lookup.
+   *
+   * Public so unit tests can swap in a stub without reflection.
+   */
+  public function setFamilyLookup(FamilyRelationsLookupInterface $familyLookup): void {
+    $this->familyLookup = $familyLookup;
   }
 
   /**
@@ -149,6 +167,7 @@ class CosignInvitationAction extends AabenFormsActionBase {
       'cpr_field' => 'parent2_cpr',
       'email_field' => 'parent2_email',
       'child_name_field' => 'child_name',
+      'child_cpr_field' => 'child_cpr',
       'subject_template' => 'Anmodning om medunderskrift',
     ] + parent::defaultConfiguration();
   }
@@ -184,6 +203,12 @@ class CosignInvitationAction extends AabenFormsActionBase {
       '#title' => $this->t('Child name field'),
       '#default_value' => $this->configuration['child_name_field'],
     ];
+    $form['child_cpr_field'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Child CPR field'),
+      '#description' => $this->t('Webform field holding the child CPR. The co-signer CPR must be a REGISTERED custody holder of this child before any invitation is sent; leave empty to skip the check (not recommended).'),
+      '#default_value' => $this->configuration['child_cpr_field'],
+    ];
     $form['subject_template'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Subject'),
@@ -197,7 +222,7 @@ class CosignInvitationAction extends AabenFormsActionBase {
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state): void {
-    foreach (['parent_number', 'cpr_field', 'email_field', 'child_name_field', 'subject_template'] as $key) {
+    foreach (['parent_number', 'cpr_field', 'email_field', 'child_name_field', 'child_cpr_field', 'subject_template'] as $key) {
       $this->configuration[$key] = (string) $form_state->getValue($key);
     }
     parent::submitConfigurationForm($form, $form_state);
@@ -221,6 +246,21 @@ class CosignInvitationAction extends AabenFormsActionBase {
     $childName = (string) ($submission->getElementData((string) $this->configuration['child_name_field']) ?? '');
     $cpr = $this->cprAccess->reveal((string) ($submission->getElementData((string) $this->configuration['cpr_field']) ?? ''));
     $cpr = $cpr ? (preg_replace('/[^0-9]/', '', $cpr) ?? '') : '';
+
+    // Never let a citizen-typed CPR address an official letter about a named
+    // child: the recipient must be a REGISTERED custody holder. Without this,
+    // anyone could make the municipality send Digital Post naming someone's
+    // child to any CPR in Denmark (and could address the co-sign link to
+    // themselves to self-approve).
+    if ($cpr !== '' && !$this->recipientHoldsCustody($submission, $cpr)) {
+      $this->recordStep(
+        'Co-sign Invitation',
+        'Blocked - the named co-signer is not a registered custody holder of the child',
+        'failed',
+      );
+      $this->log('Co-sign invitation blocked: recipient is not a registered custody holder', [], 'warning');
+      return;
+    }
 
     if ($cpr !== '') {
       try {
@@ -299,6 +339,43 @@ class CosignInvitationAction extends AabenFormsActionBase {
     }
     else {
       $this->recordStep('Co-sign Invitation', 'Failed - email fallback did not send', 'failed');
+    }
+  }
+
+  /**
+   * Whether the intended recipient holds registered custody of the child.
+   *
+   * Fail-closed: an unknown child CPR, an unreachable registry, or a
+   * recipient outside the registered custody-holder set all return FALSE.
+   * Returns TRUE only when the check is disabled by configuration (no child
+   * CPR field configured), which the config form marks as not recommended.
+   *
+   * @param object $submission
+   *   The webform submission.
+   * @param string $recipientCpr
+   *   The normalised recipient CPR.
+   *
+   * @return bool
+   *   TRUE when the invitation may be sent.
+   */
+  protected function recipientHoldsCustody(object $submission, string $recipientCpr): bool {
+    $childCprField = (string) ($this->configuration['child_cpr_field'] ?? '');
+    if ($childCprField === '') {
+      return TRUE;
+    }
+    $childCpr = $this->cprAccess->reveal((string) ($submission->getElementData($childCprField) ?? ''));
+    $childCpr = $childCpr ? (preg_replace('/[^0-9]/', '', $childCpr) ?? '') : '';
+    if ($childCpr === '') {
+      return FALSE;
+    }
+    try {
+      return $this->familyLookup->hasCustody($recipientCpr, $childCpr);
+    }
+    catch (\Throwable $e) {
+      $this->log('Custody check for co-sign recipient failed closed: {message}', [
+        'message' => $e->getMessage(),
+      ], 'error');
+      return FALSE;
     }
   }
 

@@ -61,6 +61,9 @@ elements: |
   parent2_email:
     '#type': email
     '#title': 'Indehaver 2 - e-mail (reserve)'
+  guardian_count:
+    '#type': hidden
+    '#default_value': '0'
   parent1_status:
     '#type': hidden
     '#default_value': pending

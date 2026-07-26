@@ -42,8 +42,8 @@ conditions:
     plugin: eca_scalar
     configuration:
       negate: false
-      left: '[webform_submission:values:parent1_status:raw][webform_submission:values:parent2_cpr:raw]'
-      right: complete
+      left: '[webform_submission:values:parent1_status:raw][webform_submission:values:guardian_count:raw]'
+      right: complete1
       operator: equal
       type: value
       case: false

@@ -23,10 +23,10 @@ events:
       type: 'webform_submission school_transfer'
     successors:
       -
-        id: find_case
+        id: resolve_caseworker
         condition: gate_approved
       -
-        id: find_case
+        id: resolve_caseworker
         condition: gate_rejected
 conditions:
   gate_approved:
@@ -47,12 +47,21 @@ conditions:
       operator: equal
       type: value
       case: false
-  gate_case_found:
+  gate_caseworker_ok:
     plugin: eca_scalar
     configuration:
       negate: false
-      left: '[skoleskift_case_id_status]'
-      right: found
+      left: '[skoleskift_caseworker_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_caseworker_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[skoleskift_caseworker_status]'
+      right: verified
       operator: equal
       type: value
       case: false
@@ -94,6 +103,27 @@ conditions:
       case: false
 gateways: {  }
 actions:
+  resolve_caseworker:
+    label: 'Bekræft at afgørelsen træffes af en sagsbehandler'
+    plugin: aabenforms_resolve_employee
+    configuration:
+      submitted_employee_id_token: '[current-user:mail]'
+      result_token: skoleskift_caseworker
+    successors:
+      -
+        id: find_case
+        condition: gate_caseworker_ok
+      -
+        id: deny_unauthorised_decision
+        condition: gate_caseworker_deny
+  deny_unauthorised_decision:
+    label: 'Afvis: afgørelse kræver sagsbehandler'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: skoleskift_unauthorised_decision
+      step_label: 'Afgørelse afvist'
+      message: 'En afgørelse kan kun træffes af en sagsbehandler. Statusfeltet blev ændret uden for sagsbehandlingen, og der er ikke truffet nogen afgørelse.'
+    successors: {  }
   find_case:
     label: 'Find sagen for ansøgningen'
     plugin: aabenforms_case_find

@@ -92,6 +92,7 @@ class ResolveGuardiansAction extends AabenFormsActionBase {
     return [
       'child_cpr_token' => 'child_cpr',
       'result_token' => 'post_recipients',
+      'persist_count_field' => '',
     ] + parent::defaultConfiguration();
   }
 
@@ -115,6 +116,13 @@ class ResolveGuardiansAction extends AabenFormsActionBase {
       '#required' => TRUE,
     ];
 
+    $form['persist_count_field'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('Persist recipient count to field'),
+      '#description' => $this->t('Optional webform element key that receives the resolved recipient count. Later events run in a fresh token scope, so a join flow that must know how many custody holders the REGISTRY found needs it stored on the submission rather than re-derived from staff-typed fields.'),
+      '#default_value' => $this->configuration['persist_count_field'],
+    ];
+
     return parent::buildConfigurationForm($form, $form_state);
   }
 
@@ -124,7 +132,31 @@ class ResolveGuardiansAction extends AabenFormsActionBase {
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state): void {
     $this->configuration['child_cpr_token'] = $form_state->getValue('child_cpr_token');
     $this->configuration['result_token'] = $form_state->getValue('result_token');
+    $this->configuration['persist_count_field'] = (string) $form_state->getValue('persist_count_field');
     parent::submitConfigurationForm($form, $form_state);
+  }
+
+  /**
+   * Stores the resolved recipient count on the submission, when configured.
+   *
+   * @param int $count
+   *   The number of resolved recipients.
+   */
+  protected function persistCount(int $count): void {
+    $field = (string) ($this->configuration['persist_count_field'] ?? '');
+    if ($field === '') {
+      return;
+    }
+    $submission = $this->getSubmission();
+    if ($submission === NULL) {
+      return;
+    }
+    if ((string) $submission->getElementData($field) === (string) $count) {
+      // Already stored: avoid a redundant save (and a redundant update event).
+      return;
+    }
+    $submission->setElementData($field, (string) $count);
+    $submission->resave();
   }
 
   /**
@@ -155,6 +187,8 @@ class ResolveGuardiansAction extends AabenFormsActionBase {
     for ($slot = 1; $slot <= self::MAX_RECIPIENT_SLOTS; $slot++) {
       $this->setTokenValue($resultToken . '_' . $slot, $cprs[$slot - 1] ?? '');
     }
+
+    $this->persistCount(count($cprs));
 
     switch ($resolution->rule) {
       case RecipientResolution::RULE_GUARDIANS:
