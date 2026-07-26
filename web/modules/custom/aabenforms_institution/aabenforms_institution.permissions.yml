@@ -1,0 +1,4 @@
+administer aabenforms_institution:
+  title: 'Administer institutions'
+  description: 'Create, edit and delete institution registry entries.'
+  restrict access: true

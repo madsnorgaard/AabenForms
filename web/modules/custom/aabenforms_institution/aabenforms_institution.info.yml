@@ -1,0 +1,10 @@
+name: 'ÅbenForms Institution'
+type: module
+description: 'Registry of schools and other institutions keyed by institutionsnummer (Institutionsregisteret), with hierarchy-aware routing for workflows. Institutions only - pupils, classes and groups belong to STIL/OS2skoledata.'
+package: 'ÅbenForms'
+core_version_requirement: ^11
+php: ^8.3
+
+dependencies:
+  - aabenforms_core:aabenforms_core
+  - aabenforms_workflows:aabenforms_workflows

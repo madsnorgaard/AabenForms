@@ -6,6 +6,7 @@ module:
   aabenforms_digital_post: 0
   aabenforms_digital_post_eca: 0
   aabenforms_digital_post_session_inbox: 0
+  aabenforms_institution: 0
   aabenforms_kombit: 0
   aabenforms_mitid: 0
   aabenforms_nemlogin: 0
