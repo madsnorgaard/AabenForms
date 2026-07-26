@@ -27,6 +27,9 @@ aabenforms_core.settings:
             SF1601:
               type: string
               label: 'Digital Post service URL (SF1601)'
+            SF6006:
+              type: string
+              label: 'Familie+ CPR lookup service URL (SF6006)'
         certificates:
           type: mapping
           label: 'Client certificates'

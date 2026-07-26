@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/sf6006",
+    "bodyPatterns": [
+      {
+        "contains": "<ns:PNR>1502856234</ns:PNR>"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml; charset=UTF-8"
+    },
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <FamilyLookupResponse>\n      <Person>\n        <CPR>1502856234</CPR>\n        <FirstName>Mikkel</FirstName>\n        <LastName>Jensen</LastName>\n        <BirthDate>1985-02-15</BirthDate>\n      </Person>\n      <Children/>\n    </FamilyLookupResponse>\n  </soap:Body>\n</soap:Envelope>"
+  }
+}
