@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:eca="https://drupal.org/project/eca"
+                  id="Definitions_skoleskift"
+                  targetNamespace="http://aabenforms.dk/bpmn">
+  <bpmn:process id="skoleskift" name="Skoleskift (school transfer)" isExecutable="true">
+    <bpmn:documentation>[category: municipal]
+School transfer application with registry-verified custody (FOB 2025-9):
+MitID identity gate, CPR custody check, co-signature from the other custody
+holder via Digital Post, school leader review, decision letters to BOTH
+custody holders, klagefrist and ESDH archiving. The executable models are
+eca.eca.skoleskift_flow, skoleskift_cosign_flow and skoleskift_decision_flow;
+this template documents the citizen-facing insert flow.
+    </bpmn:documentation>
+
+    <bpmn:startEvent id="StartEvent_Submission" name="Application submitted">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_MitId" name="Validate MitID session" eca:action="aabenforms_mitid_validate">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Custody" name="Verify custody (CPR registry)" eca:action="aabenforms_custody_verify">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_OpenCase" name="Open case (skoleskift)" eca:action="aabenforms_case_open">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Journal" name="Journalize case (SF1470)" eca:action="aabenforms_case_journal">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Institution" name="Look up target school" eca:action="aabenforms_institution_lookup">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway id="Gateway_Custody" name="Custody situation">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_Sole</bpmn:outgoing>
+      <bpmn:outgoing>Flow_JointAgreed</bpmn:outgoing>
+      <bpmn:outgoing>Flow_JointDisagreed</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask id="Task_Cosign" name="Send co-sign invitation (Digital Post)" eca:action="aabenforms_send_cosign_invitation">
+      <bpmn:incoming>Flow_JointAgreed</bpmn:incoming>
+      <bpmn:outgoing>Flow_AwaitCosign</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Partshoering" name="Open partshoering (known disagreement, FOB 2025-9)" eca:action="aabenforms_case_partshoering">
+      <bpmn:incoming>Flow_JointDisagreed</bpmn:incoming>
+      <bpmn:outgoing>Flow_Manual</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:userTask id="Task_Review" name="School leader review">
+      <bpmn:incoming>Flow_Sole</bpmn:incoming>
+      <bpmn:incoming>Flow_AwaitCosign</bpmn:incoming>
+      <bpmn:outgoing>Flow_Decision</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:serviceTask id="Task_Resolve" name="Resolve recipients (both custody holders)" eca:action="aabenforms_resolve_guardians">
+      <bpmn:incoming>Flow_Decision</bpmn:incoming>
+      <bpmn:outgoing>Flow_Letters</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Letters" name="Decision letters via Digital Post" eca:action="aabenforms_digital_post_send">
+      <bpmn:incoming>Flow_Letters</bpmn:incoming>
+      <bpmn:outgoing>Flow_Archive</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask id="Task_Esdh" name="Archive in ESDH" eca:action="aabenforms_case_esdh_journal">
+      <bpmn:incoming>Flow_Archive</bpmn:incoming>
+      <bpmn:outgoing>Flow_End</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="EndEvent_Done" name="Decision delivered">
+      <bpmn:incoming>Flow_End</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:endEvent id="EndEvent_Manual" name="Manual handling">
+      <bpmn:incoming>Flow_Manual</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_Submission" targetRef="Task_MitId"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_MitId" targetRef="Task_Custody"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Custody" targetRef="Task_OpenCase"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_OpenCase" targetRef="Task_Journal"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Journal" targetRef="Task_Institution"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Institution" targetRef="Gateway_Custody"/>
+    <bpmn:sequenceFlow id="Flow_Sole" name="Sole custody" sourceRef="Gateway_Custody" targetRef="Task_Review"/>
+    <bpmn:sequenceFlow id="Flow_JointAgreed" name="Joint custody, agreed" sourceRef="Gateway_Custody" targetRef="Task_Cosign"/>
+    <bpmn:sequenceFlow id="Flow_JointDisagreed" name="Known disagreement" sourceRef="Gateway_Custody" targetRef="Task_Partshoering"/>
+    <bpmn:sequenceFlow id="Flow_AwaitCosign" name="Co-signed" sourceRef="Task_Cosign" targetRef="Task_Review"/>
+    <bpmn:sequenceFlow id="Flow_Manual" sourceRef="Task_Partshoering" targetRef="EndEvent_Manual"/>
+    <bpmn:sequenceFlow id="Flow_Decision" sourceRef="Task_Review" targetRef="Task_Resolve"/>
+    <bpmn:sequenceFlow id="Flow_Letters" sourceRef="Task_Resolve" targetRef="Task_Letters"/>
+    <bpmn:sequenceFlow id="Flow_Archive" sourceRef="Task_Letters" targetRef="Task_Esdh"/>
+    <bpmn:sequenceFlow id="Flow_End" sourceRef="Task_Esdh" targetRef="EndEvent_Done"/>
+  </bpmn:process>
+</bpmn:definitions>

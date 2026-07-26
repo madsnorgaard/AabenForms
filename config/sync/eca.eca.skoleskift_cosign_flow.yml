@@ -1,0 +1,56 @@
+uuid: 8d3f0a5b-2c7e-4f9b-8d4a-6b8c3e5f7a9b
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: skoleskift_cosign_flow
+id: skoleskift_cosign_flow
+weight: null
+template: null
+events:
+  on_cosign:
+    plugin: 'content_entity:custom'
+    configuration:
+      event_id: parent2_approved
+      type: 'webform_submission school_transfer'
+    successors:
+      -
+        id: find_case
+        condition: ''
+conditions:
+  gate_case_found:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_case_id_status]'
+      right: found
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  find_case:
+    label: 'Find sagen for ansøgningen'
+    plugin: aabenforms_case_find
+    configuration:
+      result_token: skoleskift_case_id
+    successors:
+      -
+        id: audit_cosign
+        condition: gate_case_found
+  audit_cosign:
+    label: 'Medunderskrift modtaget - klar til skoleleders vurdering'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: skoleskift_cosign_complete
+      additional_data_token: ''
+      message_template: 'Den anden forældremyndighedsindehaver har medunderskrevet med MitID (identitet og forældremyndighed kontrolleret). Sagen er klar til skoleleders vurdering.'
+      status: success
+    successors: {  }

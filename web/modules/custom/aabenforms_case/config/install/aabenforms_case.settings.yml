@@ -11,6 +11,9 @@ frister:
   merudgifter:
     unit: hverdage
     amount: 20
+  skoleskift:
+    unit: hverdage
+    amount: 10
   default:
     unit: hverdage
     amount: 28

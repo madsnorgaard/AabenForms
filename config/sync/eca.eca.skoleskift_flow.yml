@@ -1,0 +1,233 @@
+uuid: 7c2e9f4a-1b6d-4e8a-9c3f-5a7b2d4e6f8a
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_digital_post_eca
+    - aabenforms_institution
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: skoleskift_flow
+id: skoleskift_flow
+weight: null
+template: null
+events:
+  on_submission:
+    plugin: 'content_entity:insert'
+    configuration:
+      type: 'webform_submission school_transfer'
+    successors:
+      -
+        id: mitid_validate
+        condition: ''
+conditions:
+  gate_mitid_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_mitid_valid_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_mitid_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[skoleskift_mitid_valid_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_custody_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_custody]'
+      right: 'true'
+      operator: equal
+      type: value
+      case: false
+  gate_custody_fail:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[skoleskift_custody]'
+      right: 'true'
+      operator: equal
+      type: value
+      case: false
+  gate_sole:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:custody_status:raw]'
+      right: sole
+      operator: equal
+      type: value
+      case: false
+  gate_joint_agreed:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:custody_status:raw]'
+      right: joint_agreed
+      operator: equal
+      type: value
+      case: false
+  gate_joint_disagreed:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:custody_status:raw]'
+      right: joint_disagreed
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  mitid_validate:
+    label: 'Validér MitID-session'
+    plugin: aabenforms_mitid_validate
+    configuration:
+      workflow_id_token: workflow_id_skoleskift
+      result_token: skoleskift_mitid_valid
+      session_data_token: skoleskift_session
+    successors:
+      -
+        id: custody_verify
+        condition: gate_mitid_ok
+      -
+        id: deny_identity
+        condition: gate_mitid_deny
+  deny_identity:
+    label: 'Afvis: identitet ikke bekræftet'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: skoleskift_denied
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Ansøgningen blev ikke behandlet, fordi din identitet ikke kunne bekræftes med MitID. Log ind med MitID og prøv igen.'
+    successors: {  }
+  custody_verify:
+    label: 'Kontrollér forældremyndighed (CPR-registret)'
+    plugin: aabenforms_custody_verify
+    configuration:
+      adult_cpr_token: '[webform_submission:values:applicant_cpr:raw]'
+      child_cpr_token: '[webform_submission:values:child_cpr:raw]'
+      result_token: skoleskift_custody
+    successors:
+      -
+        id: open_case
+        condition: gate_custody_ok
+      -
+        id: deny_custody
+        condition: gate_custody_fail
+  deny_custody:
+    label: 'Afvis: ingen registreret forældremyndighed'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: skoleskift_no_custody
+      step_label: 'Forældremyndighed ikke bekræftet'
+      message: 'Ansøgningen blev ikke behandlet, fordi CPR-registret ikke bekræfter, at du har forældremyndighed over barnet. Kontakt Pladsanvisningen, hvis du mener, det er en fejl.'
+    successors: {  }
+  open_case:
+    label: 'Åbn sag (skoleskift)'
+    plugin: aabenforms_case_open
+    configuration:
+      case_type: skoleskift
+      case_id_token: case_id
+    successors:
+      -
+        id: journal_case
+        condition: ''
+  journal_case:
+    label: 'Journalisér sag (SF1470)'
+    plugin: aabenforms_case_journal
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: institution_lookup
+        condition: ''
+  institution_lookup:
+    label: 'Slå ønsket skole op (institutionsregister)'
+    plugin: aabenforms_institution_lookup
+    configuration:
+      institution_number_token: '[webform_submission:values:target_school:raw]'
+      result_token: target_institution
+    successors:
+      -
+        id: transition_oplyst
+        condition: ''
+  transition_oplyst:
+    label: 'Oplys sag'
+    plugin: aabenforms_case_transition
+    configuration:
+      case_id_token: '[case_id]'
+      target_status: oplyst
+      log_message: 'Sag oplyst: identitet og forældremyndighed bekræftet i CPR-registret, skole slået op.'
+    successors:
+      -
+        id: audit_ready_sole
+        condition: gate_sole
+      -
+        id: cosign_invite
+        condition: gate_joint_agreed
+      -
+        id: partshoering_manual
+        condition: gate_joint_disagreed
+  audit_ready_sole:
+    label: 'Klar til skoleleders vurdering (eneforældremyndighed)'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: skoleskift_awaiting_review
+      additional_data_token: '[target_institution_leader_email]'
+      message_template: 'Eneforældremyndighed bekræftet i CPR. Sagen er klar til vurdering hos skolelederen på den ønskede skole.'
+      status: success
+    successors: {  }
+  cosign_invite:
+    label: 'Send medunderskrift til den anden indehaver (Digital Post)'
+    plugin: aabenforms_send_cosign_invitation
+    configuration:
+      parent_number: '2'
+      cpr_field: parent2_cpr
+      email_field: parent2_email
+      child_name_field: child_name
+      subject_template: 'Medunderskrift: ansøgning om skoleskift'
+    successors:
+      -
+        id: audit_awaiting_cosign
+        condition: ''
+  audit_awaiting_cosign:
+    label: 'Afventer medunderskrift (14 dage)'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: skoleskift_awaiting_cosign
+      additional_data_token: ''
+      message_template: 'Den anden forældremyndighedsindehaver er bedt om medunderskrift via Digital Post. Sagen afventer svar i op til 14 dage.'
+      status: success
+    successors: {  }
+  partshoering_manual:
+    label: 'Åbn partshøring (uenighed om skoleskift)'
+    plugin: aabenforms_case_partshoering
+    configuration:
+      case_id_token: '[case_id]'
+      state: afventer
+    successors:
+      -
+        id: audit_manual
+        condition: ''
+  audit_manual:
+    label: 'Manuel behandling (FOB 2025-9)'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: skoleskift_manual_handling
+      additional_data_token: ''
+      message_template: 'Kendt uenighed mellem forældremyndighedsindehavere. Skoleskift kan ikke gennemføres mod den anden indehavers vilje (FOB 2025-9); sagen overgår til manuel behandling med partshøring.'
+      status: success
+    successors: {  }
