@@ -6,3 +6,9 @@ employee_provisioning:
   employee_claim_field: ''
   employee_claim_match: equals
   employee_claim_value: ''
+# Auto-bind users to tenants at login: when the configured claim value matches a
+# map entry, the mapped tenant (domain) is appended to the user's
+# field_domain_access. Empty map disables auto-binding (manual assignment only).
+tenant_binding:
+  claim_field: cvr
+  map: {  }

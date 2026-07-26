@@ -272,6 +272,14 @@ ddev drush aabenforms:tenant:provision odense "Odense Kommune" \
 # 127.0.0.1 odense.aabenforms.ddev.site
 ```
 
+Isolation follows the host by default. To pin a caseworker to their own
+kommune (so they cannot see another tenant even by visiting its host), bind
+them via the `domain_access` "Domain Access" field (`field_domain_access`) on
+`/user/{id}/edit`, or auto-bind from a login claim mapped under
+`/admin/config/aabenforms/tenant`. A bound user gets an empty inbox, denied
+records, and a 403 on foreign-host case pages; unbound users and
+`bypass tenant isolation` operators are unaffected.
+
 ## Workflow Development
 
 The visual editor is the **Workflow Modeler** provided by `drupal/modeler` (React Flow /

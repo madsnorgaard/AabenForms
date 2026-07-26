@@ -4,3 +4,13 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@logger.factory'
+  aabenforms_tenant.tenant_membership_access_check:
+    class: Drupal\aabenforms_tenant\Access\TenantMembershipAccessCheck
+    arguments:
+      - '@aabenforms_core.tenant_resolver'
+    tags:
+      - { name: access_check, applies_to: _aabenforms_tenant_member }
+  aabenforms_tenant.route_subscriber:
+    class: Drupal\aabenforms_tenant\Routing\TenantRouteSubscriber
+    tags:
+      - { name: event_subscriber }

@@ -15,3 +15,22 @@ aabenforms_tenant.settings:
         employee_claim_value:
           type: string
           label: 'Expected claim value'
+    tenant_binding:
+      type: mapping
+      label: 'Auto-bind users to tenants at login'
+      mapping:
+        claim_field:
+          type: string
+          label: 'Claim field carrying the tenant discriminator (e.g. cvr)'
+        map:
+          type: sequence
+          label: 'Claim value to tenant id map'
+          sequence:
+            type: mapping
+            mapping:
+              claim_value:
+                type: string
+                label: 'Claim value'
+              tenant_id:
+                type: string
+                label: 'Tenant (domain) id'
