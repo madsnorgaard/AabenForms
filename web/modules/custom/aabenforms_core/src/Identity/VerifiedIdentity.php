@@ -56,6 +56,9 @@ final class VerifiedIdentity {
    *   The asserting IdP entity id / issuer, when known.
    * @param int|null $authTime
    *   The authentication instant as a Unix timestamp, when known.
+   * @param string|null $cvr
+   *   The organisation CVR, when a business/employee (NemLog-in Erhverv) login
+   *   issues it. Used for tenant auto-binding (kommune-granularity).
    */
   public function __construct(
     public readonly string $cpr,
@@ -69,6 +72,7 @@ final class VerifiedIdentity {
     public readonly ?string $email = NULL,
     public readonly ?string $issuer = NULL,
     public readonly ?int $authTime = NULL,
+    public readonly ?string $cvr = NULL,
   ) {}
 
   /**
@@ -129,6 +133,7 @@ final class VerifiedIdentity {
       'birthdate' => $this->birthdate,
       'email' => $this->email,
       'issuer' => $this->issuer,
+      'cvr' => $this->cvr,
     ];
     foreach ($optional as $key => $value) {
       if ($value !== NULL && $value !== '') {
@@ -163,6 +168,7 @@ final class VerifiedIdentity {
       email: $session['email'] ?? NULL,
       issuer: $session['issuer'] ?? NULL,
       authTime: isset($session['authenticated_at']) ? (int) $session['authenticated_at'] : NULL,
+      cvr: $session['cvr'] ?? NULL,
     );
   }
 

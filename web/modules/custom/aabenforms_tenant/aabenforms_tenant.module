@@ -87,6 +87,15 @@ function aabenforms_tenant_entity_access(EntityInterface $entity, $operation, Ac
   if ($owner === '' || $account->hasPermission('bypass tenant isolation')) {
     return AccessResult::neutral()->cachePerPermissions();
   }
+  // Per-user binding: a user bound to a set of tenants (via field_domain_access)
+  // may never see a row owned by a tenant outside that set, on any host.
+  $bound = _aabenforms_tenant_user_domains($account);
+  if ($bound !== NULL && !in_array($owner, $bound, TRUE)) {
+    return AccessResult::forbidden('User is not a member of this tenant.')
+      ->cachePerPermissions()
+      ->addCacheContexts(['user', 'url.site'])
+      ->addCacheableDependency($entity);
+  }
   $current = \Drupal::service('aabenforms_core.tenant_resolver')->getCurrentTenantId();
   if ($current !== NULL && $owner !== $current) {
     return AccessResult::forbidden('Cross-tenant access denied.')
@@ -133,6 +142,13 @@ function _aabenforms_tenant_scope_query(AlterableInterface $query, string $entit
   if ($current === NULL) {
     return;
   }
+  // Per-user binding: a bound user on a host whose tenant is not in their set
+  // sees nothing (empty inbox / JSON:API listing).
+  $bound = _aabenforms_tenant_user_domains(\Drupal::currentUser());
+  if ($bound !== NULL && !in_array($current, $bound, TRUE)) {
+    $query->where('1 = 0');
+    return;
+  }
   $base = \Drupal::entityTypeManager()->getStorage($entity_type_id)->getEntityType()->getBaseTable();
   $alias = NULL;
   foreach ($query->getTables() as $a => $info) {
@@ -152,6 +168,35 @@ function _aabenforms_tenant_scope_query(AlterableInterface $query, string $entit
 }
 
 /**
+ * Returns the tenant (domain) ids a user is bound to, or NULL if unbound.
+ *
+ * The binding reuses the domain_access `field_domain_access` field on the user
+ * (a multi-value reference to the same Domain entities that back tenants), so a
+ * caseworker is pinned to their kommune/magistrat. An unbound user (empty or
+ * absent field) keeps the host-based behavior, and platform operators bypass
+ * isolation entirely via the `bypass tenant isolation` permission.
+ *
+ * @param \Drupal\Core\Session\AccountInterface $account
+ *   The account to resolve.
+ *
+ * @return string[]|null
+ *   The bound domain ids, or NULL when the user is not bound to any tenant.
+ */
+function _aabenforms_tenant_user_domains(AccountInterface $account): ?array {
+  $uid = (int) $account->id();
+  if ($uid <= 0) {
+    return NULL;
+  }
+  $user = \Drupal::entityTypeManager()->getStorage('user')->load($uid);
+  if ($user === NULL || !$user->hasField('field_domain_access')) {
+    return NULL;
+  }
+  $ids = array_column($user->get('field_domain_access')->getValue(), 'target_id');
+  $ids = array_values(array_filter(array_map('strval', $ids), static fn (string $v): bool => $v !== ''));
+  return $ids === [] ? NULL : $ids;
+}
+
+/**
  * Implements hook_help().
  */
 function aabenforms_tenant_help(string $route_name, RouteMatchInterface $route_match): ?string {
@@ -160,7 +205,7 @@ function aabenforms_tenant_help(string $route_name, RouteMatchInterface $route_m
       return '<p>' . t('Multi-tenancy support and employee role provisioning for ÅbenForms.') . '</p>';
 
     case 'aabenforms_tenant.settings':
-      return '<p>' . t('Map an OIDC claim from MitID/NemLogin to the AabenForms employee role. When a citizen logs in and the claim is present, the role is granted automatically so they can submit HR webforms.') . '</p>';
+      return '<p>' . t('Map an OIDC claim to the AabenForms employee role, and bind users to their tenant(s) at login. When a user logs in, a matching employee claim grants the role, and a matching tenant-binding claim adds the mapped kommune to their Domain Access so they only see their own tenant.') . '</p>';
   }
   return NULL;
 }
@@ -168,15 +213,27 @@ function aabenforms_tenant_help(string $route_name, RouteMatchInterface $route_m
 /**
  * Implements hook_user_login().
  *
- * Reads MitID/NemLogin claims from the most recent OIDC session and
- * grants the aabenforms_employee role when the configured claim
- * matches. Empty employee_claim_field disables provisioning. The role
- * persists on the user account; revocation isn't automated yet.
+ * Two independent, additive login actions: grant the aabenforms_employee role
+ * from a claim, and bind the user to their tenant(s) from a claim map.
  */
 function aabenforms_tenant_user_login($account): void {
   if (!$account instanceof UserInterface) {
     return;
   }
+  _aabenforms_tenant_provision_employee_role($account);
+  _aabenforms_tenant_autobind_tenants($account);
+}
+
+/**
+ * Grants the aabenforms_employee role when the configured claim matches.
+ *
+ * Empty employee_claim_field disables provisioning. The role persists on the
+ * account; revocation isn't automated yet.
+ *
+ * @param \Drupal\user\UserInterface $account
+ *   The logging-in user.
+ */
+function _aabenforms_tenant_provision_employee_role(UserInterface $account): void {
   if ($account->hasRole('aabenforms_employee')) {
     return;
   }
@@ -210,6 +267,87 @@ function aabenforms_tenant_user_login($account): void {
       ['@uid' => $account->id(), '@field' => $field],
     );
   }
+}
+
+/**
+ * Binds the user to their tenant(s) from the configured claim->tenant map.
+ *
+ * Additive only: appends any mapped, existing Domain the user is not already a
+ * member of to their field_domain_access (reused as tenant membership). An
+ * empty map disables auto-binding. A CVR claim is kommune-granularity.
+ *
+ * @param \Drupal\user\UserInterface $account
+ *   The logging-in user.
+ */
+function _aabenforms_tenant_autobind_tenants(UserInterface $account): void {
+  if (!$account->hasField('field_domain_access')) {
+    return;
+  }
+  $claims = _aabenforms_tenant_recent_oidc_claims();
+  if ($claims === NULL) {
+    return;
+  }
+  _aabenforms_tenant_apply_binding_map($account, $claims);
+}
+
+/**
+ * Appends the tenants a claim set maps to onto a user's field_domain_access.
+ *
+ * The pure, testable core of auto-binding: given the login claims, resolve the
+ * configured claim value through the tenant_binding map and append each mapped,
+ * existing Domain the user is not already a member of. Additive; never removes.
+ *
+ * @param \Drupal\user\UserInterface $account
+ *   The user to bind.
+ * @param array $claims
+ *   The login claim set (as returned by _aabenforms_tenant_recent_oidc_claims).
+ *
+ * @return string[]
+ *   The tenant (domain) ids newly added, empty when nothing changed.
+ */
+function _aabenforms_tenant_apply_binding_map(UserInterface $account, array $claims): array {
+  if (!$account->hasField('field_domain_access')) {
+    return [];
+  }
+  $config = \Drupal::config('aabenforms_tenant.settings');
+  $field = (string) $config->get('tenant_binding.claim_field');
+  $map = $config->get('tenant_binding.map') ?: [];
+  if ($field === '' || $map === []) {
+    return [];
+  }
+  $actual = $claims[$field] ?? NULL;
+  if (!is_string($actual) && !is_numeric($actual)) {
+    return [];
+  }
+  $actual = (string) $actual;
+
+  $wanted = [];
+  foreach ($map as $entry) {
+    if ((string) ($entry['claim_value'] ?? '') === $actual && (string) ($entry['tenant_id'] ?? '') !== '') {
+      $wanted[(string) $entry['tenant_id']] = TRUE;
+    }
+  }
+  if ($wanted === []) {
+    return [];
+  }
+  $existing = array_column($account->get('field_domain_access')->getValue(), 'target_id');
+  $domainStorage = \Drupal::entityTypeManager()->getStorage('domain');
+  $added = [];
+  foreach (array_keys($wanted) as $tenantId) {
+    if (in_array($tenantId, $existing, TRUE) || $domainStorage->load($tenantId) === NULL) {
+      continue;
+    }
+    $account->get('field_domain_access')->appendItem(['target_id' => $tenantId]);
+    $added[] = $tenantId;
+  }
+  if ($added !== []) {
+    $account->save();
+    \Drupal::logger('aabenforms_tenant')->info(
+      'Auto-bound uid @uid to tenant(s) @tenants via claim @field.',
+      ['@uid' => $account->id(), '@tenants' => implode(', ', $added), '@field' => $field],
+    );
+  }
+  return $added;
 }
 
 /**

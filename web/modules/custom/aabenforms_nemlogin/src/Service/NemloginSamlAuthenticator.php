@@ -44,6 +44,14 @@ class NemloginSamlAuthenticator implements IdentityProviderInterface {
   public const ATTR_ALIAS = 'https://data.gov.dk/model/core/eid/alias';
 
   /**
+   * NemLog-in Erhverv (professional) CVR attribute (OIOSAML 3), when present.
+   *
+   * Only issued for a business/employee login; used for tenant auto-binding at
+   * kommune granularity. Enrollment-dependent - absent for citizen MitID.
+   */
+  public const ATTR_CVR = 'https://data.gov.dk/model/core/eid/professional/cvr';
+
+  /**
    * NSIS Level-of-Assurance attribute and its value URIs (OIOSAML 3).
    */
   public const ATTR_NSIS_LOA = 'https://data.gov.dk/concept/core/nsis/loa';
@@ -213,6 +221,7 @@ class NemloginSamlAuthenticator implements IdentityProviderInterface {
       email: $this->first($attributes, self::ATTR_EMAIL) ?: NULL,
       issuer: (string) ($this->configFactory->get('aabenforms_nemlogin.settings')->get('idp_entity_id') ?: '') ?: NULL,
       authTime: NULL,
+      cvr: $this->first($attributes, self::ATTR_CVR) ?: NULL,
     );
   }
 

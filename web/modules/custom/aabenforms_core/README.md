@@ -105,6 +105,22 @@ Optional tenant-specific integration configuration is stored at:
 - `aabenforms_core.tenant.aarhus_mtm`
 - `aabenforms_core.tenant.aarhus_mbu`
 
+#### Per-user tenant binding
+
+By default isolation follows the host: a caseworker sees whichever tenant's data
+belongs to the host they are on. To pin a caseworker to their own kommune so they
+can never see another tenant (even by visiting its host), bind them to one or
+more tenants. The binding reuses the `domain_access` **Domain Access** field
+(`field_domain_access`) already on `/user/{id}/edit` - the same pattern the OS2
+`os2udoglaer` project uses. A bound caseworker gets an empty inbox, denied
+records, and a 403 on the case pages of any host that is not theirs; unbound
+users keep the host-based behavior and `bypass tenant isolation` operators see
+across.
+
+Bindings can be set manually on the user form, or auto-applied at login: under
+`/admin/config/aabenforms/tenant` map a login claim (e.g. `cvr`) to a tenant id.
+A CVR claim identifies a whole kommune, so magistrat-level binding stays manual.
+
 ## Usage
 
 ### ServiceplatformenClient
