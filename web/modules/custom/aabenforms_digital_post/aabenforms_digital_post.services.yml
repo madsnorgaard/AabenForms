@@ -78,6 +78,15 @@ services:
     class: Drupal\aabenforms_digital_post\Audit\CoreAuditEmitter
     arguments: ['@aabenforms_core.audit_logger']
 
+  # Resolves who receives Digital Post about a child: each custody holder
+  # when the child is under 15, the young person directly from 15. Fail-closed.
+  aabenforms_digital_post.guardian_recipient_resolver:
+    class: Drupal\aabenforms_digital_post\Service\GuardianRecipientResolver
+    arguments:
+      - '@aabenforms_core.family_lookup'
+      - '@datetime.time'
+      - '@logger.factory'
+
   # The public entry point.
   aabenforms_digital_post.sender:
     class: Drupal\aabenforms_digital_post\Service\DigitalPostSender
