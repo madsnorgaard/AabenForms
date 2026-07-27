@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'web/modules/custom/**'
+      - 'config/sync/**'
       - 'composer.json'
       - 'composer.lock'
       - 'phpunit.xml'
@@ -13,6 +14,7 @@ on:
       - main
     paths:
       - 'web/modules/custom/**'
+      - 'config/sync/**'
       - 'composer.json'
       - 'composer.lock'
       - 'phpunit.xml'
