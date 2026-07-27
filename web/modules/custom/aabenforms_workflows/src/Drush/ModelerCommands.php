@@ -4,26 +4,25 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_workflows\Drush;
 
+use Drupal\aabenforms_workflows\EcaModeler;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Commands\DrushCommands;
 
 /**
  * Drush commands for keeping ECA flows owned by the workflow modeler.
  *
- * An ECA flow renders in the React workflow modeler only while its config
- * carries the `modeler_api.modeler_id` third-party setting. ModelOwnerBase
- * defaults a missing setting to "fallback", which drops the flow to the
- * BPMN.iO editor. Some ECA save paths (and editing a flow in BPMN.iO) strip
- * that setting, so flows silently regress to fallback even though config/sync
- * declares the modeler. `af:modeler-adopt` re-asserts it across every flow;
- * it is idempotent and safe to run as a post-deploy step.
+ * The ownership rule itself lives in EcaModeler. This command is the repair
+ * path: some ECA save paths, and editing a flow in BPMN.iO, strip the
+ * `modeler_api.modeler_id` setting, so a flow can regress to the fallback
+ * editor even though config/sync declares the modeler. `af:modeler-adopt`
+ * re-asserts it across every flow; it is idempotent and safe to run as a
+ * post-deploy step.
+ *
+ * It is no longer needed after creating a workflow through the wizard.
+ * WorkflowTemplateInstantiator stamps ownership at creation, so a fresh
+ * wizard build already reports as adopted.
  */
 final class ModelerCommands extends DrushCommands {
-
-  /**
-   * The modeler id every ÅbenForms flow should be owned by.
-   */
-  private const MODELER_ID = 'workflow_modeler';
 
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
@@ -51,15 +50,10 @@ final class ModelerCommands extends DrushCommands {
 
     $fixed = [];
     foreach ($flows as $id => $flow) {
-      if ($flow->getThirdPartySetting('modeler_api', 'modeler_id', 'fallback') === self::MODELER_ID) {
+      if (EcaModeler::isOwned($flow)) {
         continue;
       }
-      $flow->setThirdPartySetting('modeler_api', 'modeler_id', self::MODELER_ID);
-      // ModelerApi shows this label in the list; default it to the flow id when
-      // none is present so the row stays readable.
-      if ($flow->getThirdPartySetting('modeler_api', 'label', '') === '') {
-        $flow->setThirdPartySetting('modeler_api', 'label', $id);
-      }
+      EcaModeler::stamp($flow);
       $flow->save();
       $fixed[] = $id;
     }

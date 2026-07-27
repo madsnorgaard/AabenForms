@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_workflows\Service;
 
+use Drupal\aabenforms_workflows\EcaModeler;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -284,27 +285,27 @@ class WorkflowTemplateInstantiator {
     $actions = $this->buildEcaActions($xml, $configuration, $conditions);
     $this->gateIdentityActions($actions, $conditions);
 
-    // Build ECA config structure.
-    $eca_config = [
-      'langcode' => 'en',
-      'status' => $configuration['status'] ?? TRUE,
-      'dependencies' => [
-        'module' => ['eca', 'webform', 'aabenforms_workflows'],
-      ],
-      'id' => $workflow_id,
-      'label' => $configuration['label'] ?? $workflow_id,
-      'modeller' => 'fallback',
-      'version' => '1.0.0',
-      'events' => $this->buildEcaEvents($xml, $configuration),
-      'gateways' => [],
-      'conditions' => $conditions,
-      'actions' => $actions,
-    ];
-
-    // Save ECA config.
-    $config = $this->configFactory->getEditable('eca.eca.' . $workflow_id);
-    $config->setData($eca_config);
-    $config->save();
+    // Save through the entity API, not configFactory->setData(). Writing the
+    // config array directly skipped ConfigEntityBase entirely: the flow got no
+    // uuid, no third-party settings (so it fell out of the Workflow Modeler
+    // until someone ran af:modeler-adopt by hand), and it carried `label`,
+    // `modeller` and `version`, none of which are in Eca::$config_export or in
+    // eca.schema.yml - so any later entity save dropped them again. The
+    // exportable properties are id, uuid, status, weight, template, events,
+    // conditions, gateways and actions; the human-readable label lives in the
+    // template_instance config and in modeler_api.label.
+    $storage = $this->entityTypeManager->getStorage('eca');
+    /** @var \Drupal\eca\Entity\Eca $eca */
+    $eca = $storage->load($workflow_id) ?: $storage->create(['id' => $workflow_id]);
+    $eca->set('status', $configuration['status'] ?? TRUE);
+    $eca->set('weight', 0);
+    $eca->set('template', FALSE);
+    $eca->set('events', $this->buildEcaEvents($xml, $configuration));
+    $eca->set('conditions', $conditions);
+    $eca->set('gateways', []);
+    $eca->set('actions', $actions);
+    EcaModeler::stamp($eca, (string) ($configuration['label'] ?? $workflow_id));
+    $eca->save();
   }
 
   /**
@@ -917,10 +918,12 @@ class WorkflowTemplateInstantiator {
         $config->delete();
       }
 
-      // Delete ECA workflow.
-      $eca_config = $this->configFactory->getEditable('eca.eca.' . $workflow_id);
-      if (!$eca_config->isNew()) {
-        $eca_config->delete();
+      // Delete the ECA flow through the entity API so entity hooks fire and
+      // ECA can tear down what it registered for the flow. Deleting the raw
+      // config removed the data without ever telling the entity system.
+      $eca = $this->entityTypeManager->getStorage('eca')->load($workflow_id);
+      if ($eca !== NULL) {
+        $eca->delete();
       }
 
       // Rebuild routes.
