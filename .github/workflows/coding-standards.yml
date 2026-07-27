@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'web/modules/custom/**'
+      - 'config/sync/**'
       - '.github/workflows/coding-standards.yml'
   push:
     branches:
       - main
     paths:
       - 'web/modules/custom/**'
+      - 'config/sync/**'
       - '.github/workflows/coding-standards.yml'
 
 jobs:
