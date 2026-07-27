@@ -377,7 +377,7 @@ function aabenforms_core_protect_decision_fields(WebformSubmissionInterface $sub
   }
 
   $account = \Drupal::currentUser();
-  if ($account->hasPermission('administer aabenforms workflows') || $account->hasRole('aabenforms_employee')) {
+  if ($account->hasPermission('administer aabenforms decision state') || $account->hasRole('aabenforms_employee')) {
     return;
   }
 
@@ -389,6 +389,13 @@ function aabenforms_core_protect_decision_fields(WebformSubmissionInterface $sub
   // Only guard the CREATE path from a browser/API client. Updates from the
   // citizen approval flow are made by server-side code after the identity,
   // CPR and custody gates have run.
+  //
+  // This is only sufficient because no client-driven UPDATE path exists:
+  // jsonapi.settings ships read_only, and the decision-bearing webforms ship
+  // `draft: none` with prepopulate off, so a citizen cannot re-open a stored
+  // submission and post a new caseworker_status. Both of those are settings
+  // rather than code, so ProtectDecisionFieldsTest asserts them; if either
+  // changes, this guard has to cover updates too.
   if (!$submission->isNew()) {
     return;
   }

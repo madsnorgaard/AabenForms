@@ -1,0 +1,6 @@
+# Permissions for ÅbenForms Workflows module.
+
+administer workflows:
+  title: 'Administer ÅbenForms workflows'
+  description: 'Create, edit and delete ECA flows through the template browser, the workflow wizard and the flow graph. Grants full control over which municipal decisions are automated, so treat it as an administrative permission.'
+  restrict access: true

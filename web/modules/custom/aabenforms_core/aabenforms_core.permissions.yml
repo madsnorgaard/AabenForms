@@ -14,3 +14,8 @@ access employee webform api:
   title: 'Submit AabenForms employee (HR) webforms'
   description: 'Restricts the HR-bundle webforms (hr_onboarding, mileage_expense, phone_declaration) to authenticated users whose MitID/NemLogin claim matches the configured employee mapping.'
   restrict access: true
+
+administer aabenforms decision state:
+  title: 'Set AabenForms decision state directly'
+  description: 'Allows a submission to carry decision-state values (caseworker_status, consent_status, parent<N>_status) straight from the request. Without it those fields are forced back to their element default on create, because a citizen who could set caseworker_status=approved would have the municipality issue a binding decision with no review. Grant only to caseworkers.'
+  restrict access: true
