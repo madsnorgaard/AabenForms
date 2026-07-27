@@ -22,6 +22,15 @@ use Psr\Log\LoggerInterface;
  * Custody filtering happens here, not in callers: childrenOf() only returns
  * children the adult actually holds custody of (GuardianType codes), and
  * hasCustody() is fail-closed.
+ *
+ * Every SF6006 call passes `no_cache => TRUE`, deliberately. Custody is the
+ * fact these flows gate on: it decides who may apply on a child's behalf, who
+ * must co-sign, and who receives the decision letter. A custody transfer takes
+ * effect the moment the registry records it, so a cached answer would let the
+ * platform act on an arrangement that no longer exists, and the mistake would
+ * land in a binding afgoerelse. The lookups are per-submission and low volume,
+ * so there is nothing to gain by caching them. Do not "optimise" this by
+ * dropping the flag.
  */
 class Sf6006FamilyLookup implements FamilyRelationsLookupInterface {
 
