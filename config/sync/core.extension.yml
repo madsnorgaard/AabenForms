@@ -4,7 +4,9 @@ module:
   aabenforms_case: 0
   aabenforms_core: 0
   aabenforms_digital_post: 0
+  aabenforms_digital_post_beskedfordeler: 0
   aabenforms_digital_post_eca: 0
+  aabenforms_digital_post_queue: 0
   aabenforms_digital_post_session_inbox: 0
   aabenforms_esdh: 0
   aabenforms_institution: 0
@@ -14,6 +16,7 @@ module:
   aabenforms_tenant: 0
   aabenforms_webform: 0
   aabenforms_workflows: 0
+  advancedqueue: 0
   block: 0
   bpmn_io: 0
   breakpoint: 0
