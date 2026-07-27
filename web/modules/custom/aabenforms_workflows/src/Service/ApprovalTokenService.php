@@ -14,9 +14,13 @@ use Psr\Log\LoggerInterface;
 class ApprovalTokenService {
 
   /**
-   * Token expiration time in seconds (7 days).
+   * Token expiration time in seconds (14 days).
+   *
+   * Matches the national co-signature precedent: the borger.dk Omsorgs- og
+   * ansvarserklaering gives the co-signer a 14-day window to sign via the
+   * Digital Post link.
    */
-  const TOKEN_EXPIRATION = 604800;
+  const TOKEN_EXPIRATION = 1209600;
 
   /**
    * Allowed clock skew when validating a token timestamp (1 hour).

@@ -1,0 +1,100 @@
+uuid: 2b7d4e9f-6a1c-4d3f-8b8e-0f2a7c9d1e3f
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_digital_post_eca
+    - aabenforms_institution
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: guardian_consent_flow
+id: guardian_consent_flow
+weight: null
+template: null
+events:
+  on_submission:
+    plugin: 'content_entity:insert'
+    configuration:
+      type: 'webform_submission guardian_consent'
+    successors:
+      -
+        id: resolve_employee
+        condition: ''
+conditions:
+  gate_employee_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[consent_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_employee_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[consent_employee_id_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  resolve_employee:
+    label: 'Bind fagperson fra login'
+    plugin: aabenforms_resolve_employee
+    configuration:
+      submitted_employee_id_token: '[current-user:mail]'
+      result_token: consent_employee_id
+    successors:
+      -
+        id: institution_lookup
+        condition: gate_employee_ok
+      -
+        id: deny_external
+        condition: gate_employee_deny
+  deny_external:
+    label: 'Afvis: kun for fagpersoner'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: guardian_consent_denied
+      step_label: 'Kun for fagpersoner'
+      message: 'Anmodninger om samtykke kan kun oprettes af skolens eller institutionens medarbejdere.'
+    successors: {  }
+  institution_lookup:
+    label: 'Slå institution op (institutionsregister)'
+    plugin: aabenforms_institution_lookup
+    configuration:
+      institution_number_token: '[webform_submission:values:institution_number:raw]'
+      result_token: consent_institution
+    successors:
+      -
+        id: consent_invite
+        condition: ''
+  consent_invite:
+    label: 'Send samtykkeanmodning (Digital Post)'
+    plugin: aabenforms_send_cosign_invitation
+    configuration:
+      parent_number: '1'
+      cpr_field: parent1_cpr
+      email_field: parent1_email
+      child_name_field: child_name
+      subject_template: 'Samtykke: anmodning fra dit barns institution'
+    successors:
+      -
+        id: audit_requested
+        condition: ''
+  audit_requested:
+    label: 'Samtykke anmodet'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: guardian_consent_requested
+      additional_data_token: '[webform_submission:values:topic:raw]'
+      message_template: 'Samtykkeanmodning sendt til forældremyndighedsindehaveren via Digital Post (én indehaver er tilstrækkelig ved hverdagsbeslutninger, jf. forældreansvarslovens §3).'
+      status: success
+    successors: {  }

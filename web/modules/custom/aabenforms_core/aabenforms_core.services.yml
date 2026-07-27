@@ -73,3 +73,17 @@ services:
     arguments:
       - '@database'
       - '@datetime.time'
+
+  aabenforms_core.demo_family_repository:
+    class: Drupal\aabenforms_core\Family\DemoFamilyRepository
+
+  aabenforms_core.family_lookup:
+    class: Drupal\aabenforms_core\Family\Sf6006FamilyLookup
+    arguments:
+      - '@aabenforms_core.serviceplatformen_client'
+      - '@config.factory'
+      - '@aabenforms_core.demo_family_repository'
+      - '@logger.factory'
+
+  Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface:
+    alias: aabenforms_core.family_lookup

@@ -1,0 +1,45 @@
+uuid: 3c8e5f0a-7b2d-4e4a-9c9f-1a3b8d0e2f4a
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: guardian_consent_signed_flow
+id: guardian_consent_signed_flow
+weight: null
+template: null
+events:
+  on_signed:
+    plugin: 'content_entity:custom'
+    configuration:
+      event_id: parent1_approved
+    successors:
+      -
+        id: audit_signed
+        condition: gate_this_form
+conditions:
+  gate_this_form:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:webform:id]'
+      right: guardian_consent
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  audit_signed:
+    label: 'Samtykke registreret (MitID-underskrevet)'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: guardian_consent_signed
+      additional_data_token: ''
+      message_template: 'Forældremyndighedsindehaveren har underskrevet samtykket med MitID (identitet kontrolleret mod CPR). Samtykket er dokumenteret og kan trækkes tilbage.'
+      status: success
+    successors: {  }

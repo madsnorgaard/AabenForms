@@ -1,0 +1,10 @@
+institution_number,name,type,district,leader_name,leader_email,parent_number,active
+751000,Børn og Unge (forvaltning),forvaltning,,Marie Kirkegaard,bu-demo@example.dk,,1
+751001,PPR Aarhus,forvaltning,,Jonas Iversen,ppr-demo@example.dk,751000,1
+751101,Frederiksbjerg Skole,skole,Frederiksbjerg,Anne Holm,skoleleder.frederiksbjerg@example.dk,751000,1
+751102,Katrinebjergskolen,skole,Katrinebjerg,Peter Dam,skoleleder.katrinebjerg@example.dk,751000,1
+751103,Møllevangskolen,skole,Møllevang,Lise Krog,skoleleder.moellevang@example.dk,751000,1
+751104,Risskov Skole,skole,Risskov,Søren Bak,skoleleder.risskov@example.dk,751000,1
+751105,Skåde Skole,skole,Skåde,Mette Juhl,,751000,1
+751201,Børnehuset Solstrålen,dagtilbud,Frederiksbjerg,Karin Toft,solstraalen@example.dk,751000,1
+751301,UngiAarhus Syd,fu,,Nikolaj Brandt,ungiaarhus-syd@example.dk,751000,1

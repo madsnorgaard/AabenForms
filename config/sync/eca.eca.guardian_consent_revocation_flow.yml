@@ -1,0 +1,45 @@
+uuid: 4d9f6a1b-8c3e-4f5b-8d0a-2b4c9e1f3a5b
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: guardian_consent_revocation_flow
+id: guardian_consent_revocation_flow
+weight: null
+template: null
+events:
+  on_update:
+    plugin: 'content_entity:update'
+    configuration:
+      type: 'webform_submission guardian_consent'
+    successors:
+      -
+        id: audit_revoked
+        condition: gate_withdrawn
+conditions:
+  gate_withdrawn:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:consent_status:raw]'
+      right: withdrawn
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  audit_revoked:
+    label: 'Samtykke trukket tilbage (GDPR)'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: guardian_consent_withdrawn
+      additional_data_token: '[webform_submission:values:topic:raw]'
+      message_template: 'Samtykket er trukket tilbage (registreres ved hver gemning, mens status er trukket tilbage - loggen er tilfoejende bevis, ikke en taeller) på indehaverens anmodning. Tilbagetrækningen er dokumenteret med tidspunkt, og institutionen skal ophøre med den samtykkebaserede behandling.'
+      status: success
+    successors: {  }

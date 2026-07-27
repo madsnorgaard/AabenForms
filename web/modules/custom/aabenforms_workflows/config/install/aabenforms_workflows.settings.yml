@@ -1,1 +1,5 @@
 require_parent_cpr_match: true
+# Webform ids whose parent approvals additionally require REGISTERED custody
+# of the child (CPR registry check via the family lookup). Empty by default:
+# existing flows verify identity only.
+custody_gated_forms: []

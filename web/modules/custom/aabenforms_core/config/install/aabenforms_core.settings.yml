@@ -5,6 +5,7 @@ serviceplatformen:
     SF1520: 'https://exttest.serviceplatformen.dk/service/CPR/CPRBasicInformation/1'
     SF1530: 'https://exttest.serviceplatformen.dk/service/CVR/CVROnline/1'
     SF1601: 'https://exttest.serviceplatformen.dk/service/DigitalPost/1'
+    SF6006: 'https://exttest.serviceplatformen.dk/service/CPR/FamilieLokal/1'
   certificates:
     cert_path: ''
     key_path: ''

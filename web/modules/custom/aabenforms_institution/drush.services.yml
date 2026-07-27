@@ -1,0 +1,8 @@
+services:
+  aabenforms_institution.drush_commands:
+    class: Drupal\aabenforms_institution\Drush\InstitutionCommands
+    arguments:
+      - '@entity_type.manager'
+      - '@aabenforms_institution.registry'
+    tags:
+      - { name: drush.command }

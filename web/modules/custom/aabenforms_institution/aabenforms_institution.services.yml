@@ -1,0 +1,16 @@
+services:
+  aabenforms_institution.registry:
+    class: Drupal\aabenforms_institution\Service\InstitutionRegistry
+    arguments:
+      - '@entity_type.manager'
+
+  # Decorates the org chart so employee ids of the form
+  # "inst:<institutionsnummer>" resolve their manager via the registry
+  # (school leader, escalating up the parent chain). All other ids
+  # delegate to the decorated directory unchanged.
+  aabenforms_institution.org_chart:
+    class: Drupal\aabenforms_institution\Service\InstitutionOrgChartService
+    decorates: aabenforms_workflows.org_chart
+    arguments:
+      - '@aabenforms_institution.org_chart.inner'
+      - '@aabenforms_institution.registry'

@@ -175,7 +175,7 @@ class SendApprovalEmailAction extends AabenFormsActionBase {
         'request_details' => $submission->getElementData('request_details'),
         'approval_url' => $approval_url,
         'deadline' => $this->dateFormatter->format(
-          strtotime('+7 days'),
+          strtotime('+14 days'),
           'long'
         ),
         'submission_id' => $submission->id(),

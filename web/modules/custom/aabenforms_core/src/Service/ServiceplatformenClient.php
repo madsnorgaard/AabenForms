@@ -25,6 +25,7 @@ use Psr\Log\LoggerInterface;
  * - SF1520: CPR person lookup
  * - SF1530: CVR company lookup
  * - SF1601: Digital Post (NgDP)
+ * - SF6006: Familie+ CPR lookup (family relations and custody)
  */
 class ServiceplatformenClient {
 
@@ -292,6 +293,7 @@ class ServiceplatformenClient {
       'SF1520' => $this->buildSf1520Envelope($operation, $params),
       'SF1530' => $this->buildSf1530Envelope($operation, $params),
       'SF1601' => $this->buildSf1601Envelope($operation, $params),
+      'SF6006' => $this->buildSf6006Envelope($operation, $params),
       default => throw new \InvalidArgumentException("Unknown service: {$service}"),
     };
   }
@@ -447,6 +449,52 @@ XML;
   }
 
   /**
+   * Builds SOAP envelope for SF6006 (Familie+ CPR lookup).
+   *
+   * @param string $operation
+   *   The operation name.
+   * @param array $params
+   *   Request parameters.
+   *
+   * @return string
+   *   The SOAP envelope XML.
+   */
+  protected function buildSf6006Envelope(string $operation, array $params): string {
+    $config = $this->configFactory->get('aabenforms_core.settings');
+    $username = $config->get('serviceplatformen.username') ?? '';
+    $password = $config->get('serviceplatformen.password') ?? '';
+
+    $cpr = $params['cpr'] ?? '';
+
+    // Escape all values to prevent XML injection.
+    $username = htmlspecialchars($username, ENT_XML1, 'UTF-8');
+    $password = htmlspecialchars($password, ENT_XML1, 'UTF-8');
+    $cpr = htmlspecialchars($cpr, ENT_XML1, 'UTF-8');
+
+    $xml = <<<XML
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
+               xmlns:ns="http://serviceplatformen.dk/familielookup/1">
+  <soap:Header>
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+      <wsse:UsernameToken>
+        <wsse:Username>{$username}</wsse:Username>
+        <wsse:Password>{$password}</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soap:Header>
+  <soap:Body>
+    <ns:FamilyLookupRequest>
+      <ns:PNR>{$cpr}</ns:PNR>
+    </ns:FamilyLookupRequest>
+  </soap:Body>
+</soap:Envelope>
+XML;
+
+    return $xml;
+  }
+
+  /**
    * Parses SOAP response XML.
    *
    * @param string $xml
@@ -506,6 +554,11 @@ XML;
       // Check for Digital Post response.
       if ($doc->getElementsByTagName('SendMessageResponse')->length > 0) {
         return $this->parseSf1601Response($doc);
+      }
+
+      // Check for family lookup response.
+      if ($doc->getElementsByTagName('FamilyLookupResponse')->length > 0) {
+        return $this->parseSf6006Response($doc);
       }
 
       // Unknown response format.
@@ -633,10 +686,112 @@ XML;
   }
 
   /**
+   * Parses SF6006 (Familie+) response.
+   *
+   * The response describes the requested person plus their family relations:
+   * a Children list (when the person is an adult) and a top-level Guardians
+   * list (the person's own custody holders, when the person is a child).
+   * Each Child carries its own nested Guardians so custody can be verified
+   * per child without follow-up lookups.
+   *
+   * @param \DOMDocument $doc
+   *   The response DOM document.
+   *
+   * @return array
+   *   Parsed family data with keys 'person', 'children' and 'guardians'.
+   */
+  protected function parseSf6006Response(\DOMDocument $doc): array {
+    $data = [
+      'success' => TRUE,
+      'service' => 'SF6006',
+      'person' => [],
+      'children' => [],
+      'guardians' => [],
+    ];
+
+    $response = $doc->getElementsByTagName('FamilyLookupResponse')->item(0);
+    if (!$response instanceof \DOMElement) {
+      return $data;
+    }
+
+    $person = $response->getElementsByTagName('Person')->item(0);
+    if ($person instanceof \DOMElement) {
+      $data['person'] = [
+        'cpr' => $this->childText($person, 'CPR'),
+        'first_name' => $this->childText($person, 'FirstName'),
+        'last_name' => $this->childText($person, 'LastName'),
+        'birth_date' => $this->childText($person, 'BirthDate'),
+      ];
+    }
+
+    foreach ($response->getElementsByTagName('Child') as $child) {
+      $firstName = $this->childText($child, 'FirstName');
+      $lastName = $this->childText($child, 'LastName');
+      $data['children'][] = [
+        'cpr' => $this->childText($child, 'CPR'),
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'full_name' => trim("{$firstName} {$lastName}"),
+        'birth_date' => $this->childText($child, 'BirthDate'),
+        'protection' => $this->childText($child, 'AddressProtection') === 'true',
+        'guardians' => $this->parseGuardians($child),
+      ];
+    }
+
+    // Top-level guardians: custody holders of the requested person itself.
+    // Only direct children of the response element count; guardians nested
+    // inside Child elements belong to those children.
+    foreach ($response->childNodes as $node) {
+      if ($node instanceof \DOMElement && $node->tagName === 'Guardians') {
+        $data['guardians'] = $this->parseGuardians($node);
+      }
+    }
+
+    return $data;
+  }
+
+  /**
+   * Parses Guardian elements inside a container element.
+   *
+   * @param \DOMElement $container
+   *   The element holding Guardian children (a Child or Guardians element).
+   *
+   * @return array[]
+   *   Guardian records with cpr, type, full_name and same_address keys.
+   */
+  protected function parseGuardians(\DOMElement $container): array {
+    $guardians = [];
+    foreach ($container->getElementsByTagName('Guardian') as $guardian) {
+      $guardians[] = [
+        'cpr' => $this->childText($guardian, 'CPR'),
+        'type' => (int) $this->childText($guardian, 'GuardianType'),
+        'full_name' => $this->childText($guardian, 'FullName'),
+        'same_address' => $this->childText($guardian, 'SameAddress') !== 'false',
+      ];
+    }
+    return $guardians;
+  }
+
+  /**
+   * Returns the text content of the first named descendant element.
+   *
+   * @param \DOMElement $element
+   *   The element to search within.
+   * @param string $tag
+   *   The descendant tag name.
+   *
+   * @return string
+   *   The text content, or '' when absent.
+   */
+  protected function childText(\DOMElement $element, string $tag): string {
+    return $element->getElementsByTagName($tag)->item(0)?->textContent ?? '';
+  }
+
+  /**
    * Gets the service URL from configuration.
    *
    * @param string $service
-   *   The service name (SF1520, SF1530, SF1601).
+   *   The service name (SF1520, SF1530, SF1601, SF6006).
    *
    * @return string
    *   The service endpoint URL.

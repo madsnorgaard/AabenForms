@@ -342,4 +342,80 @@ function aabenforms_core_webform_submission_presave(WebformSubmissionInterface $
       $submission->setElementData($key, $cprAccess->protect($value));
     }
   }
+
+  aabenforms_core_protect_decision_fields($submission);
+}
+
+/**
+ * Keeps decision-state fields out of the submitter's hands.
+ *
+ * Workflow state lives in hidden webform elements (parent<N>_status,
+ * caseworker_status, consent_status) that ECA flows gate on: a caseworker
+ * approval triggers a binding afgoerelse with decision letters. "Hidden" is
+ * a rendering hint, NOT an access control - the API controller and the form
+ * both accept whatever the client posts - so without this guard a citizen
+ * could submit caseworker_status=approved and have the municipality issue a
+ * decision with no review at all.
+ *
+ * The rule: only an authenticated employee (or the CLI/cron, where flows and
+ * drush act on the platform's behalf) may set these fields to a non-default
+ * value. Everyone else has them forced back to the element default. The
+ * legitimate citizen path is untouched, because parent approvals are written
+ * server-side by ParentApprovalForm after the MitID + CPR + custody gates,
+ * running as the same anonymous session but through code, not payload - so
+ * the guard exempts only what the form itself sets on an already-persisted
+ * submission (see $submission->isNew()).
+ *
+ * @param \Drupal\webform\WebformSubmissionInterface $submission
+ *   The submission being saved.
+ */
+function aabenforms_core_protect_decision_fields(WebformSubmissionInterface $submission): void {
+  // Server-side actors (drush, cron, queue workers) are trusted: ECA flows and
+  // the approval form run there and legitimately advance workflow state.
+  if (PHP_SAPI === 'cli') {
+    return;
+  }
+
+  $account = \Drupal::currentUser();
+  if ($account->hasPermission('administer aabenforms decision state') || $account->hasRole('aabenforms_employee')) {
+    return;
+  }
+
+  $webform = $submission->getWebform();
+  if ($webform === NULL) {
+    return;
+  }
+
+  // Only guard the CREATE path from a browser/API client. Updates from the
+  // citizen approval flow are made by server-side code after the identity,
+  // CPR and custody gates have run.
+  //
+  // This is only sufficient because no client-driven UPDATE path exists:
+  // jsonapi.settings ships read_only, and the decision-bearing webforms ship
+  // `draft: none` with prepopulate off, so a citizen cannot re-open a stored
+  // submission and post a new caseworker_status. Both of those are settings
+  // rather than code, so ProtectDecisionFieldsTest asserts them; if either
+  // changes, this guard has to cover updates too.
+  if (!$submission->isNew()) {
+    return;
+  }
+
+  $guarded = 0;
+  foreach ($webform->getElementsInitializedAndFlattened() as $key => $element) {
+    if ($key !== 'caseworker_status' && $key !== 'consent_status' && !preg_match('/^parent\d+_status$/', $key)) {
+      continue;
+    }
+    $default = $element['#default_value'] ?? '';
+    if ((string) $submission->getElementData($key) !== (string) $default) {
+      $submission->setElementData($key, $default);
+      $guarded++;
+    }
+  }
+
+  if ($guarded > 0) {
+    \Drupal::logger('aabenforms_core')->warning(
+      'Blocked @count submitter-supplied decision-state field(s) on webform @form; reset to defaults.',
+      ['@count' => $guarded, '@form' => $webform->id()]
+    );
+  }
 }

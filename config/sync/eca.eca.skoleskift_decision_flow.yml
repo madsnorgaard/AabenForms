@@ -1,0 +1,230 @@
+uuid: 9e4a1b6c-3d8f-4a0c-9e5b-7c9d4f6a8b0c
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_digital_post_eca
+    - aabenforms_esdh
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: skoleskift_decision_flow
+id: skoleskift_decision_flow
+weight: null
+template: null
+events:
+  on_update:
+    plugin: 'content_entity:update'
+    configuration:
+      type: 'webform_submission school_transfer'
+    successors:
+      -
+        id: resolve_caseworker
+        condition: gate_approved
+      -
+        id: resolve_caseworker
+        condition: gate_rejected
+conditions:
+  gate_approved:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:caseworker_status:raw]'
+      right: approved
+      operator: equal
+      type: value
+      case: false
+  gate_rejected:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:caseworker_status:raw]'
+      right: rejected
+      operator: equal
+      type: value
+      case: false
+  gate_caseworker_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_caseworker_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_caseworker_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[skoleskift_caseworker_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_decide_approved:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_case_id_status][webform_submission:values:caseworker_status:raw]'
+      right: foundapproved
+      operator: equal
+      type: value
+      case: false
+  gate_decide_rejected:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[skoleskift_case_id_status][webform_submission:values:caseworker_status:raw]'
+      right: foundrejected
+      operator: equal
+      type: value
+      case: false
+  gate_recipients_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[post_recipients_status]'
+      right: none
+      operator: equal
+      type: value
+      case: false
+  gate_recipients_none:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[post_recipients_status]'
+      right: none
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  resolve_caseworker:
+    label: 'Bekræft at afgørelsen træffes af en sagsbehandler'
+    plugin: aabenforms_resolve_employee
+    configuration:
+      submitted_employee_id_token: '[current-user:mail]'
+      result_token: skoleskift_caseworker
+    successors:
+      -
+        id: find_case
+        condition: gate_caseworker_ok
+      -
+        id: deny_unauthorised_decision
+        condition: gate_caseworker_deny
+  deny_unauthorised_decision:
+    label: 'Afvis: afgørelse kræver sagsbehandler'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: skoleskift_unauthorised_decision
+      step_label: 'Afgørelse afvist'
+      message: 'En afgørelse kan kun træffes af en sagsbehandler. Statusfeltet blev ændret uden for sagsbehandlingen, og der er ikke truffet nogen afgørelse.'
+    successors: {  }
+  find_case:
+    label: 'Find sagen for ansøgningen'
+    plugin: aabenforms_case_find
+    configuration:
+      result_token: skoleskift_case_id
+    successors:
+      -
+        id: decide_bevilget
+        condition: gate_decide_approved
+      -
+        id: decide_afslag
+        condition: gate_decide_rejected
+  decide_bevilget:
+    label: 'Afgørelse: skoleskift bevilget'
+    plugin: aabenforms_case_decide
+    configuration:
+      case_id_token: '[skoleskift_case_id]'
+      afgoerelse_type: medhold
+      klagevejledning: ''
+      klagefrist_uger: 4
+    successors:
+      -
+        id: resolve_recipients
+        condition: ''
+  decide_afslag:
+    label: 'Afgørelse: afslag på skoleskift'
+    plugin: aabenforms_case_decide
+    configuration:
+      case_id_token: '[skoleskift_case_id]'
+      afgoerelse_type: afslag
+      klagevejledning: 'Du kan klage over afgørelsen. Klagen skal være modtaget senest 4 uger efter, du har fået afgørelsen.'
+      klagefrist_uger: 4
+    successors:
+      -
+        id: resolve_recipients
+        condition: ''
+  resolve_recipients:
+    label: 'Find modtagere (begge forældremyndighedsindehavere)'
+    plugin: aabenforms_resolve_guardians
+    configuration:
+      child_cpr_token: '[webform_submission:values:child_cpr:raw]'
+      result_token: post_recipients
+    successors:
+      -
+        id: letter_recipient_1
+        condition: gate_recipients_ok
+      -
+        id: audit_no_recipients
+        condition: gate_recipients_none
+  audit_no_recipients:
+    label: 'Ingen modtagere - manuel forsendelse'
+    plugin: aabenforms_audit_log
+    configuration:
+      event_type: skoleskift_no_recipients
+      additional_data_token: ''
+      message_template: 'Modtagerne af afgørelsesbrevet kunne ikke fastlægges i CPR-registret. Brevet skal sendes manuelt, og sagen forbliver åben.'
+      status: failure
+    successors: {  }
+  letter_recipient_1:
+    label: 'Send afgørelsesbrev (indehaver 1)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[post_recipients_1]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Afgørelse: skoleskift'
+      body_template: '<p>Der er truffet afgørelse i sagen om skoleskift for dit barn. Afgørelsen med begrundelse og klagevejledning fremgår af sagen.</p>'
+      type: 'Digital Post'
+      result_token: skoleskift_letter_1
+    successors:
+      -
+        id: letter_recipient_2
+        condition: ''
+  letter_recipient_2:
+    label: 'Send afgørelsesbrev (indehaver 2)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[post_recipients_2]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Afgørelse: skoleskift'
+      body_template: '<p>Der er truffet afgørelse i sagen om skoleskift for dit barn. Afgørelsen med begrundelse og klagevejledning fremgår af sagen.</p>'
+      type: 'Digital Post'
+      result_token: skoleskift_letter_2
+    successors:
+      -
+        id: set_klagefrist
+        condition: ''
+  set_klagefrist:
+    label: 'Start klagefrist (breve afsendt)'
+    plugin: aabenforms_case_set_klagefrist
+    configuration:
+      case_id_token: '[skoleskift_case_id]'
+      klagefrist_uger: 4
+    successors:
+      -
+        id: esdh_journal
+        condition: ''
+  esdh_journal:
+    label: 'Arkivér i ESDH'
+    plugin: aabenforms_case_esdh_journal
+    configuration:
+      case_id_token: '[skoleskift_case_id]'
+    successors: {  }

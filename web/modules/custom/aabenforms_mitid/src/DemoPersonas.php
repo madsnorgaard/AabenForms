@@ -13,9 +13,10 @@ namespace Drupal\aabenforms_mitid;
  * "Test as demo citizen" action.
  *
  * This is test/demo scaffolding only. Seeding a session here is gated by the
- * `administer aabenforms workflows` permission (and the CLI), never exposed to
- * anonymous citizens, and the resulting session carries the same shape a real
- * MitID callback would produce so downstream actions behave identically.
+ * `administer eca` permission on the "Test as demo citizen" route (and by the
+ * CLI for the Drush command), never exposed to anonymous citizens, and the
+ * resulting session carries the same shape a real MitID callback would produce
+ * so downstream actions behave identically.
  */
 final class DemoPersonas {
 

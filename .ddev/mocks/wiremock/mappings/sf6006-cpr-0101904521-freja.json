@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "urlPath": "/sf6006",
+    "bodyPatterns": [
+      {
+        "contains": "<ns:PNR>0101904521</ns:PNR>"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "text/xml; charset=UTF-8"
+    },
+    "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n  <soap:Body>\n    <FamilyLookupResponse>\n      <Person>\n        <CPR>0101904521</CPR>\n        <FirstName>Freja</FirstName>\n        <LastName>Nielsen</LastName>\n        <BirthDate>1990-01-01</BirthDate>\n      </Person>\n      <Children>\n        <Child>\n          <CPR>0109182345</CPR>\n          <FirstName>Emil</FirstName>\n          <LastName>Nielsen Andersen</LastName>\n          <BirthDate>2018-09-01</BirthDate>\n          <AddressProtection>false</AddressProtection>\n          <Guardians>\n            <Guardian><CPR>0101904521</CPR><GuardianType>3</GuardianType><FullName>Freja Nielsen</FullName><SameAddress>true</SameAddress></Guardian>\n            <Guardian><CPR>0803755210</CPR><GuardianType>4</GuardianType><FullName>Lars Andersen</FullName><SameAddress>false</SameAddress></Guardian>\n          </Guardians>\n        </Child>\n        <Child>\n          <CPR>2005102345</CPR>\n          <FirstName>Oliver</FirstName>\n          <LastName>Nielsen Andersen</LastName>\n          <BirthDate>2010-05-20</BirthDate>\n          <AddressProtection>false</AddressProtection>\n          <Guardians>\n            <Guardian><CPR>0101904521</CPR><GuardianType>3</GuardianType><FullName>Freja Nielsen</FullName><SameAddress>true</SameAddress></Guardian>\n            <Guardian><CPR>0803755210</CPR><GuardianType>4</GuardianType><FullName>Lars Andersen</FullName><SameAddress>false</SameAddress></Guardian>\n          </Guardians>\n        </Child>\n      </Children>\n    </FamilyLookupResponse>\n  </soap:Body>\n</soap:Envelope>"
+  }
+}

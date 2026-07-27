@@ -110,7 +110,7 @@ function aabenforms_workflows_mail(string $key, array &$message, array $params):
 
       $message['body'][] = '';
 
-      $message['body'][] = t('This link will expire in 7 days.');
+      $message['body'][] = t('This link will expire in 14 days.');
 
       $message['body'][] = '';
 
