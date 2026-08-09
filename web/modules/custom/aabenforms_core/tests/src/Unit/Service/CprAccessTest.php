@@ -110,4 +110,34 @@ class CprAccessTest extends UnitTestCase {
     $this->cprAccess->protect('0101901234');
   }
 
+  /**
+   * Matches every real CPR element type and the key-naming convention.
+   *
+   * The #172 regression: the old check matched the type 'cpr_field' when the
+   * plugin id was 'aabenforms_cpr_field', so a CPR-typed element whose key
+   * did not follow the naming convention was stored in plaintext.
+   *
+   * @covers ::isCprElement
+   * @dataProvider cprElementProvider
+   */
+  public function testIsCprElement(string $key, array $element, bool $expected): void {
+    $this->assertSame($expected, $this->cprAccess->isCprElement($key, $element));
+  }
+
+  /**
+   * Cases for testIsCprElement.
+   */
+  public static function cprElementProvider(): array {
+    return [
+      'current plugin id, unconventional key' => ['cpr_number', ['#type' => 'cpr_field'], TRUE],
+      'legacy aabenforms_cpr_field id' => ['cpr_number', ['#type' => 'aabenforms_cpr_field'], TRUE],
+      'legacy cpr id' => ['person', ['#type' => 'cpr'], TRUE],
+      'plain textfield, key convention _cpr' => ['applicant_cpr', ['#type' => 'textfield'], TRUE],
+      'plain textfield, key cpr' => ['cpr', ['#type' => 'textfield'], TRUE],
+      'not a CPR field' => ['email', ['#type' => 'email'], FALSE],
+      'cpr substring is not a match' => ['cpr_consent', ['#type' => 'checkbox'], FALSE],
+      'missing #type, non-matching key' => ['note', [], FALSE],
+    ];
+  }
+
 }

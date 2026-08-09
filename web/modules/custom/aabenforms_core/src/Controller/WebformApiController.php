@@ -149,8 +149,12 @@ class WebformApiController extends ControllerBase {
     }
     // Only the first CPR element belongs to the authenticated applicant; any
     // further CPR fields (a child's, a partner's) must never inherit it.
+    // Same authority as the presave encryption hook (#172), so a field this
+    // prefill writes can never be one the encryption misses.
+    /** @var \Drupal\aabenforms_core\Service\CprAccess $cprAccess */
+    $cprAccess = \Drupal::service('aabenforms_core.cpr_access');
     foreach ($webform->getElementsDecodedAndFlattened() as $key => $element) {
-      if (!in_array($element['#type'] ?? '', ['cpr', 'cpr_field'], TRUE)) {
+      if (!$cprAccess->isCprElement($key, $element)) {
         continue;
       }
       $value = (string) ($submission_data[$key] ?? '');

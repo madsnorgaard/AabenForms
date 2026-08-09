@@ -34,6 +34,15 @@ class CprAccess {
   protected const DEFAULT_PROFILE = 'aabenforms_aes256';
 
   /**
+   * Element '#type' values that hold a CPR number.
+   *
+   * 'cpr_field' is the real plugin id. 'aabenforms_cpr_field' and 'cpr' are
+   * the pre-#172 ids, kept so stored or imported config that still uses them
+   * is encrypted rather than silently skipped.
+   */
+  public const CPR_ELEMENT_TYPES = ['cpr_field', 'aabenforms_cpr_field', 'cpr'];
+
+  /**
    * The encryption service.
    *
    * @var \Drupal\aabenforms_core\Service\EncryptionService
@@ -81,6 +90,30 @@ class CprAccess {
    */
   public function isProtected(string $value): bool {
     return str_starts_with($value, self::PREFIX) || str_starts_with($value, self::PREFIX_TENANT);
+  }
+
+  /**
+   * Decides whether a webform element holds a CPR number.
+   *
+   * The single authority for "is this a CPR field" (#172). Both the
+   * webform-submission presave encryption hook and the API controller's
+   * MitID prefill MUST use this, so a field cannot be prefilled with a CPR
+   * by one path and then missed by the encryption in the other.
+   *
+   * @param string $key
+   *   The element's machine key.
+   * @param array<string, mixed> $element
+   *   The (initialized or decoded) element definition.
+   *
+   * @return bool
+   *   TRUE when the element's type is a CPR type, or - because several
+   *   citizen forms use a plain textfield - its key is 'cpr' or ends in
+   *   '_cpr' (cpr, child_cpr, applicant_cpr, parent1_cpr, ...).
+   */
+  public function isCprElement(string $key, array $element): bool {
+    return in_array($element['#type'] ?? '', self::CPR_ELEMENT_TYPES, TRUE)
+      || $key === 'cpr'
+      || str_ends_with($key, '_cpr');
   }
 
   /**
