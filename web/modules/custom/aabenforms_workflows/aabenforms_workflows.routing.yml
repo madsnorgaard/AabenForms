@@ -142,3 +142,11 @@ aabenforms_workflows.wizard_generate_svg:
     _permission: 'administer workflows'
   options:
     _ajax_route: TRUE
+
+aabenforms_workflows.flow_overview:
+  path: '/admin/aabenforms/flows'
+  defaults:
+    _controller: '\Drupal\aabenforms_workflows\Controller\FlowOverviewController::overview'
+    _title: 'Flow overview'
+  requirements:
+    _permission: 'administer workflows'

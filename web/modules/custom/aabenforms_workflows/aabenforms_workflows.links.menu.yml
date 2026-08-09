@@ -11,3 +11,10 @@ aabenforms_workflows.template_select:
   route_name: aabenforms_workflows.template_select
   parent: system.admin_config_workflow
   weight: 11
+
+aabenforms_workflows.flow_overview:
+  title: 'Flow overview'
+  description: 'All ECA flows grouped by citizen journey'
+  route_name: aabenforms_workflows.flow_overview
+  parent: system.admin_config_workflow
+  weight: 9
