@@ -134,17 +134,22 @@ class AuditLogger {
   /**
    * Logs workflow data access.
    *
+   * Rows land with action='workflow_access' and the sub-action in the
+   * purpose column. The parameter is named $purpose to match, so queries
+   * written from a call site's vocabulary do not filter the wrong column
+   * (the dashboard's MitID login counter did exactly that, #191).
+   *
    * @param string $workflow_id
    *   The workflow instance ID.
-   * @param string $action
-   *   The action performed (e.g., 'view', 'update', 'delete').
+   * @param string $purpose
+   *   The sub-action performed (e.g., 'view', 'mitid_session_created').
    * @param string $status
    *   The result status.
    * @param array<string, mixed> $context
    *   Additional context.
    */
-  public function logWorkflowAccess(string $workflow_id, string $action, string $status, array $context = []): void {
-    $this->log('workflow_access', $workflow_id, $action, $status, $context);
+  public function logWorkflowAccess(string $workflow_id, string $purpose, string $status, array $context = []): void {
+    $this->log('workflow_access', $workflow_id, $purpose, $status, $context);
   }
 
   /**

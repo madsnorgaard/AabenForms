@@ -96,8 +96,16 @@ class MitidSection extends AabenformsDashboardSectionBase {
 
     $since = $this->time->getRequestTime() - 86400;
     try {
+      // A successful MitID login is audited by MitIdSessionManager::
+      // storeSession() as action='workflow_access' with the sub-action in
+      // the purpose column (AuditLogger::logWorkflowAccess() wraps log(),
+      // whose first parameter is the action 'workflow_access' itself). The
+      // previous query counted action='mitid_login', which nothing writes,
+      // so this tile was structurally stuck at zero (#191).
       $logins24h = (int) $this->database->select('aabenforms_audit_log', 'l')
-        ->condition('action', 'mitid_login')
+        ->condition('action', 'workflow_access')
+        ->condition('purpose', 'mitid_session_created')
+        ->condition('status', 'success')
         ->condition('timestamp', $since, '>=')
         ->countQuery()
         ->execute()
