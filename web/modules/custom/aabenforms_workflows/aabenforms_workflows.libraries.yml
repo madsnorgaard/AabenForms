@@ -14,9 +14,12 @@ workflow_wizard:
   css:
     theme:
       css/workflow-wizard.css: {}
+  js:
+    js/workflow-wizard.js: {}
   dependencies:
     - core/drupal
     - core/jquery
+    - core/once
     - aabenforms_core/admin
 
 bpmn_editor:

@@ -331,7 +331,7 @@ class WorkflowTemplateWizardForm extends FormBase {
     $template_id = $form_state->getValue('template_id');
 
     $form['step_title'] = [
-      '#markup' => '<h2>' . $this->t('Step 2: Configure Webform Integration') . '</h2>',
+      '#markup' => '<h2>' . $this->t('Step 3: Configure Webform Integration') . '</h2>',
     ];
 
     $form['help'] = [
@@ -351,6 +351,12 @@ class WorkflowTemplateWizardForm extends FormBase {
       '#description' => $this->t('Which webform should trigger this workflow?'),
       '#options' => $webform_options,
       '#required' => TRUE,
+      // An explicit empty default: without it the first webform
+      // (alphabetically) is silently preselected, and a flow can go live
+      // bound to the wrong form without the admin ever touching the field
+      // (#197 - three such flows were found on production).
+      '#empty_option' => $this->t('- Select webform -'),
+      '#empty_value' => '',
       '#default_value' => $form_state->getValue('webform_id'),
       '#ajax' => [
         'callback' => '::updateFieldMappings',
@@ -405,7 +411,7 @@ class WorkflowTemplateWizardForm extends FormBase {
     $template_id = $form_state->getValue('template_id');
 
     $form['step_title'] = [
-      '#markup' => '<h2>' . $this->t('Step 3: Configure Actions') . '</h2>',
+      '#markup' => '<h2>' . $this->t('Step 4: Configure Actions') . '</h2>',
     ];
 
     $form['help'] = [
@@ -443,10 +449,20 @@ class WorkflowTemplateWizardForm extends FormBase {
       ];
 
       foreach ($actions as $action_id => $action) {
+        // A collapsed details hiding a required field means the admin sees a
+        // near-empty step, clicks Next, and gets errors for fields that were
+        // never visible (#197). Open every action that requires input.
+        $has_required = FALSE;
+        foreach ($action['configurable_fields'] as $field) {
+          if (!empty($field['required'])) {
+            $has_required = TRUE;
+            break;
+          }
+        }
         $form['action_config'][$action_id] = [
           '#type' => 'details',
           '#title' => $action['name'],
-          '#open' => FALSE,
+          '#open' => $has_required,
         ];
 
         foreach ($action['configurable_fields'] as $field_id => $field) {
@@ -472,7 +488,7 @@ class WorkflowTemplateWizardForm extends FormBase {
     $template_id = $form_state->getValue('template_id');
 
     $form['step_title'] = [
-      '#markup' => '<h2>' . $this->t('Step 4: Data Visibility (Optional)') . '</h2>',
+      '#markup' => '<h2>' . $this->t('Step 5: Data Visibility (Optional)') . '</h2>',
     ];
 
     // Only show for templates with multi-party workflows.
@@ -514,7 +530,7 @@ class WorkflowTemplateWizardForm extends FormBase {
     $template = $templates[$template_id];
 
     $form['step_title'] = [
-      '#markup' => '<h2>' . $this->t('Step 5: Preview and Activate') . '</h2>',
+      '#markup' => '<h2>' . $this->t('Step 6: Preview and Activate') . '</h2>',
     ];
 
     $form['help'] = [
