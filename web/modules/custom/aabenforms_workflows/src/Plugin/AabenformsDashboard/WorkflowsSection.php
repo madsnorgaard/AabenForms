@@ -8,6 +8,7 @@ use Drupal\aabenforms_core\Dashboard\AabenformsDashboardSectionBase;
 use Drupal\aabenforms_core\Dashboard\Attribute\AabenformsDashboardSection;
 use Drupal\aabenforms_workflows\Service\BpmnTemplateManager;
 use Drupal\aabenforms_workflows\Service\WorkflowTemplateInstantiator;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -24,6 +25,7 @@ class WorkflowsSection extends AabenformsDashboardSectionBase {
     array $plugin_definition,
     protected readonly BpmnTemplateManager $templateManager,
     protected readonly WorkflowTemplateInstantiator $instantiator,
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
@@ -38,6 +40,7 @@ class WorkflowsSection extends AabenformsDashboardSectionBase {
       $plugin_definition,
       $container->get('aabenforms_workflows.bpmn_template_manager'),
       $container->get('aabenforms_workflows.template_instantiator'),
+      $container->get('entity_type.manager'),
     );
   }
 
@@ -45,16 +48,30 @@ class WorkflowsSection extends AabenformsDashboardSectionBase {
    * {@inheritdoc}
    */
   public function getLabel(): TranslatableMarkup {
-    return $this->t('Workflow Templates');
+    return $this->t('Workflows');
   }
 
   /**
    * {@inheritdoc}
    */
   public function getHeroMetric(): ?array {
-    $instances = $this->instantiator->getInstances();
+    // "Active workflows" means enabled ECA flows - every flow that fires,
+    // whether hand-authored in config/sync or built with the wizard. The
+    // previous count read only the wizard's template_instance configs, so
+    // deploying hand-authored flows never moved the number and a deploy
+    // looked like it had not landed (#192).
+    try {
+      $count = $this->entityTypeManager->getStorage('eca')->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('status', TRUE)
+        ->count()
+        ->execute();
+    }
+    catch (\Throwable) {
+      $count = 0;
+    }
     return [
-      'value' => count($instances),
+      'value' => (int) $count,
       'label' => $this->t('active workflows'),
     ];
   }
@@ -64,6 +81,10 @@ class WorkflowsSection extends AabenformsDashboardSectionBase {
    */
   public function getSecondaryMetrics(): array {
     return [
+      [
+        'label' => $this->t('Built with the wizard'),
+        'value' => count($this->instantiator->getInstances()),
+      ],
       [
         'label' => $this->t('Templates available'),
         'value' => count($this->templateManager->getAvailableTemplates()),
