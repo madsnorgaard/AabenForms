@@ -9,3 +9,6 @@ dependencies:
   - drupal:key
   - drupal:encrypt
   - drupal:real_aes
+
+'interface translation project': aabenforms_core
+'interface translation server pattern': 'modules/custom/aabenforms_core/translations/%project.%language.po'

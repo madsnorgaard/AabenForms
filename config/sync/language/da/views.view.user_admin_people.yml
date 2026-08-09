@@ -1,0 +1,71 @@
+label: Personer
+display:
+  default:
+    display_title: Standard
+    display_options:
+      title: Personer
+      fields:
+        user_bulk_form:
+          label: Masseopdatering
+        name:
+          label: Brugernavn
+        status:
+          label: Status
+          settings:
+            format_custom_false: Blokeret
+            format_custom_true: Aktiv
+        roles_target_id:
+          label: Roller
+        created:
+          label: 'Medlem i'
+        access:
+          label: 'Seneste tilgang'
+        operations:
+          label: Handlinger
+        mail:
+          separator: ', '
+      pager:
+        options:
+          tags:
+            next: 'Næste ›'
+            previous: '‹ Forrige'
+            first: '« Første'
+            last: 'Sidste »'
+          expose:
+            items_per_page_label: 'Antal elementer'
+            items_per_page_options_all_label: '- Alle -'
+            offset_label: Forskydning
+      exposed_form:
+        options:
+          submit_button: Filter
+          reset_button_label: Gendan
+          exposed_sorts_label: 'Sortér efter'
+          sort_asc_label: Stigende
+          sort_desc_label: Faldende
+      empty:
+        area_text_custom:
+          content: 'Ingen personer til rådighed.'
+      filters:
+        status:
+          group_info:
+            label: Status
+            group_items:
+              1:
+                title: Aktiv
+              2:
+                title: Blokeret
+        roles_target_id:
+          expose:
+            label: Rolle
+        permission:
+          expose:
+            label: Tilladelse
+      use_more_text: mere
+  page_1:
+    display_title: Side
+    display_options:
+      menu:
+        title: Vis
+      tab_options:
+        title: Personer
+        description: 'Håndtér brugerkonti, roller og tilladelser.'

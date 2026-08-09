@@ -1,0 +1,78 @@
+cancel_confirm:
+  subject: 'Anmodning om opsigelse af konto for [user:display-name] på [site:name]'
+password_reset:
+  subject: 'Ny login-information for [user:display-name] på [site:name]'
+  body: |-
+    [user:display-name],
+
+    Der er lavet en forespørgsel om at nulstille adgangskoden til din konto på [site:name].
+
+    Du kan logge ind nu ved at klikke på linket eller ved at kopiere og indsætte det i din browser:
+
+    [user:one-time-login-url]
+
+    Dette link kan kun bruges til at logge ind én gang, og det sender dig til en side hvor du kan vælge en adgangskode. Linket udløber efter én dag og der sker ikke noget hvis det ikke bruges.
+
+    -- Holdet bag [site:name]
+register_admin_created:
+  subject: 'En administrator har oprettet en konto til dig på [site:name]'
+  body: |-
+    [user:display-name],
+
+    En administrator på [site:name] har oprettet en konto til dig. Du kan logge ind ved at klikke på linket eller ved at kopiere og indsætte det i din browser:
+
+    [user:one-time-login-url]
+
+    Dette link kan kun bruges til at logge ind, og det sender dig til en side hvor du kan vælge en adgangskode.
+
+    Når du har valgt en adgangskode kan du logge ind på [site:login-url] med:
+
+    Brugernavn: [user:name]
+    Adgangskode: Din adgangskode
+
+    --  Holdet bag [site:name]
+register_no_approval_required:
+  subject: 'Kontoinformationer for [user:display-name] på [site:name] (blokeret)'
+  body: |-
+    [user:display-name],
+
+    Tak fordi du har oprettet dig som bruger på [site:name]. Du kan nu logge ind ved at klikke på linket eller ved at kopiere og indsætte det i din browser:
+
+    [user:one-time-login-url]
+
+    Dette link kan kun bruges til at logge ind, og det sender dig til en side hvor du kan vælge en adgangskode.
+
+    Når du har valgt en adgangskode kan du logge ind på [site:login-url] med:
+
+    Brugernavn: [user:name]
+    Adgangskode: Din adgangskode
+
+    --  Holdet bag [site:name]
+register_pending_approval:
+  subject: 'Kontoinformation for [user:display-name] på [site:name] (afventer godkendelse af administrator)'
+  body: |-
+    [bruger:vist navn],
+
+    Tak for din tilmelding på [site:name]. Din ansøgning om en konto afventer i øjeblikket godkendelse. Når den er godkendt, modtager du en anden e-mail med oplysninger om, hvordan du logger ind, angiver din adgangskode og andre detaljer.
+
+    -- [site:name] holdet
+register_pending_approval_admin:
+  subject: 'Kontoinformation for [user:display-name] på [site:name] (afventer godkendelse af administrator)'
+  body: |-
+    [user:display-name] har anmodet om en konto.
+
+    [user:edit-url]
+status_activated:
+  subject: 'Kontoinformationer for [user:display-name] på [site:name] (godkendt)'
+  body: "[user:display-name],\r\n\r\nDin konto på [site:name] er blevet aktiveret.\r\n\r\nDu kan logge ind ved at klikke på følgende link eller ved at kopiere og indsætte det i din browser:\r\n\r\n[user:one-time-login-url]\r\n\r\nLinket kan kun bruges én gang, og det fører dig til en side, hvor du kan vælge din adgangskode.\r\n\r\nNår du har valgt en adgangskode kan du fremover logge ind på [site:login-url] med:\r\n\r\nBrugernavn: [user:account-name]\r\nAdgangskode: Din adgangskode\r\n\r\n--  Holdet bag [site:name]"
+status_blocked:
+  subject: 'Kontoinformationer for [user:display-name] på [site:name] (blokeret)'
+  body: "[user:display-name],\r\n\r\nDin konto på [site:name] er blevet blokeret.\r\n\r\n--  [site:name] team"
+status_canceled:
+  subject: 'Kontoinformationer for [user:display-name] på [site:name] (opsagt)'
+  body: |-
+    [user:display-name],
+
+    Din konto på [site:name] er blevet lukket.
+
+    --  [site:name] holdet

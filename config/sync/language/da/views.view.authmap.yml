@@ -1,0 +1,34 @@
+display:
+  default:
+    display_options:
+      fields:
+        name:
+          separator: ', '
+        delete_link:
+          label: slet
+          text: slet
+      pager:
+        options:
+          tags:
+            next: ››
+            previous: ‹‹
+          expose:
+            items_per_page_label: 'Antal elementer'
+            items_per_page_options_all_label: '- Alle -'
+            offset_label: Forskydning
+      exposed_form:
+        options:
+          submit_button: Udfør
+          reset_button_label: Gendan
+          exposed_sorts_label: 'Sortér efter'
+          sort_asc_label: Stigende
+          sort_desc_label: Faldende
+      arguments:
+        provider_field:
+          exception:
+            title: Alle
+  page:
+    display_title: Side
+    display_options:
+      menu:
+        title: Eksterne

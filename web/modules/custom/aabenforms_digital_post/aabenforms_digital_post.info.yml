@@ -8,3 +8,6 @@ dependencies:
   - aabenforms_core
 
 configure: aabenforms_digital_post.settings
+
+'interface translation project': aabenforms_digital_post
+'interface translation server pattern': 'modules/custom/aabenforms_digital_post/translations/%project.%language.po'

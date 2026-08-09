@@ -1,0 +1,85 @@
+# Danish translations for aabenforms_core.
+# Covers the admin dashboard shell and its activity panel.
+msgid ""
+msgstr ""
+"Project-Id-Version: aabenforms_core\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Workflow automation backend for Danish municipalities."
+msgstr "Backend til automatisering af arbejdsgange i danske kommuner."
+
+msgid "Evidence traces"
+msgstr "Evidensspor"
+
+msgid "Readiness board"
+msgstr "Parathedsoversigt"
+
+msgid "New workflow"
+msgstr "Ny arbejdsgang"
+
+msgid "Send test Digital Post"
+msgstr "Send test-Digital Post"
+
+msgid "Open ECA modeller"
+msgstr "Åbn ECA-modellering"
+
+msgid "View submissions"
+msgstr "Vis indsendelser"
+
+msgid "Recent activity"
+msgstr "Seneste aktivitet"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Audit"
+msgstr "Audit"
+
+msgid "Errors"
+msgstr "Fejl"
+
+msgid "No events yet."
+msgstr "Ingen hændelser endnu."
+
+msgid "View activity"
+msgstr "Vis aktivitet"
+
+msgid "Audit Log"
+msgstr "Auditlog"
+
+msgid "events (24h)"
+msgstr "hændelser (24 t)"
+
+msgid "Failures (24h)"
+msgstr "Fejl (24 t)"
+
+msgid "Mock Services"
+msgstr "Mock-tjenester"
+
+msgid "Running"
+msgstr "Kører"
+
+msgid "Down"
+msgstr "Nede"
+
+msgid "Degraded"
+msgstr "Forringet"
+
+msgid "Unavailable"
+msgstr "Utilgængelig"
+
+msgid "Mock in prod"
+msgstr "Mock i produktion"
+
+msgid "Live test"
+msgstr "Livetest"
+
+msgid "(no subject)"
+msgstr "(intet emne)"
+
+msgid "Not set"
+msgstr "Ikke angivet"

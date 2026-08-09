@@ -1,0 +1,13 @@
+settings:
+  default_submit_button_label: Indsend
+  default_reset_button_label: Gendan
+  default_delete_button_label: Slet
+  default_preview_next_button_label: Gennemse
+  default_preview_label: Gennemse
+  dialog_options:
+    narrow:
+      title: Smal
+    wide:
+      title: Bred
+element:
+  default_more_title: Mere

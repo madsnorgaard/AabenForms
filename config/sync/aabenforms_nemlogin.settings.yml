@@ -1,24 +1,12 @@
-# NemLog-in OIOSAML 3 Service Provider settings.
-#
-# Certificates and keys are NOT stored here: sp_cert_key / sp_private_key_key
-# name entries in the `key` module (drupal:key), so the OCES3 material stays out
-# of config/sync. Live activation is gated on an SP registration + metadata
-# exchange in NemLog-in integrationstest (ops), so all endpoints default empty.
 enabled: false
 strict: true
-# The SP entityId - must equal the value registered in NemLog-in and is the
-# audience the returned assertion is restricted to.
 sp_entity_id: ''
-# Absolute SP endpoint URLs (built from the site by default via the controller).
 acs_url: ''
 slo_url: ''
-# NemLog-in IdP metadata, filled in after the integrationstest exchange.
 idp_entity_id: 'https://saml.nemlog-in.dk'
 idp_sso_url: ''
 idp_slo_url: ''
 idp_cert: ''
-# `key` module entry names holding the SP OCES3 keypair (PEM).
 sp_cert_key: ''
 sp_private_key_key: ''
-# Minimum NSIS assurance the SP requests and re-verifies (low|substantial|high).
-required_assurance_level: 'substantial'
+required_assurance_level: substantial
