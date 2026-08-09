@@ -12,3 +12,6 @@ dependencies:
   - modeler_api:modeler_api
   - bpmn_io:bpmn_io
   - modeler:modeler
+
+'interface translation project': aabenforms_workflows
+'interface translation server pattern': 'modules/custom/aabenforms_workflows/translations/%project.%language.po'

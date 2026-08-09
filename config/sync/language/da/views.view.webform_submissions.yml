@@ -1,0 +1,134 @@
+label: 'Indsendte webforms'
+display:
+  default:
+    display_options:
+      exposed_form:
+        options:
+          submit_button: Udfør
+          reset_button_label: Gendan
+          exposed_sorts_label: 'Sortér efter'
+          sort_asc_label: Stigende
+          sort_desc_label: Faldende
+      pager:
+        options:
+          tags:
+            previous: ‹‹
+            next: ››
+            first: '« Første'
+            last: 'Sidste »'
+          expose:
+            items_per_page_label: 'Antal elementer'
+            items_per_page_options_all_label: '- Alle -'
+            offset_label: Forskydning
+      fields:
+        sid:
+          separator: ', '
+        in_draft:
+          separator: ', '
+        created:
+          label: Oprettet
+          separator: ', '
+        remote_addr:
+          label: IP-adresse
+          separator: ', '
+        view_webform_submission:
+          label: Handlinger
+          text: vis
+      header:
+        result:
+          content: 'Viser @start - @end af @total'
+      arguments:
+        in_draft:
+          exception:
+            title: Alle
+      title: 'Indsendte webforms'
+  embed_administer:
+    display_options:
+      fields:
+        webform_submission_bulk_form:
+          action_title: Handling
+        sid:
+          separator: ', '
+        in_draft:
+          separator: ', '
+        sticky:
+          separator: ', '
+        locked:
+          label: Låst
+          separator: ', '
+        created:
+          label: Oprettet
+          separator: ', '
+        completed:
+          label: Gennemført
+          separator: ', '
+        remote_addr:
+          label: IP-adresse
+          separator: ', '
+        operations:
+          label: Handlinger
+      filters:
+        locked:
+          expose:
+            label: Låst
+  embed_manage:
+    display_options:
+      fields:
+        webform_submission_bulk_form:
+          action_title: Handling
+        sid:
+          separator: ', '
+        in_draft:
+          separator: ', '
+        sticky:
+          separator: ', '
+        locked:
+          label: Låst
+          separator: ', '
+        created:
+          label: Oprettet
+          separator: ', '
+        completed:
+          label: Gennemført
+          separator: ', '
+        remote_addr:
+          label: IP-adresse
+          separator: ', '
+        view_webform_submission:
+          label: Handlinger
+          text: vis
+        edit_webform_submission:
+          label: Handlinger
+          text: redigér
+      filters:
+        locked:
+          expose:
+            label: Låst
+  embed_review:
+    display_options:
+      fields:
+        sid:
+          separator: ', '
+        in_draft:
+          separator: ', '
+        sticky:
+          separator: ', '
+        locked:
+          label: Låst
+          separator: ', '
+        created:
+          label: Oprettet
+          separator: ', '
+        completed:
+          label: Gennemført
+          separator: ', '
+        remote_addr:
+          label: IP-adresse
+          separator: ', '
+        view_webform_submission:
+          label: Handlinger
+          text: vis
+      filters:
+        locked:
+          expose:
+            label: Låst

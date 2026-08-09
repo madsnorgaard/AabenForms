@@ -1,9 +1,6 @@
 active_connector: demo
-# SBSYS (SBSIP REST) live transport - all empty until an operator enrolls.
-# The client secret is held in a drupal:key entry named by sbsys_client_secret_key,
-# never in config/sync. sbsys_templates maps a case type to its SBSIP template id.
 sbsys_base_url: ''
 sbsys_token_url: ''
 sbsys_client_id: ''
 sbsys_client_secret_key: ''
-sbsys_templates: {}
+sbsys_templates: {  }

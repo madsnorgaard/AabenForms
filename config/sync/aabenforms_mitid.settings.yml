@@ -14,12 +14,9 @@ token_endpoint: 'http://keycloak:8080/realms/danish-gov-test/protocol/openid-con
 userinfo_endpoint: 'http://keycloak:8080/realms/danish-gov-test/protocol/openid-connect/userinfo'
 redirect_uri: 'https://aabenforms.ddev.site/mitid/callback'
 issuer: 'http://keycloak:8080/realms/danish-gov-test'
-accepted_issuers:
-  # The containerised Keycloak issues tokens with the browser-facing host
-  # (localhost:8080) while the backend reaches it - and fetches JWKS - via the
-  # internal host (keycloak:8080, the `issuer` above). Both are the same realm.
-  - 'http://localhost:8080/realms/danish-gov-test'
 scopes:
   - openid
   - ssn
 pkce_enabled: true
+accepted_issuers:
+  - 'http://localhost:8080/realms/danish-gov-test'

@@ -1,0 +1,42 @@
+# Danish translations for aabenforms_digital_post (dashboard card).
+msgid ""
+msgstr ""
+"Project-Id-Version: aabenforms_digital_post\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Sender CVR"
+msgstr "Afsender-CVR"
+
+msgid "Sent (24h)"
+msgstr "Sendt (24 t)"
+
+msgid "Fake DB"
+msgstr "Fake DB"
+
+msgid "Digital Post queue"
+msgstr "Digital Post-kø"
+
+msgid "In queue"
+msgstr "I kø"
+
+msgid "Sent"
+msgstr "Sendt"
+
+msgid "Manage queue"
+msgstr "Administrér kø"
+
+msgid "Clear"
+msgstr "Tom"
+
+msgid "Pending"
+msgstr "Afventer"
+
+msgid "@n in flight"
+msgstr "@n undervejs"
+
+msgid "@n need attention"
+msgstr "@n kræver opmærksomhed"

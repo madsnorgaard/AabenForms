@@ -1,12 +1,6 @@
 require_parent_cpr_match: true
-# Webform ids whose parent approvals additionally require REGISTERED custody
-# of the child (CPR registry check via the family lookup).
 custody_gated_forms:
   - school_transfer
   - ppr_referral
   - guardian_consent
-# MitID demo mode lets a workflow run without a real session. It must ship OFF:
-# with it on, an identity gate cannot be relied on. Exported here (default FALSE)
-# so a `drush cim` cannot silently change it. Even when ON, MitIdValidateAction
-# records a non-verified status that gates never treat as verified.
 allow_mitid_demo_mode: false

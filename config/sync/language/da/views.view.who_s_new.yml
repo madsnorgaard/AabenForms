@@ -1,0 +1,14 @@
+display:
+  default:
+    display_title: Standard
+    display_options:
+      exposed_form:
+        options:
+          submit_button: Udfør
+          reset_button_label: Gendan
+          exposed_sorts_label: 'Sortér efter'
+          sort_asc_label: Stigende
+          sort_desc_label: Faldende
+  block_1:
+    display_options:
+      block_category: Bruger

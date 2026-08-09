@@ -8,3 +8,6 @@ php: ^8.3
 dependencies:
   - drupal:webform
   - aabenforms_core:aabenforms_core
+
+'interface translation project': aabenforms_webform
+'interface translation server pattern': 'modules/custom/aabenforms_webform/translations/%project.%language.po'

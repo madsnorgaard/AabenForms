@@ -1,6 +1,8 @@
 _core:
   default_config_hash: 91eddBLmEzocTHYCBUQFuMc4UrlvzjYYg6a0I4Ke4no
 serviceplatformen:
+  username: ''
+  password: ''
   urls:
     SF1520: 'https://exttest.serviceplatformen.dk/service/CPR/CPRBasicInformation/1'
     SF1530: 'https://exttest.serviceplatformen.dk/service/CVR/CVROnline/1'
@@ -13,8 +15,6 @@ serviceplatformen:
   cache:
     enabled: true
     default_expiration: 900
-  username: ''
-  password: ''
 encryption:
   default_profile: aabenforms_aes256
 audit:

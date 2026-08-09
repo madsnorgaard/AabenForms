@@ -1,0 +1,332 @@
+# Danish translations for aabenforms_workflows.
+# Covers the workflow wizard, template browser, flow overview and the
+# Workflows dashboard card - the flow-builder surfaces a kommune admin sees.
+msgid ""
+msgstr ""
+"Project-Id-Version: aabenforms_workflows\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Step 1: Select a Workflow Template"
+msgstr "Trin 1: Vælg en arbejdsgangsskabelon"
+
+msgid "Step 2: Flow Preview"
+msgstr "Trin 2: Forhåndsvisning af flow"
+
+msgid "Step 3: Configure Webform Integration"
+msgstr "Trin 3: Opsæt webformular"
+
+msgid "Step 4: Configure Actions"
+msgstr "Trin 4: Opsæt handlinger"
+
+msgid "Step 5: Data Visibility (Optional)"
+msgstr "Trin 5: Datasynlighed (valgfrit)"
+
+msgid "Step 6: Preview and Activate"
+msgstr "Trin 6: Gennemse og aktivér"
+
+msgid "Select Template"
+msgstr "Vælg skabelon"
+
+msgid "Flow Preview"
+msgstr "Forhåndsvisning"
+
+msgid "Configure Webform"
+msgstr "Opsæt webformular"
+
+msgid "Configure Actions"
+msgstr "Opsæt handlinger"
+
+msgid "Data Visibility"
+msgstr "Datasynlighed"
+
+msgid "Preview & Activate"
+msgstr "Gennemse og aktivér"
+
+msgid "Available Templates"
+msgstr "Tilgængelige skabeloner"
+
+msgid "Choose a pre-built workflow template that matches your needs. Each template is designed for common municipality use cases."
+msgstr "Vælg en færdigbygget arbejdsgangsskabelon, der passer til jeres behov. Hver skabelon er designet til almindelige kommunale opgaver."
+
+msgid "Next"
+msgstr "Næste"
+
+msgid "Back"
+msgstr "Tilbage"
+
+msgid "Cancel"
+msgstr "Annullér"
+
+msgid "Create Workflow"
+msgstr "Opret arbejdsgang"
+
+msgid "- Select webform -"
+msgstr "- Vælg webformular -"
+
+msgid "Select Webform"
+msgstr "Vælg webformular"
+
+msgid "Which webform should trigger this workflow?"
+msgstr "Hvilken webformular skal starte denne arbejdsgang?"
+
+msgid "Connect this workflow to a webform and map the form fields to workflow variables."
+msgstr "Forbind arbejdsgangen til en webformular, og knyt formularfelterne til arbejdsgangens variabler."
+
+msgid "Select a webform to configure field mappings."
+msgstr "Vælg en webformular for at opsætte feltkoblinger."
+
+msgid "Workflow Settings"
+msgstr "Indstillinger for arbejdsgang"
+
+msgid "Action Configuration"
+msgstr "Opsætning af handlinger"
+
+msgid "Customize email templates, approval pages, and notification settings for each workflow action."
+msgstr "Tilpas e-mailskabeloner, godkendelsessider og notifikationer for hver handling i arbejdsgangen."
+
+msgid "Configure which data is visible to each party involved in the workflow. This ensures GDPR compliance."
+msgstr "Vælg hvilke oplysninger hver part i arbejdsgangen kan se. Det understøtter efterlevelse af GDPR."
+
+msgid "Note: CPR numbers and other sensitive data are always encrypted per GDPR requirements."
+msgstr "Bemærk: CPR-numre og andre følsomme oplysninger krypteres altid i overensstemmelse med GDPR."
+
+msgid "Full transparency - All parties see all data"
+msgstr "Fuld gennemsigtighed - alle parter ser alle oplysninger"
+
+msgid "Restricted - Each party sees only relevant data"
+msgstr "Begrænset - hver part ser kun relevante oplysninger"
+
+msgid "Visibility Mode"
+msgstr "Synlighedstilstand"
+
+msgid "This template does not require data visibility configuration."
+msgstr "Denne skabelon kræver ikke opsætning af datasynlighed."
+
+msgid "Review your workflow configuration and activate it."
+msgstr "Gennemse opsætningen af arbejdsgangen, og aktivér den."
+
+msgid "Workflow Name"
+msgstr "Navn på arbejdsgang"
+
+msgid "Give this workflow a descriptive name"
+msgstr "Giv arbejdsgangen et sigende navn"
+
+msgid "Configuration Summary"
+msgstr "Opsummering"
+
+msgid "Workflow Steps"
+msgstr "Arbejdsgangens trin"
+
+msgid "Activate workflow immediately"
+msgstr "Aktivér arbejdsgangen med det samme"
+
+msgid "If unchecked, workflow will be created but not active."
+msgstr "Hvis feltet ikke er markeret, oprettes arbejdsgangen uden at være aktiv."
+
+msgid "Workflow \"@label\" has been created successfully!"
+msgstr "Arbejdsgangen \"@label\" er oprettet!"
+
+msgid "Failed to create workflow: @message"
+msgstr "Arbejdsgangen kunne ikke oprettes: @message"
+
+msgid "Could not determine which template to instantiate. Please start the wizard again from the template browser."
+msgstr "Det kunne ikke afgøres, hvilken skabelon der skulle bruges. Start guiden igen fra skabelonoversigten."
+
+msgid "Template Preview"
+msgstr "Forhåndsvisning af skabelon"
+
+msgid "Step @num: @name"
+msgstr "Trin @num: @name"
+
+msgid "Template not found."
+msgstr "Skabelonen blev ikke fundet."
+
+msgid "This is your workflow as it will run - generated from the live ECA flow. Branch labels show the gating condition (for example MitID = verified)."
+msgstr "Sådan kører arbejdsgangen - genereret fra det aktive ECA-flow. Grenetiketterne viser betingelsen (fx MitID = verificeret)."
+
+msgid "<strong>Template:</strong> @name"
+msgstr "<strong>Skabelon:</strong> @name"
+
+msgid "<strong>Webform:</strong> @form"
+msgstr "<strong>Webformular:</strong> @form"
+
+msgid "Active Workflows"
+msgstr "Aktive arbejdsgange"
+
+msgid "Workflow Templates"
+msgstr "Arbejdsgangsskabeloner"
+
+msgid "Use This Template"
+msgstr "Brug denne skabelon"
+
+msgid "No workflow templates available."
+msgstr "Ingen arbejdsgangsskabeloner tilgængelige."
+
+msgid "No workflows created yet. Use the templates below to create your first workflow."
+msgstr "Der er ikke oprettet arbejdsgange endnu. Brug skabelonerne nedenfor til at oprette den første."
+
+msgid "Create new approval workflows from pre-built templates designed for Danish municipalities. No technical knowledge required."
+msgstr "Opret nye godkendelsesarbejdsgange fra færdigbyggede skabeloner designet til danske kommuner. Ingen teknisk viden nødvendig."
+
+msgid "View Form"
+msgstr "Vis formular"
+
+msgid "Edit"
+msgstr "Redigér"
+
+msgid "Delete"
+msgstr "Slet"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Active"
+msgstr "Aktiv"
+
+msgid "Inactive"
+msgstr "Inaktiv"
+
+msgid "Created"
+msgstr "Oprettet"
+
+msgid "Template"
+msgstr "Skabelon"
+
+msgid "Webform"
+msgstr "Webformular"
+
+msgid "Operations"
+msgstr "Handlinger"
+
+msgid "Are you sure you want to delete the workflow instance %workflow?"
+msgstr "Er du sikker på, at du vil slette arbejdsgangen %workflow?"
+
+msgid "This will delete the workflow configuration and all associated ECA rules. This action cannot be undone."
+msgstr "Dette sletter arbejdsgangens opsætning og alle tilhørende ECA-regler. Handlingen kan ikke fortrydes."
+
+msgid "Delete Workflow"
+msgstr "Slet arbejdsgang"
+
+msgid "Workflow instance %workflow has been deleted."
+msgstr "Arbejdsgangen %workflow er slettet."
+
+msgid "Failed to delete workflow instance %workflow."
+msgstr "Arbejdsgangen %workflow kunne ikke slettes."
+
+msgid "No workflow instances found."
+msgstr "Ingen arbejdsgange fundet."
+
+msgid "Workflows"
+msgstr "Arbejdsgange"
+
+msgid "active workflows"
+msgstr "aktive arbejdsgange"
+
+msgid "Built with the wizard"
+msgstr "Bygget med guiden"
+
+msgid "Templates available"
+msgstr "Skabeloner til rådighed"
+
+msgid "Browse templates"
+msgstr "Se skabeloner"
+
+msgid "Flow overview"
+msgstr "Flowoversigt"
+
+msgid "Flows grouped by the journey they belong to. Stages run top to bottom: intake, event-driven steps, decision. The raw model list remains at <a href=\":url\">ECA models</a>."
+msgstr "Flows grupperet efter det forløb, de hører til. Trinnene læses oppefra og ned: modtagelse, hændelsesdrevne trin, afgørelse. Den rå modelliste findes fortsat under <a href=\":url\">ECA-modeller</a>."
+
+msgid "@enabled enabled of @total flows in @journeys journeys."
+msgstr "@enabled aktiveret af @total flows i @journeys forløb."
+
+msgid "@label (@count flows)"
+msgstr "@label (@count flows)"
+
+msgid "@label (@count)"
+msgstr "@label (@count)"
+
+msgid "Event-driven steps without a journey"
+msgstr "Hændelsesdrevne trin uden forløb"
+
+msgid "Scheduled (cron)"
+msgstr "Planlagt (cron)"
+
+msgid "Other"
+msgstr "Øvrige"
+
+msgid "On submission (@webform)"
+msgstr "Ved indsendelse (@webform)"
+
+msgid "On update (@webform)"
+msgstr "Ved opdatering (@webform)"
+
+msgid "Event: @event"
+msgstr "Hændelse: @event"
+
+msgid "Cron: @frequency"
+msgstr "Cron: @frequency"
+
+msgid "Wizard"
+msgstr "Guide"
+
+msgid "Hand-authored"
+msgstr "Håndbygget"
+
+msgid "Enabled"
+msgstr "Aktiveret"
+
+msgid "Disabled"
+msgstr "Deaktiveret"
+
+msgid "Flow"
+msgstr "Flow"
+
+msgid "Machine name"
+msgstr "Maskinnavn"
+
+msgid "Trigger"
+msgstr "Udløser"
+
+msgid "Source"
+msgstr "Kilde"
+
+msgid "Graph"
+msgstr "Graf"
+
+msgid "No flows."
+msgstr "Ingen flows."
+
+msgid "Elections"
+msgstr "Valg"
+
+msgid "Total elections"
+msgstr "Valg i alt"
+
+msgid "Browse elections"
+msgstr "Se valg"
+
+msgid "Voting open"
+msgstr "Afstemning åben"
+
+msgid "Awaiting publish"
+msgstr "Afventer offentliggørelse"
+
+msgid "Published"
+msgstr "Offentliggjort"
+
+msgid "Latest"
+msgstr "Seneste"
+
+msgid "Create Workflow from Template"
+msgstr "Opret arbejdsgang fra skabelon"
+
+msgid "Create and manage approval workflows from templates"
+msgstr "Opret og administrér godkendelsesarbejdsgange fra skabeloner"
+
+msgid "All ECA flows grouped by citizen journey"
+msgstr "Alle ECA-flows grupperet efter borgerforløb"

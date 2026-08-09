@@ -9,3 +9,6 @@ dependencies:
   - drupal:openid_connect
   - aabenforms_core:aabenforms_core
   - aabenforms_webform:aabenforms_webform
+
+'interface translation project': aabenforms_mitid
+'interface translation server pattern': 'modules/custom/aabenforms_mitid/translations/%project.%language.po'
