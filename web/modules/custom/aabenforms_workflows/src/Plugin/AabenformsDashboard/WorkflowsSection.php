@@ -105,6 +105,16 @@ class WorkflowsSection extends AabenformsDashboardSectionBase {
   /**
    * {@inheritdoc}
    */
+  public function getSecondaryLink(): array {
+    return [
+      'label' => $this->t('Flow overview'),
+      'url' => Url::fromRoute('aabenforms_workflows.flow_overview'),
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getCacheTags(): array {
     return ['config:eca_list', 'aabenforms_workflows:templates'];
   }

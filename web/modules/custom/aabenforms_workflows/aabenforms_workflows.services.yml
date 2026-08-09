@@ -126,3 +126,9 @@ services:
     class: Drupal\aabenforms_workflows\Service\FlowGraphRenderer
     arguments:
       - '@aabenforms_workflows.eca_graph_builder'
+
+  aabenforms_workflows.flow_journey_grouper:
+    class: Drupal\aabenforms_workflows\Service\FlowJourneyGrouper
+    arguments:
+      - '@entity_type.manager'
+      - '@config.factory'
