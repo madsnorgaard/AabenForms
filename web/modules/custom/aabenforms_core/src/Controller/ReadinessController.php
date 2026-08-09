@@ -30,20 +30,26 @@ class ReadinessController extends ControllerBase {
    */
   protected const CAPABILITIES = [
     [
-      'Webform → ECA workflow engine', 'ready',
-      'Audited: 23 flows, all webform bindings valid, every plugin resolves, 0 broken, 0 stuck-case dead ends',
+      'Field-level CPR encryption (AES-256)', 'ready',
+      'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext; regression-tested across every CPR element type (#172)',
     ],
     [
-      'Field-level CPR encryption (AES-256)', 'ready',
-      'Fail-closed, ciphertext at rest, env-keyed - refuses to store plaintext',
+      'GDPR audit logging', 'ready',
+      'Every sensitive access hashed (SHA-256), logged with purpose, tenant-scoped (#174)',
     ],
-    ['GDPR audit logging', 'ready', 'Every sensitive access hashed (SHA-256) and logged with purpose'],
     ['Case (sag) lifecycle', 'ready', 'Lawful transitions, frist clock, immutable once closed'],
     ['Evidence trace dashboard', 'ready', 'Per-submission trace across every service contract (this tool)'],
-    ['MitID OIDC - protocol layer', 'ready', 'Real PKCE + RS256/JWKS verification + NSIS LoA enforced at login'],
+    [
+      'MitID OIDC - protocol layer', 'ready',
+      'Real PKCE + RS256/JWKS verification + NSIS LoA enforced at login and per flow at the workflow gate (#157)',
+    ],
     [
       'Multi-tenant data isolation', 'ready',
       'Per-tenant access control + query scoping + per-tenant CPR keys; kernel-tested cross-tenant deny (#141)',
+    ],
+    [
+      'Procurement compliance pack', 'ready',
+      'Databehandleraftale, Art. 30 record, DPIA and NIS2 incident runbook drafted in docs/compliance (#92); tilgængelighedserklæring awaits the frontend WCAG audit',
     ],
   ];
 
@@ -65,16 +71,22 @@ class ReadinessController extends ControllerBase {
     ],
     ['CVR company lookup', 'SF1530', 'mock', 'Same certificate + protocol work as SF1520 (#76)'],
     [
-      'Digital Post (MeMo)', 'SF1601', 'mock',
-      'Real MeMo XML builder + SOAP (library bundled, unwired); cert; idempotency (#73, #77)',
+      'Digital Post (MeMo)', 'SF1601', 'live-capable',
+      'Real MeMo XML builder + SOAP transport built (#77); needs OCES3 cert + serviceaftale; idempotency key outstanding (#73)',
     ],
     ['Fordelingskomponent', 'SF2900', 'stub', 'Full chain: STS SF1512/1514, OCES3-signed SOAP, SFTP, async receipts'],
-    ['Case journaling', 'SF1470', 'stub', 'Real SOAP registration + KOMBIT compliancetest (#84-#86)'],
+    [
+      'Case journaling', 'SF1470', 'stub',
+      'Adapter interface + transactional outbox in place (#84); needs real SOAP registration + KOMBIT compliancetest (#85, #86)',
+    ],
     ['ESDH connectors', '-', 'stub', 'Live HTTP transports for SBSYS/GetOrganized/WorkZone/Acadre (framework is real)'],
     ['eIndkomst income', '-', 'stub', 'No real integration - income is demo-synthesised'],
     ['Adressevælger picker', '-', 'mock', 'Protocol-correct REST proxy; needs only a real API URL + token'],
     ['Datafordeler validation', '-', 'stub', 'Authoritative BBR/Matriklen/DAR address validation (#80)'],
-    ['Beskedfordeler receipts', 'SF1461/62', 'stub', 'Entire submodule not yet built (#78)'],
+    [
+      'Beskedfordeler receipts', 'SF1461/62', 'mock',
+      'Submodule built: SF1461 delivery status + SF1462 case-completed events (#78); needs live subscription + certs',
+    ],
   ];
 
   /**
@@ -91,19 +103,20 @@ class ReadinessController extends ControllerBase {
       . 'via NemLog-in at NSIS Substantial; needs the aabenforms_nemlogin SP + broker registration (#79).',
     ],
     [
-      'Assurance enforced at login, not at the workflow gate', 'medium',
-      'NSIS level is enforced at the OIDC callback, but MitIdValidateAction treats any live session '
-      . 'as verified, so a per-flow "requires High" cannot be enforced (#157).',
+      'JSON:API and MitID routes are unthrottled', 'high',
+      'The webform submit endpoint is flood-controlled, but JSON:API and the MitID session '
+      . 'endpoints have no rate limit, leaving enumeration and cost-amplification open (#142).',
+    ],
+    [
+      'MitID session capability travels in the URL', 'medium',
+      'The session id rides the redirect as a query parameter (browser history, Referer, proxy '
+      . 'logs) and the session endpoint trusts the bearer alone within its 15-minute TTL; needs a '
+      . 'one-time exchange or HTTPOnly cookie, coordinated with the frontend (#156).',
     ],
     [
       'Government transports run on mock rails', 'medium',
-      'CPR/CVR (SF1520/1530), Digital Post (SF1601, real MeMo built), SF2900, SF1470, ESDH and '
-      . 'eIndkomst need OCES3 certs + a serviceaftale to go live (#76, #77, #84-#86).',
-    ],
-    [
-      'Audit + trace not tenant-scoped', 'medium',
-      'aabenforms_audit_log and aabenforms_trace have no tenant_id (operator-visible only, so '
-      . 'reporting segregation not a caseworker leak) (#174).',
+      'CPR/CVR (SF1520/1530), Digital Post cert + idempotency, SF2900, SF1470, ESDH and '
+      . 'eIndkomst need OCES3 certs + a serviceaftale to go live (#76, #73, #85, #86).',
     ],
   ];
 
@@ -168,7 +181,7 @@ class ReadinessController extends ControllerBase {
       'note' => [
         '#type' => 'html_tag',
         '#tag' => 'p',
-        '#value' => $this->t('The POC security holes an adversarial test found have been closed (demo-mode fail-open, client-supplied workflow_id, open-redirect, unthrottled submit, and cross-tenant data access are all fixed and tested). These are the open items on the path to a real kommune pilot.'),
+        '#value' => $this->t('The POC security holes an adversarial test found have been closed (demo-mode fail-open, client-supplied workflow_id, open-redirect, unthrottled webform submit, and cross-tenant data access are all fixed and tested), and two earlier findings have since landed as well: tenant-scoped audit + trace (#174) and the per-flow NSIS assurance gate (#157). These are the open items on the path to a real kommune pilot.'),
         '#attributes' => ['class' => ['af-trace-intro']],
       ],
       'table' => [
@@ -217,11 +230,65 @@ class ReadinessController extends ControllerBase {
   }
 
   /**
+   * Computes the workflow-engine evidence line from live config.
+   *
+   * The previous text was a frozen snapshot ("23 flows, 0 broken") that
+   * drifted from reality within weeks. Counting flows, enabled state and
+   * webform-binding resolution live keeps the claim true by construction.
+   * Whether a binding targets the RIGHT webform is a human judgement; the
+   * flow overview groups flows by journey so a wrong binding stands out.
+   *
+   * @return string
+   *   The evidence sentence.
+   */
+  protected function flowAuditEvidence(): string {
+    try {
+      $eca_storage = $this->entityTypeManager()->getStorage('eca');
+      $webform_storage = $this->entityTypeManager()->getStorage('webform');
+    }
+    catch (\Exception) {
+      return 'Flow storage unavailable';
+    }
+    $total = 0;
+    $enabled = 0;
+    $bindings = 0;
+    $missing = [];
+    $prefix = 'webform_submission ';
+    foreach ($eca_storage->loadMultiple() as $eca) {
+      $total++;
+      if ($eca->status()) {
+        $enabled++;
+      }
+      foreach ($eca->get('events') ?? [] as $event) {
+        $type = (string) ($event['configuration']['type'] ?? '');
+        if (str_starts_with($type, $prefix)) {
+          $bindings++;
+          $webform_id = substr($type, strlen($prefix));
+          if (!$webform_storage->load($webform_id)) {
+            $missing[] = $webform_id;
+          }
+        }
+      }
+    }
+    $resolution = $missing === []
+      ? 'all resolving to existing webforms'
+      : count($missing) . ' targeting missing webforms (' . implode(', ', array_unique($missing)) . ')';
+    return sprintf(
+      'Live audit: %d flows (%d enabled), %d webform bindings, %s. Binding-to-the-right-form is reviewed per journey in the flow overview.',
+      $total, $enabled, $bindings, $resolution,
+    );
+  }
+
+  /**
    * Builds the "production-grade capabilities" panel.
    */
   protected function buildCapabilities(): array {
     $rows = [];
-    foreach (self::CAPABILITIES as [$capability, $status, $evidence]) {
+    $capabilities = array_merge(
+      [['Webform → ECA workflow engine', 'ready', $this->flowAuditEvidence()]],
+      self::CAPABILITIES,
+    );
+    foreach ($capabilities as [$capability, $status, $evidence]) {
       $rows[] = [
         $capability,
         [
