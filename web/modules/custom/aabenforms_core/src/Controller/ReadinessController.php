@@ -254,6 +254,7 @@ class ReadinessController extends ControllerBase {
     $bindings = 0;
     $missing = [];
     $prefix = 'webform_submission ';
+    /** @var \Drupal\eca\Entity\Eca $eca */
     foreach ($eca_storage->loadMultiple() as $eca) {
       $total++;
       if ($eca->status()) {
