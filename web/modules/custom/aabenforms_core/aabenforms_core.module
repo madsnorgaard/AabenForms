@@ -328,13 +328,7 @@ function aabenforms_core_webform_submission_presave(WebformSubmissionInterface $
   /** @var \Drupal\aabenforms_core\Service\CprAccess $cprAccess */
   $cprAccess = \Drupal::service('aabenforms_core.cpr_access');
   foreach ($webform->getElementsInitializedAndFlattened() as $key => $element) {
-    // A field holds a CPR when it uses the cpr_field element, or - because
-    // several citizen forms use a plain textfield - when its key is "cpr" or
-    // ends in "_cpr" (cpr, child_cpr, applicant_cpr, partner1_cpr, ...).
-    $is_cpr = ($element['#type'] ?? '') === 'cpr_field'
-      || $key === 'cpr'
-      || str_ends_with($key, '_cpr');
-    if (!$is_cpr) {
+    if (!$cprAccess->isCprElement($key, $element)) {
       continue;
     }
     $value = $submission->getElementData($key);

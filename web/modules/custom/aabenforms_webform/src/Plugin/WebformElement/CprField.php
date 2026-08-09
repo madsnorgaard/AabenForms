@@ -7,10 +7,15 @@ use Drupal\webform\Plugin\WebformElementBase;
 use Drupal\webform\WebformSubmissionInterface;
 
 /**
- * Provides a 'cpr_field' element for Danish CPR numbers.
+ * Provides the 'cpr_field' element for Danish CPR numbers.
+ *
+ * The plugin id matches the '#type' used by every shipped form and by the
+ * frontend's WebformRenderer. It was 'aabenforms_cpr_field' until #172: no
+ * form used that id, so the forms silently fell back to Webform's generic
+ * element and lost modulus-11 validation and masked display.
  *
  * @WebformElement(
- *   id = "aabenforms_cpr_field",
+ *   id = "cpr_field",
  *   label = @Translation("CPR Number"),
  *   description = @Translation("Danish CPR number (personnummer) with validation."),
  *   category = @Translation("Danish Government"),

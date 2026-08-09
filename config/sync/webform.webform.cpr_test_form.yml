@@ -20,7 +20,7 @@ elements: |
     '#required': true
 
   cpr_number:
-    '#type': aabenforms_cpr_field
+    '#type': cpr_field
     '#title': 'CPR Number (Danish Personnummer)'
     '#required': true
     '#description': 'Enter your 10-digit CPR number (format: DDMMYYXXXX)'
