@@ -121,6 +121,6 @@
         }
     },
     "require-dev": {
-        "drupal/core-dev": "~11.3.14"
+        "drupal/core-dev": "~11.4.6"
     }
 }
