@@ -100,30 +100,62 @@ services:
   # so the round-trip stays inside the docker bridge. The H2 store is volume-
   # mounted so the imported realm survives container restarts; on first
   # boot --import-realm seeds the realm from the JSON below. To force a re-
-  # import after editing the realm: docker compose down keycloak &&
-  # docker volume rm api.aabenforms.dk_keycloak_data && docker compose up -d
-  # keycloak.
+  # --import-realm only imports into an empty database. To re-import after
+  # editing the realm JSON: docker compose down keycloak keycloak_db &&
+  # docker volume rm api.aabenforms.dk_keycloak_db_data && docker compose up -d.
+  # Keycloak database. Keycloak used to run start-dev on an H2 file inside the
+  # keycloak_data volume; that store is not upgradable across Keycloak majors
+  # (the 23 -> 26 bump on 2026-09-17 crash-looped on it). A real database makes
+  # future Keycloak upgrades ordinary schema migrations.
+  keycloak_db:
+    image: postgres:16-alpine
+    container_name: aabenforms_keycloak_db
+    restart: always
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD in .env}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - internal
+
   keycloak:
-    image: quay.io/keycloak/keycloak:23.0
+    image: quay.io/keycloak/keycloak:26.7
     container_name: aabenforms_keycloak
     restart: always
+    depends_on:
+      keycloak_db:
+        condition: service_healthy
     env_file:
       - .env
     environment:
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KC_HOSTNAME: auth.aabenforms.dk
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "false"
+      # Database (production mode requires one).
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak_db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?set KC_DB_PASSWORD in .env}
+      # Bootstrap admin (only used on first start into an empty database).
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Hostname v2: public URL fixed; back-channel (Drupal -> http://keycloak:8080)
+      # keeps dynamic endpoints. Note the token issuer is always the public URL.
+      KC_HOSTNAME: https://auth.aabenforms.dk
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      # TLS terminates at Traefik.
       KC_HTTP_ENABLED: "true"
-      KC_PROXY: edge
       KC_HTTP_PORT: 8080
+      KC_PROXY_HEADERS: xforwarded
     volumes:
       - ./docker/keycloak/realms/danish-gov-test.json:/opt/keycloak/data/import/danish-gov-test.json:ro
       - ./docker/keycloak/themes:/opt/keycloak/themes:ro
-      - keycloak_data:/opt/keycloak/data
     command:
-      - start-dev
+      - start
       - --import-realm
       - --http-relative-path=/
     labels:
@@ -138,4 +170,6 @@ services:
 
 volumes:
   drupal_files:
+  # Old H2 store from Keycloak 23 (start-dev). Kept for rollback; safe to remove later.
   keycloak_data:
+  keycloak_db_data:
