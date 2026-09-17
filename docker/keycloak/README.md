@@ -23,7 +23,7 @@ Public URL: https://auth.aabenforms.dk - realm `danish-gov-test`, imported from
 `--import-realm` only imports into an empty database:
 
     docker compose down keycloak keycloak_db
-    docker volume rm api.aabenforms.dk_keycloak_db_data
+    docker volume rm apiaabenformsdk_keycloak_db_data
     docker compose up -d
 
 ## Upgrading Keycloak
