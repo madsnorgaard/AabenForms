@@ -23,6 +23,10 @@ updates:
     ignore:
       # Keycloak majors: 23 -> 26.7 (#210) took auth.aabenforms.dk down - KC 26 cannot open
       # the H2 store KC 23 created and its proxy/hostname config changed. Upgrade deliberately.
+      # Dependabot names this dependency "keycloak/keycloak" (registry host stripped);
+      # the earlier rule used the full quay.io path and did not match (#221).
+      - dependency-name: "keycloak/keycloak"
+        update-types: ["version-update:semver-major"]
       - dependency-name: "quay.io/keycloak/keycloak"
         update-types: ["version-update:semver-major"]
       # MariaDB majors: 11 -> 13 (#214) would recreate the Drupal DB on a new major on the

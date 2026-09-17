@@ -104,7 +104,7 @@ services:
   # docker volume rm api.aabenforms.dk_keycloak_data && docker compose up -d
   # keycloak.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7
+    image: quay.io/keycloak/keycloak:23.0
     container_name: aabenforms_keycloak
     restart: always
     env_file:
