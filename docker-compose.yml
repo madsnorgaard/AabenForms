@@ -102,7 +102,7 @@ services:
   # boot --import-realm seeds the realm from the JSON below. To force a re-
   # --import-realm only imports into an empty database. To re-import after
   # editing the realm JSON: docker compose down keycloak keycloak_db &&
-  # docker volume rm api.aabenforms.dk_keycloak_db_data && docker compose up -d.
+  # docker volume rm apiaabenformsdk_keycloak_db_data && docker compose up -d.
   # Keycloak database. Keycloak used to run start-dev on an H2 file inside the
   # keycloak_data volume; that store is not upgradable across Keycloak majors
   # (the 23 -> 26 bump on 2026-09-17 crash-looped on it). A real database makes
