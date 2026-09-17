@@ -205,7 +205,7 @@ jobs:
           COVERAGE: ${{ steps.coverage.outputs.percentage }}
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/html
