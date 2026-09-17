@@ -9,7 +9,7 @@ networks:
 
 services:
   aabenforms_db:
-    image: mariadb:11
+    image: mariadb:13
     container_name: aabenforms_db
     env_file:
     - .env
