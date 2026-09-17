@@ -20,6 +20,15 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      # Keycloak majors: 23 -> 26.7 (#210) took auth.aabenforms.dk down - KC 26 cannot open
+      # the H2 store KC 23 created and its proxy/hostname config changed. Upgrade deliberately.
+      - dependency-name: "quay.io/keycloak/keycloak"
+        update-types: ["version-update:semver-major"]
+      # MariaDB majors: 11 -> 13 (#214) would recreate the Drupal DB on a new major on the
+      # next deploy. Database majors need a planned upgrade with a dump.
+      - dependency-name: "mariadb"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
