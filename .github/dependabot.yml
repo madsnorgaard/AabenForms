@@ -33,6 +33,8 @@ updates:
       # next deploy. Database majors need a planned upgrade with a dump.
       - dependency-name: "mariadb"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
