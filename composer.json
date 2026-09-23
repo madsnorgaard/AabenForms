@@ -36,7 +36,7 @@
         "drupal/real_aes": "^2.6",
         "drupal/redis": "^1.11",
         "drupal/smtp": "^1.4",
-        "drupal/webform": "^6.3@dev",
+        "drupal/webform": "^6.3",
         "drush/drush": "^13.7",
         "itk-dev/serviceplatformen": "^1.8",
         "onelogin/php-saml": "^4"
