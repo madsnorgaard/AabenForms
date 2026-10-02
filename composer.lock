@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1bf474e564d08960df8f3743ce9617ea",
+    "content-hash": "3e5f207c6113e0807d9912d3f7d0d2f0",
     "packages": [
         {
             "name": "asm89/stack-cors",
@@ -1701,17 +1701,17 @@
         },
         {
             "name": "drupal/domain",
-            "version": "2.0.1",
+            "version": "3.0.1",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/domain.git",
-                "reference": "2.0.1"
+                "reference": "3.0.1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/domain-2.0.1.zip",
-                "reference": "2.0.1",
-                "shasum": "975740311b148badace73f4734e802982461acd3"
+                "url": "https://ftp.drupal.org/files/projects/domain-3.0.1.zip",
+                "reference": "3.0.1",
+                "shasum": "3b2619d738ed01f0979c0a21a693d00dd0c2295d"
             },
             "require": {
                 "drupal/core": "^10.2 || ^11"
@@ -1723,8 +1723,8 @@
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "2.0.1",
-                    "datestamp": "1775132882",
+                    "version": "3.0.1",
+                    "datestamp": "1778231514",
                     "security-coverage": {
                         "status": "covered",
                         "message": "Covered by Drupal's security advisory policy"
@@ -15557,7 +15557,6 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "drupal/domain": 10,
         "drupal/openid_connect": 15
     },
     "prefer-stable": true,

@@ -22,7 +22,7 @@
         "drupal/core-project-message": "~11.4.7",
         "drupal/core-recipe-unpack": "~11.4.7",
         "drupal/core-recommended": "~11.3.14",
-        "drupal/domain": "^2.0@beta",
+        "drupal/domain": "^3.0@beta",
         "drupal/eca": "^3.0",
         "drupal/eca_cm": "^1.0",
         "drupal/encrypt": "^3.2",
