@@ -126,7 +126,7 @@ services:
       - internal
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7
+    image: quay.io/keycloak/keycloak:26.8
     container_name: aabenforms_keycloak
     restart: always
     depends_on:
