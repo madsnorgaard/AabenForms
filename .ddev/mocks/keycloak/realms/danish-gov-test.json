@@ -45,7 +45,8 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "attributes": {
-        "access.token.lifespan": "3600"
+        "access.token.lifespan": "3600",
+        "post.logout.redirect.uris": "https://aabenforms-frontend.ddev.site:3001/*##https://aabenforms.ddev.site/*"
       },
       "protocolMappers": [
         {
