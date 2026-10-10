@@ -31,7 +31,7 @@ elements: |
     '#type': date
     '#title': 'Første sygedag'
     '#required': true
-    '#description': 'Hentes fra din arbejdsgivers sygemelding (NemRefusion). Ret den, hvis den ikke passer.'
+    '#description': 'Hentes fra din arbejdsgivers sygemelding (NemRefusion). Er du uenig i arbejdsgiverens oplysninger, så giv kommunen besked.'
   sickness_description:
     '#type': textarea
     '#title': 'Hvad kan du ikke på grund af din sygdom?'
