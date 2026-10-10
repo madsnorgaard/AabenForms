@@ -222,7 +222,7 @@ class ParentApprovalForm extends FormBase {
     $form['request_info']['request_details'] = [
       '#type' => 'item',
       '#title' => $this->t('Description'),
-      '#markup' => '<p>' . nl2br(htmlspecialchars($submission->getElementData('request_details'))) . '</p>',
+      '#markup' => '<p>' . nl2br(htmlspecialchars((string) ($submission->getElementData('request_details') ?? $submission->getElementData('reason') ?? $submission->getElementData('details') ?? ''))) . '</p>',
     ];
 
     // Request date.
@@ -319,6 +319,15 @@ class ParentApprovalForm extends FormBase {
     // 15-minute MitID session may have expired since, and we never want a
     // stale or different identity to finalise the decision.
     $workflow_id = sprintf('parent_approval_%d_p%d', $submission_id, $parent_number);
+    if (!$this->mitidSessionManager->hasValidSession($workflow_id)) {
+      // The controller bound the verified (minted) MitID session to this
+      // submission + parent in the server-side session; never read it from
+      // the request. The CPR re-verification below still applies.
+      $bound = (string) $this->getRequest()->getSession()->get("mitid_approval_workflow_parent{$parent_number}_{$submission_id}", '');
+      if ($bound !== '') {
+        $workflow_id = $bound;
+      }
+    }
     if (!$this->mitidSessionManager->hasValidSession($workflow_id)) {
       $form_state->setErrorByName('submission_id', $this->t('Your MitID session has expired. Please open the approval link again to re-authenticate.'));
       return;
