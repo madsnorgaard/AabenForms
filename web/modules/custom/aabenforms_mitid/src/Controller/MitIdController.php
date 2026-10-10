@@ -6,12 +6,14 @@ use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_mitid\Service\MitIdOidcClient;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Flood\FloodInterface;
 use Drupal\Core\Routing\TrustedRedirectResponse;
 use Drupal\Core\Url;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Controller for MitID OIDC authentication endpoints.
@@ -40,6 +42,25 @@ class MitIdController extends ControllerBase {
   protected AuditLogger $auditLogger;
 
   /**
+   * The flood service (rate limits the revoke endpoint).
+   *
+   * @var \Drupal\Core\Flood\FloodInterface
+   */
+  protected FloodInterface $flood;
+
+  /**
+   * Shape of a server-minted workflow id (see login()).
+   */
+  public const WORKFLOW_ID_PATTERN = '/^wf_[a-f0-9]{32}$/';
+
+  /**
+   * Flood event name and limits for the revoke endpoint (prefill envelope).
+   */
+  protected const REVOKE_FLOOD_EVENT = 'aabenforms_mitid.revoke';
+  protected const REVOKE_FLOOD_LIMIT = 30;
+  protected const REVOKE_FLOOD_WINDOW = 60;
+
+  /**
    * Constructs a MitIdController.
    *
    * @param \Drupal\aabenforms_mitid\Service\MitIdOidcClient $oidc_client
@@ -59,11 +80,13 @@ class MitIdController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container) {
-    return new static(
+    $instance = new static(
       $container->get('aabenforms_mitid.oidc_client'),
       $container->get('aabenforms_mitid.session_manager'),
       $container->get('aabenforms_core.audit_logger')
     );
+    $instance->flood = $container->get('flood');
+    return $instance;
   }
 
   /**
@@ -87,44 +110,7 @@ class MitIdController extends ControllerBase {
 
     // Get redirect URL (where to return after auth).
     // Validate that it's an internal path to prevent open redirect attacks.
-    $returnUrl = $request->query->get('return_url') ?? '/';
-
-    // Reject backslashes outright: browsers normalise "/\" and "\/" to "//"
-    // (protocol-relative), so a value like "/\evil.com" that looks local here
-    // would redirect off-site after the session id is appended in callback().
-    if (str_contains($returnUrl, '\\')) {
-      $this->getLogger('aabenforms_mitid')->warning('Rejected return_url with backslash: @url', ['@url' => $returnUrl]);
-      $returnUrl = '/';
-    }
-
-    // Strip any external URLs - only allow internal paths or trusted frontend origins.
-    if (preg_match('#^https?://#i', $returnUrl)) {
-      $currentHost = $request->getSchemeAndHttpHost();
-      $returnHost = parse_url($returnUrl, PHP_URL_SCHEME) . '://' . parse_url($returnUrl, PHP_URL_HOST);
-      $returnHostWithPort = $returnHost;
-      $port = parse_url($returnUrl, PHP_URL_PORT);
-      if ($port) {
-        $returnHostWithPort = $returnHost . ':' . $port;
-      }
-
-      // Allow the current site and configured CORS origins (frontend).
-      $corsOrigin = getenv('CORS_ALLOW_ORIGIN') ?: '';
-      $allowedOrigins = array_filter([$currentHost, $corsOrigin]);
-
-      if (!in_array($returnHost, $allowedOrigins, TRUE) && !in_array($returnHostWithPort, $allowedOrigins, TRUE)) {
-        $this->getLogger('aabenforms_mitid')->warning('Rejected external return_url: @url', ['@url' => $returnUrl]);
-        $returnUrl = '/';
-      }
-    }
-    elseif (str_starts_with($returnUrl, '//')) {
-      // Reject protocol-relative URLs (e.g., //evil.com).
-      $this->getLogger('aabenforms_mitid')->warning('Rejected protocol-relative return_url: @url', ['@url' => $returnUrl]);
-      $returnUrl = '/';
-    }
-    elseif (!str_starts_with($returnUrl, '/')) {
-      // Ensure path starts with / for relative URLs.
-      $returnUrl = '/' . $returnUrl;
-    }
+    $returnUrl = $this->sanitizeReturnUrl($request, (string) ($request->query->get('return_url') ?? '/'));
 
     // Generate authorization URL.
     // ?fresh=1 forces the IdP to re-authenticate instead of reusing its SSO
@@ -147,6 +133,61 @@ class MitIdController extends ControllerBase {
 
     // Redirect to MitID (external URL - use TrustedRedirectResponse).
     return new TrustedRedirectResponse($result['url']);
+  }
+
+  /**
+   * Validates a return_url: internal path or allowed (CORS) origin only.
+   *
+   * Shared by login() and logout() so both apply the exact same open-redirect
+   * guard. Anything rejected collapses to '/'.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param string $returnUrl
+   *   The candidate return URL.
+   *
+   * @return string
+   *   A safe return URL.
+   */
+  protected function sanitizeReturnUrl(Request $request, string $returnUrl): string {
+    // Reject backslashes outright: browsers normalise "/\" and "\/" to "//"
+    // (protocol-relative), so a value like "/\evil.com" that looks local here
+    // would redirect off-site after the session id is appended in callback().
+    if (str_contains($returnUrl, '\\')) {
+      $this->getLogger('aabenforms_mitid')->warning('Rejected return_url with backslash: @url', ['@url' => $returnUrl]);
+      return '/';
+    }
+
+    // Strip any external URLs - only allow internal paths or trusted frontend origins.
+    if (preg_match('#^https?://#i', $returnUrl)) {
+      $currentHost = $request->getSchemeAndHttpHost();
+      $returnHost = parse_url($returnUrl, PHP_URL_SCHEME) . '://' . parse_url($returnUrl, PHP_URL_HOST);
+      $returnHostWithPort = $returnHost;
+      $port = parse_url($returnUrl, PHP_URL_PORT);
+      if ($port) {
+        $returnHostWithPort = $returnHost . ':' . $port;
+      }
+
+      // Allow the current site and configured CORS origins (frontend).
+      $corsOrigin = getenv('CORS_ALLOW_ORIGIN') ?: '';
+      $allowedOrigins = array_filter([$currentHost, $corsOrigin]);
+
+      if (!in_array($returnHost, $allowedOrigins, TRUE) && !in_array($returnHostWithPort, $allowedOrigins, TRUE)) {
+        $this->getLogger('aabenforms_mitid')->warning('Rejected external return_url: @url', ['@url' => $returnUrl]);
+        return '/';
+      }
+    }
+    elseif (str_starts_with($returnUrl, '//')) {
+      // Reject protocol-relative URLs (e.g., //evil.com).
+      $this->getLogger('aabenforms_mitid')->warning('Rejected protocol-relative return_url: @url', ['@url' => $returnUrl]);
+      return '/';
+    }
+    elseif (!str_starts_with($returnUrl, '/')) {
+      // Ensure path starts with / for relative URLs.
+      $returnUrl = '/' . $returnUrl;
+    }
+
+    return $returnUrl;
   }
 
   /**
@@ -208,6 +249,9 @@ class MitIdController extends ControllerBase {
         'nonce' => $stateData['nonce'] ?? '',
       ]);
 
+      // completeFlow() keeps the raw id_token in the server-side session
+      // payload; it is only ever used as id_token_hint by logout() and is
+      // never part of getPublicAttributes().
       // Store session ID in user's session for frontend access.
       $request->getSession()->set('mitid_workflow_id', $workflowId);
       $request->getSession()->set('mitid_authenticated', TRUE);
@@ -239,25 +283,90 @@ class MitIdController extends ControllerBase {
   }
 
   /**
-   * Logout endpoint.
+   * RP-initiated logout.
    *
-   * Route: /mitid/logout.
+   * Route: GET /mitid/logout?return_url=...
+   *
+   * Revokes the MitID session bound to THIS browser's Drupal session (key
+   * mitid_workflow_id - never a workflow id from the URL), clears the Drupal
+   * session keys, then sends the browser to the IdP end_session endpoint so
+   * the IdP session ends too (on a shared device the next citizen must not be
+   * offered the previous one). return_url gets the same guard as login().
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
    *
    * @return \Symfony\Component\HttpFoundation\RedirectResponse
-   *   Redirect to homepage.
+   *   Redirect to the IdP logout, or to return_url when no IdP logout is
+   *   configured.
    */
   public function logout(Request $request): RedirectResponse {
+    $returnUrl = $this->sanitizeReturnUrl($request, (string) ($request->query->get('return_url') ?? '/'));
+    $absoluteReturn = preg_match('#^https?://#i', $returnUrl)
+      ? $returnUrl
+      : $request->getSchemeAndHttpHost() . $returnUrl;
+
+    $idToken = NULL;
+    $session = $request->hasSession() ? $request->getSession() : NULL;
+    $workflowId = $session ? $session->get('mitid_workflow_id') : NULL;
+    if (is_string($workflowId) && preg_match(self::WORKFLOW_ID_PATTERN, $workflowId)) {
+      $this->sessionManager->revokeSession($workflowId);
+      $idToken = $this->sessionManager->takeLogoutIdToken($workflowId);
+    }
+
     // Clear MitID session data.
-    $request->getSession()->remove('mitid_workflow_id');
-    $request->getSession()->remove('mitid_authenticated');
-    $request->getSession()->remove('mitid_cpr');
+    if ($session) {
+      $session->remove('mitid_workflow_id');
+      $session->remove('mitid_authenticated');
+      $session->remove('mitid_cpr');
+    }
 
-    $this->messenger()->addStatus($this->t('You have been logged out.'));
+    $endSessionUrl = $this->oidcClient->getEndSessionUrl($idToken, $absoluteReturn);
+    if ($endSessionUrl !== NULL) {
+      return new TrustedRedirectResponse($endSessionUrl);
+    }
+    return preg_match('#^https?://#i', $returnUrl)
+      ? new TrustedRedirectResponse($returnUrl)
+      : new RedirectResponse($returnUrl);
+  }
 
-    return new RedirectResponse('/');
+  /**
+   * Revokes a MitID session (citizen logout from the SPA).
+   *
+   * Route: POST /api/mitid/session/revoke, body {"session_id": "wf_..."}.
+   *
+   * The workflow id is the bearer capability, so it travels in the body, never
+   * the URL (no access-log / Referer leak). Always 204 for a well-formed id,
+   * whether or not the session existed, so this is not an existence oracle.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   *
+   * @return \Symfony\Component\HttpFoundation\Response
+   *   204 on success, 400 on a malformed id, 429 when rate limited.
+   */
+  public function revoke(Request $request): Response {
+    $floodId = (string) $request->getClientIp();
+    if (!$this->flood->isAllowed(self::REVOKE_FLOOD_EVENT, self::REVOKE_FLOOD_LIMIT, self::REVOKE_FLOOD_WINDOW, $floodId)) {
+      return new JsonResponse(['error' => 'Too many requests, please try again later'], 429);
+    }
+    $this->flood->register(self::REVOKE_FLOOD_EVENT, self::REVOKE_FLOOD_WINDOW, $floodId);
+
+    $body = json_decode((string) $request->getContent(), TRUE);
+    $workflowId = is_array($body) ? ($body['session_id'] ?? NULL) : NULL;
+    if (!is_string($workflowId) || !preg_match(self::WORKFLOW_ID_PATTERN, $workflowId)) {
+      return new JsonResponse(['error' => 'Invalid session_id'], 400);
+    }
+
+    $this->sessionManager->revokeSession($workflowId);
+
+    // Same browser? Drop the Drupal-session binding too.
+    if ($request->hasSession() && $request->getSession()->get('mitid_workflow_id') === $workflowId) {
+      $request->getSession()->remove('mitid_authenticated');
+      $request->getSession()->remove('mitid_cpr');
+    }
+
+    return new Response('', 204);
   }
 
   /**

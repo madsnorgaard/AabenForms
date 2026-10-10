@@ -70,6 +70,9 @@ aabenforms_mitid.settings:
     token_endpoint:
       type: string
       label: 'Fallback token endpoint'
+    end_session_endpoint:
+      type: string
+      label: 'RP-initiated logout (end_session) endpoint; derived from a Keycloak authorization endpoint when empty'
     userinfo_endpoint:
       type: string
       label: 'Fallback userinfo endpoint'

@@ -189,6 +189,45 @@ class MitIdOidcClient implements IdentityProviderInterface {
   }
 
   /**
+   * Builds the IdP RP-initiated logout (end_session) URL.
+   *
+   * The endpoint comes from config `end_session_endpoint`; when unset and the
+   * authorization endpoint is a Keycloak one (/protocol/openid-connect/auth),
+   * the sibling /protocol/openid-connect/logout is used (the value Keycloak
+   * publishes as end_session_endpoint in its discovery document).
+   *
+   * @param string|null $id_token
+   *   The raw id_token for id_token_hint, or NULL. Without it Keycloak shows
+   *   its own logout confirmation page.
+   * @param string $post_logout_redirect_uri
+   *   Absolute URL to return to; must be registered on the IdP client.
+   *
+   * @return string|null
+   *   The logout URL, or NULL when no end_session endpoint is known.
+   */
+  public function getEndSessionUrl(?string $id_token, string $post_logout_redirect_uri): ?string {
+    $config = $this->configFactory->get('aabenforms_mitid.settings');
+    $endpoint = (string) ($config->get('end_session_endpoint') ?? '');
+    if ($endpoint === '') {
+      $authorize = (string) ($config->get('authorization_endpoint') ?? '');
+      if (preg_match('#^(https?://.+/protocol/openid-connect)/auth$#', $authorize, $m)) {
+        $endpoint = $m[1] . '/logout';
+      }
+    }
+    if ($endpoint === '') {
+      return NULL;
+    }
+
+    $params = ['client_id' => (string) $config->get('client_id')];
+    if ($id_token !== NULL && $id_token !== '') {
+      $params['id_token_hint'] = $id_token;
+    }
+    $params['post_logout_redirect_uri'] = $post_logout_redirect_uri;
+
+    return $endpoint . (str_contains($endpoint, '?') ? '&' : '?') . http_build_query($params);
+  }
+
+  /**
    * Reads the configured scope list and renders it as a space-separated string.
    */
   protected function resolveScopes(): string {

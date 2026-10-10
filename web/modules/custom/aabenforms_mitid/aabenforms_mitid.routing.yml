@@ -37,6 +37,9 @@ aabenforms_mitid.logout:
     _title: 'Logout'
   requirements:
     _access: 'TRUE'
+  methods: [GET]
+  options:
+    no_cache: TRUE
 
 aabenforms_mitid.session:
   path: '/mitid/session/{session_id}'
@@ -47,3 +50,14 @@ aabenforms_mitid.session:
     _access: 'TRUE'
     session_id: '.+'
   methods: [GET]
+
+aabenforms_mitid.session_revoke:
+  path: '/api/mitid/session/revoke'
+  defaults:
+    _controller: '\Drupal\aabenforms_mitid\Controller\MitIdController::revoke'
+    _title: 'Revoke MitID session'
+  requirements:
+    _access: 'TRUE'
+  methods: [POST]
+  options:
+    no_cache: TRUE
