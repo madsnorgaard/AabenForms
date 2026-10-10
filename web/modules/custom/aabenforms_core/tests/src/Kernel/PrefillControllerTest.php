@@ -269,7 +269,7 @@ class PrefillControllerTest extends KernelTestBase {
     $this->assertStringNotContainsString('31500', $json, 'Pay is not sent to the browser');
 
     // Employer + history from the demo eIndkomst rail, one audit row.
-    $this->assertSame('12345678', $fields['employer_cvr']['value']);
+    $this->assertSame('29876543', $fields['employer_cvr']['value']);
     $this->assertStringContainsString('(demo)', $fields['employer_name']['value']);
     $history = $fields['employment_history']['value'];
     $this->assertTrue($history['requirement_met']);

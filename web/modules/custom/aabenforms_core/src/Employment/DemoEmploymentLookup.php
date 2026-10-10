@@ -27,7 +27,7 @@ final class DemoEmploymentLookup implements EmploymentLookupInterface {
     // Mikkel Jensen (DemoPersonas 'mikkel'): full-time, meets the requirement.
     '1502856234' => [
       'employer_name' => 'Østjysk Lager & Logistik ApS (demo)',
-      'employer_cvr' => '12345678',
+      'employer_cvr' => '29876543',
       'hours' => [160, 160, 152, 160, 160, 148],
       'monthly_pay' => 31500,
       // Days before today the employer reports as the first sick day.
