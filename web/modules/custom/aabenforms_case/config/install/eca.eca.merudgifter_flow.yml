@@ -132,16 +132,6 @@ actions:
       case_id_token: '[case_id]'
     successors:
       -
-        id: income_lookup
-        condition: ''
-  income_lookup:
-    label: 'Hent husstandsindkomst (eIndkomst)'
-    plugin: aabenforms_case_income_lookup
-    configuration:
-      cpr_token: '[webform_submission:values:applicant_cpr:raw]'
-      result_token: merudgift_income
-    successors:
-      -
         id: transition_oplyst
         condition: ''
   transition_oplyst:
@@ -150,7 +140,7 @@ actions:
     configuration:
       case_id_token: '[case_id]'
       target_status: oplyst
-      log_message: 'Sag oplyst: identitet bekræftet, journaliseret, indkomst hentet.'
+      log_message: 'Sag oplyst: identitet bekræftet og journaliseret. Indkomst hentes ikke (SEL §41 afhænger ikke af indkomst).'
     successors:
       -
         id: decide_medhold
