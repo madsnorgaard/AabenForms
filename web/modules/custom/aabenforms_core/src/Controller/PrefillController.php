@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_core\Controller;
 
+use Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Prefill\LegalBasis;
 use Drupal\aabenforms_core\Service\AuditLogger;
@@ -129,6 +130,16 @@ class PrefillController extends ControllerBase {
   protected const CASE_WEBFORMS = ['klage'];
 
   /**
+   * Webforms that ask for the child's current school (STIL elevdata).
+   */
+  protected const ENROLMENT_WEBFORMS = ['school_transfer'];
+
+  /**
+   * Element key for the child's current school.
+   */
+  protected const SCHOOL_KEY = 'current_school';
+
+  /**
    * Virtual key for household income (no form element carries it).
    */
   protected const INCOME_KEY = 'household_income';
@@ -147,6 +158,11 @@ class PrefillController extends ControllerBase {
    * The family / custody lookup (SF6006 or demo).
    */
   protected FamilyRelationsLookupInterface $familyLookup;
+
+  /**
+   * The pupil enrolment lookup (STIL elevdata; demo rail today).
+   */
+  protected PupilEnrolmentLookupInterface $enrolmentLookup;
 
   /**
    * The flood service for rate limiting.
@@ -183,6 +199,7 @@ class PrefillController extends ControllerBase {
     $instance->auditLogger = $container->get('aabenforms_core.audit_logger');
     $instance->cprAccess = $container->get('aabenforms_core.cpr_access');
     $instance->familyLookup = $container->get('aabenforms_core.family_lookup');
+    $instance->enrolmentLookup = $container->get('aabenforms_core.pupil_enrolment');
     $instance->flood = $container->get('flood');
     $instance->time = $container->get('datetime.time');
     foreach ([
@@ -388,6 +405,13 @@ class PrefillController extends ControllerBase {
     }
     $single = count($options) === 1 ? $options[0] : NULL;
 
+    // Enrolment source (school_transfer): the child's current school is
+    // known from STIL pupil data, so it is fetched, not asked.
+    $schools = [];
+    if (isset($elements[self::SCHOOL_KEY]) && in_array($webform_id, self::ENROLMENT_WEBFORMS, TRUE)) {
+      $schools = $this->addEnrolment($fields, $children, $options, $cpr, $workflow_id, $webform_id, $legal_basis, $fetched_at);
+    }
+
     if (isset($elements['child_name'])) {
       $fields['child_name'] = $this->entry($single['name'] ?? NULL, $source, $legal_basis, $fetched_at, $audit_id, $options);
     }
@@ -405,17 +429,72 @@ class PrefillController extends ControllerBase {
         'children' => count($options),
         'mode' => $mode,
       ]);
-      $custody_options = array_map(static fn (array $o): array => [
+      $custody_options = array_map(static fn (array $o, int $i): array => [
         'child_cpr' => $o['cpr'],
         'custody_status' => $o['custody'],
         'parent2_cpr' => $o['other_guardian']['cpr'] ?? NULL,
         'parent2_name' => $o['other_guardian']['name'] ?? NULL,
-      ], $options);
+      ] + ($schools === [] ? [] : [self::SCHOOL_KEY => $schools[$i] ?? NULL]), $options, array_keys($options));
       $fields['custody_status'] = $this->entry($single['custody'] ?? NULL, $source, $legal_basis, $fetched_at, $custody_audit, $custody_options);
       if (isset($elements['parent2_cpr'])) {
         $fields['parent2_cpr'] = $this->entry($single['other_guardian']['cpr'] ?? NULL, $source, $legal_basis, $fetched_at, $custody_audit, $custody_options);
       }
     }
+  }
+
+  /**
+   * Enrolment source: each custody child's current school (STIL elevdata).
+   *
+   * Writes one audit row for the lookup (hashed applicant CPR, masked child
+   * CPRs only) and sets the current_school field: the institution number as
+   * value when exactly one child is known, otherwise NULL with per-child
+   * options. $children are the raw custody children (plaintext CPR, never
+   * returned); $options are the masked child options, index-aligned.
+   *
+   * @return array
+   *   The current school ({institution_number, name} or NULL) per child,
+   *   index-aligned with $options (masked CPRs can collide for twins), or
+   *   an empty array when the lookup failed.
+   */
+  protected function addEnrolment(array &$fields, array $children, array $options, string $cpr, string $workflow_id, string $webform_id, string $legal_basis, string $fetched_at): array {
+    $mode = $this->enrolmentLookup->isDemoMode() ? 'demo' : 'live';
+    $schools = [];
+    $status = 'success';
+    foreach (array_values($children) as $i => $child) {
+      try {
+        $enrolment = $this->enrolmentLookup->currentInstitution((string) ($child['cpr'] ?? ''));
+      }
+      catch (\Exception $e) {
+        $this->getLogger('aabenforms_core')->error('Prefill enrolment lookup failed: {message}', ['message' => $e->getMessage()]);
+        $enrolment = NULL;
+        $status = 'failure';
+      }
+      $schools[$i] = $enrolment === NULL ? NULL : [
+        'institution_number' => (string) $enrolment['institution_number'],
+        'name' => (string) $enrolment['name'],
+      ];
+    }
+    $audit_id = $this->auditLogger->log('prefill_enrolment', $cpr, $webform_id, $status, [
+      'workflow_id' => $workflow_id,
+      'children' => array_column($options, 'cpr'),
+      'found' => count(array_filter($schools)),
+      'mode' => $mode,
+    ]);
+    if ($status !== 'success') {
+      return [];
+    }
+    $school_options = [];
+    foreach ($schools as $i => $school) {
+      $school_options[] = ['child_cpr' => $options[$i]['cpr'], self::SCHOOL_KEY => $school];
+    }
+    $value = count($schools) === 1 ? (reset($schools)['institution_number'] ?? NULL) : NULL;
+    $fields[self::SCHOOL_KEY] = $this->entry($value, [
+      'register' => 'STIL elevdata',
+      'contract' => 'STIL (Styrelsen for IT og Læring) - integration ikke etableret',
+      'mode' => $mode,
+      'label' => (string) $this->t('From pupil data at STIL (Styrelsen for IT og Læring)'),
+    ], $legal_basis, $fetched_at, $audit_id, $school_options);
+    return $schools;
   }
 
   /**

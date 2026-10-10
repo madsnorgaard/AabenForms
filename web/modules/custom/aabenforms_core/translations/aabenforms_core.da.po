@@ -95,3 +95,6 @@ msgstr "Fra indkomstregistret (eIndkomst)"
 
 msgid "From your cases with the municipality"
 msgstr "Fra dine sager hos kommunen"
+
+msgid "From pupil data at STIL (Styrelsen for IT og Læring)"
+msgstr "Fra elevdata hos STIL (Styrelsen for IT og Læring)"

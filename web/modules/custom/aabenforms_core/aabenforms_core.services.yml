@@ -87,3 +87,12 @@ services:
 
   Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface:
     alias: aabenforms_core.family_lookup
+
+  # STIL elevdata is not integrated; the demo rail always reports demo mode.
+  aabenforms_core.pupil_enrolment:
+    class: Drupal\aabenforms_core\Enrolment\DemoPupilEnrolment
+    arguments:
+      - '@?aabenforms_institution.registry'
+
+  Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface:
+    alias: aabenforms_core.pupil_enrolment

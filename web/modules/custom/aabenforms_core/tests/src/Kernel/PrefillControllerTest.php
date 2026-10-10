@@ -289,6 +289,74 @@ class PrefillControllerTest extends KernelTestBase {
   }
 
   /**
+   * School transfer: current school per custody child from the STIL demo rail.
+   */
+  public function testSchoolTransferPrefillsCurrentSchool(): void {
+    Webform::create([
+      'id' => 'school_transfer',
+      'title' => 'Skoleskift',
+      'elements' => Yaml::encode([
+        'child_name' => ['#type' => 'textfield', '#title' => 'Barnets navn'],
+        'child_cpr' => ['#type' => 'cpr_field', '#title' => 'Barnets CPR'],
+        'current_school' => [
+          '#type' => 'select',
+          '#title' => 'Nuværende skole',
+          '#options' => [
+            '751101' => 'Frederiksbjerg Skole',
+            '751102' => 'Katrinebjergskolen',
+            '751103' => 'Møllevangskolen',
+          ],
+        ],
+        'custody_status' => [
+          '#type' => 'select',
+          '#title' => 'Forældremyndighed',
+          '#options' => ['sole' => 'Ene', 'joint' => 'Fælles'],
+        ],
+        'new_school' => ['#type' => 'textfield', '#title' => 'Ønsket skole'],
+      ]),
+    ])->save();
+
+    // Freja: two children (Emil, Oliver), so no single value, options only.
+    $body = $this->prefill('school_transfer', $this->seed('freja'))['body'];
+    $school = $body['fields']['current_school'];
+    $this->assertNull($school['value']);
+    $this->assertSame([
+      [
+        'child_cpr' => '010918-XXXX',
+        'current_school' => ['institution_number' => '751101', 'name' => 'Frederiksbjerg Skole'],
+      ],
+      [
+        'child_cpr' => '200510-XXXX',
+        'current_school' => ['institution_number' => '751102', 'name' => 'Katrinebjergskolen'],
+      ],
+    ], $school['options']);
+    $this->assertSame('STIL elevdata', $school['source']['register']);
+    $this->assertSame('demo', $school['source']['mode'], 'No STIL integration: enrolment is demo');
+    $this->assertStringContainsString('integration ikke etableret', $school['source']['contract']);
+    $this->assertSame(LegalBasis::for('school_transfer'), $school['legal_basis']);
+    $this->assertSame('751101', $body['fields']['custody_status']['options'][0]['current_school']['institution_number']);
+    $this->assertNotContains('current_school', $body['not_asked']);
+    $this->assertSame(['new_school'], $body['not_asked']);
+    $json = json_encode($body);
+    $this->assertStringNotContainsString('0109182345', $json, 'Child CPR never leaves unmasked');
+    $this->assertStringNotContainsString(self::FREJA_CPR, $json);
+
+    $rows = $this->auditRows('school_transfer');
+    $this->assertArrayHasKey('prefill_enrolment', $rows);
+    $row = $rows['prefill_enrolment'];
+    $this->assertSame(hash('sha256', self::FREJA_CPR), $row['identifier_hash']);
+    $this->assertSame('success', $row['status']);
+    $this->assertSame((int) $row['id'], $school['audit_id']);
+    $this->assertStringContainsString('010918-XXXX', (string) $row['context']);
+    $this->assertStringNotContainsString('0109182345', (string) $row['context']);
+
+    // Sofie: sole custody of Alma, so the school is unambiguous.
+    $body = $this->prefill('school_transfer', $this->seed('sofie'))['body'];
+    $this->assertSame('751103', $body['fields']['current_school']['value']);
+    $this->assertSame('Møllevangskolen', $body['fields']['current_school']['options'][0]['current_school']['name']);
+  }
+
+  /**
    * Without a session, or with an unknown one, nothing is disclosed.
    */
   public function testMissingOrUnknownSessionIsRejected(): void {
