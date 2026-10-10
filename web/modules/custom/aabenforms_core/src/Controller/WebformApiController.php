@@ -163,7 +163,73 @@ class WebformApiController extends ControllerBase {
       }
       break;
     }
-    return $submission_data;
+    return $this->resolveFamilyCprs($webform, $cpr, $submission_data);
+  }
+
+  /**
+   * Resolves the child's and the other parent's CPR from the family registry.
+   *
+   * The SPA only ever holds masked CPRs (DDMMYY-XXXX). The child is resolved
+   * strictly among the AUTHENTICATED applicant's own custody children (masked
+   * prefix plus name must identify exactly one), so a client cannot name an
+   * arbitrary child. The other custody holder (parent2_cpr) is always taken
+   * from the registry for that child and never from the client, so an
+   * invitation can never be steered to a CPR of the client's choosing.
+   * Unresolvable input is left untouched and the flow's custody gate denies.
+   *
+   * @param \Drupal\webform\Entity\Webform $webform
+   *   The webform.
+   * @param string $applicantCpr
+   *   The CPR from the verified MitID session.
+   * @param array $data
+   *   Submission values.
+   *
+   * @return array
+   *   Submission values with child_cpr / parent2_cpr resolved where possible.
+   */
+  protected function resolveFamilyCprs(Webform $webform, string $applicantCpr, array $data): array {
+    $elements = $webform->getElementsDecodedAndFlattened();
+    if (!isset($elements['child_cpr']) || !\Drupal::hasService('aabenforms_core.family_lookup')) {
+      return $data;
+    }
+    /** @var \Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface $family */
+    $family = \Drupal::service('aabenforms_core.family_lookup');
+    try {
+      $children = $family->childrenOf($applicantCpr);
+    }
+    catch (\Exception $e) {
+      \Drupal::logger('aabenforms_core')->error('Family lookup failed at submit: @m', ['@m' => $e->getMessage()]);
+      return $data;
+    }
+
+    $submitted = strtoupper(preg_replace('/[\s-]/', '', (string) ($data['child_cpr'] ?? '')));
+    $name = mb_strtolower(trim((string) ($data['child_name'] ?? '')));
+    $match = NULL;
+    if (preg_match('/^\d{10}$/', $submitted)) {
+      // Unmasked value: accept only if it is one of the applicant's children.
+      foreach ($children as $child) {
+        if (($child['cpr'] ?? '') === $submitted) {
+          $match = $child;
+        }
+      }
+    }
+    elseif (preg_match('/^(\d{6})X{4}$/', $submitted, $m)) {
+      $candidates = array_values(array_filter($children, static fn (array $c): bool =>
+        str_starts_with((string) ($c['cpr'] ?? ''), $m[1])
+        && ($name === '' || mb_strtolower((string) ($c['full_name'] ?? '')) === $name)));
+      $match = count($candidates) === 1 ? $candidates[0] : NULL;
+    }
+    if ($match === NULL) {
+      return $data;
+    }
+    $data['child_cpr'] = $match['cpr'];
+
+    if (isset($elements['parent2_cpr'])) {
+      $other = array_values(array_filter($match['guardians'] ?? [], static fn (array $g): bool =>
+        ($g['cpr'] ?? '') !== '' && $g['cpr'] !== $applicantCpr));
+      $data['parent2_cpr'] = $other[0]['cpr'] ?? '';
+    }
+    return $data;
   }
 
   /**
