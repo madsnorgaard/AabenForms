@@ -235,7 +235,9 @@ class ParentApprovalController extends ControllerBase {
    */
   protected function buildMitIdLoginPage($submission, int $parent_number, string $token): array {
     $child_name = $submission->getElementData('child_name');
-    $request_details = $submission->getElementData('request_details');
+    // Forms other than parent_request_form (e.g. school_transfer) carry the
+    // free-text summary under another key, so fall back and never pass NULL.
+    $request_details = (string) ($submission->getElementData('request_details') ?? $submission->getElementData('reason') ?? $submission->getElementData('details') ?? '');
 
     return [
       '#theme' => 'parent_approval_login',
