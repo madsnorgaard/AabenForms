@@ -1,0 +1,13 @@
+uuid: a265e6be-a62c-43bd-91bf-301c60b6c79e
+langcode: en
+status: true
+dependencies:
+  module:
+    - aabenforms_workflows
+id: skoleleder
+label: Skoleleder
+weight: 6
+is_admin: false
+permissions:
+  - 'decide school transfer'
+

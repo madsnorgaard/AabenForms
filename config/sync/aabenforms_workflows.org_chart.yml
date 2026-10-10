@@ -10,3 +10,8 @@ employees:
     account_name: medarbejder
     manager_email: leder@example.dk
     tier_limit_cents: 300000
+  E1003:
+    name: 'Skoleleder Demo'
+    account_name: skoleleder
+    manager_email: leder@example.dk
+    tier_limit_cents: 0

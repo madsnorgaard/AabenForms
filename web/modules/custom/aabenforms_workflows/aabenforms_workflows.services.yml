@@ -132,3 +132,13 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@config.factory'
+
+  # Skoleskift read model: the co-signer's receipt and the school leader's
+  # staff summary (masked CPR only).
+  aabenforms_workflows.school_transfer_case_view:
+    class: Drupal\aabenforms_workflows\Service\SchoolTransferCaseView
+    arguments:
+      - '@entity_type.manager'
+      - '@database'
+      - '@aabenforms_core.cpr_access'
+      - '@aabenforms_core.family_lookup'
