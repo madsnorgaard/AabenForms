@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_case\Drush;
 
-use Drupal\aabenforms_case\Service\CaseLookup;
-use Drupal\aabenforms_case\Service\FristClock;
-use Drupal\aabenforms_core\Service\AuditLogger;
-use Drupal\Component\Datetime\TimeInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Drupal\webform\Entity\Webform;
+use Drupal\aabenforms_case\Service\KlageDemoSeeder;
 use Drush\Commands\DrushCommands;
 
 /**
@@ -17,36 +12,23 @@ use Drush\Commands\DrushCommands;
  */
 final class AabenformsCaseCommands extends DrushCommands {
 
-  /**
-   * The persona the klage scenario is built around (see DemoPersonas).
-   */
-  private const KAREN_CPR = '2403482210';
-
-  /**
-   * The case area the seeded decision belongs to.
-   */
-  private const CASE_TYPE = 'merudgifter';
-
   public function __construct(
-    private readonly EntityTypeManagerInterface $entityTypeManager,
-    private readonly FristClock $fristClock,
-    private readonly CaseLookup $caseLookup,
-    private readonly AuditLogger $auditLogger,
-    private readonly TimeInterface $time,
+    private readonly KlageDemoSeeder $seeder,
   ) {
     parent::__construct();
   }
 
   /**
-   * Seed a decided (afslag) merudgifter case for Karen so klage has a target.
+   * Seed a decided (afslag) merudgifter case for Birthe so klage has a target.
    *
-   * Creates, for the demo persona Karen Christensen, a merudgifter case that
+   * Creates, for the demo persona Birthe Jensen, a merudgifter case that
    * went modtaget -> oplyst -> afgoerelse with afslag, decided 10 days ago,
    * with the klagefrist computed by the FristClock from that date. The case
    * is left in "afgoerelse" (decided), which is the only state the lawful
    * lifecycle allows an appeal from - a "lukket" case is terminal and could
    * not be appealed. Idempotent: a second run finds the existing case by
-   * Karen's subject hash and does nothing.
+   * Birthe's subject hash and does nothing. Once the scenario has been run
+   * (the case is paaklaget or lukket), --reset seeds a fresh one.
    *
    * @param array $options
    *   Command options.
@@ -54,92 +36,55 @@ final class AabenformsCaseCommands extends DrushCommands {
    * @command aabenforms:demo:seed-klage-case
    * @aliases af:seed-klage
    * @option days-ago How many days ago the decision was made (default 10).
+   * @option reset Create a fresh case when the existing one is no longer
+   *   appealable (paaklaget / lukket). Never duplicates an appealable case.
    * @usage drush aabenforms:demo:seed-klage-case
    *   Seed the case and print its id and klagefrist.
+   * @usage drush aabenforms:demo:seed-klage-case --reset
+   *   After running the klage scenario, seed a fresh case to run it again.
    */
-  public function seedKlageCase(array $options = ['days-ago' => 10]): int {
-    $daysAgo = max(0, (int) $options['days-ago']);
-
-    foreach ($this->caseLookup->findByCpr(self::KAREN_CPR) as $existing) {
-      if ($existing['case_type'] === self::CASE_TYPE && $existing['afgoerelse_type'] === 'afslag') {
-        $this->io()->success(dt('Karen already has a decided merudgifter case: #@id (klagefrist @frist). Nothing to do.', [
-          '@id' => $existing['case_id'],
-          '@frist' => $existing['klagefrist'] ?? '-',
-        ]));
-        return self::EXIT_SUCCESS;
-      }
-    }
-
-    $webform = Webform::load(self::CASE_TYPE);
-    if ($webform === NULL) {
-      $this->logger()->error(dt('The "@id" webform is not installed; enable aabenforms_case config first.', ['@id' => self::CASE_TYPE]));
-      return self::EXIT_FAILURE;
-    }
-
-    $now = $this->time->getRequestTime();
-    $decided = $now - ($daysAgo * 86400);
-    $received = $decided - (20 * 86400);
-
+  public function seedKlageCase(array $options = ['days-ago' => 10, 'reset' => FALSE]): int {
     try {
-      // The application behind the case. The presave hook encrypts the CPR
-      // at rest; the case only ever carries its hash.
-      $submission = $this->entityTypeManager->getStorage('webform_submission')->create([
-        'webform_id' => self::CASE_TYPE,
-        'in_draft' => FALSE,
-        'data' => [
-          'applicant_cpr' => self::KAREN_CPR,
-          'funktionsnedsaettelse' => 'Nedsat gangfunktion og behov for hjælpemidler i hjemmet (demo).',
-          'maanedlig_merudgift' => 1850,
-        ],
-      ]);
-      $submission->save();
-
-      $storage = $this->entityTypeManager->getStorage('aabenforms_case');
-      /** @var \Drupal\aabenforms_case\Entity\AabenformsCase $case */
-      $case = $storage->create([
-        'title' => 'Merudgifter - ansøgning om dækning af merudgifter (demo)',
-        'case_type' => self::CASE_TYPE,
-        'status' => 'modtaget',
-        'submission_ref' => $submission->id(),
-        'modtagelsesdato' => $received,
-        'frist_due' => $this->fristClock->computeDue($received, self::CASE_TYPE),
-        'subject_cpr_hash' => $this->caseLookup->subjectHashFromSubmission($submission) ?? CaseLookup::hashCpr(self::KAREN_CPR),
-      ]);
-      $case->setNewRevision(TRUE);
-      $case->setRevisionLogMessage('Sag oprettet fra indsendelse (demo-seed).');
-      $case->save();
-
-      // Walk the lawful lifecycle so the revision trail looks like real
-      // casework: oplyst, then an adverse decision with klagevejledning.
-      $case->setStatus('oplyst');
-      $case->setRevisionLogMessage('Sagen er oplyst: lægefaglig dokumentation modtaget (demo-seed).');
-      $case->save();
-
-      $case->set('afgoerelse_type', 'afslag');
-      $case->set('afgoerelse_dato', $decided);
-      $case->set('partshoering_state', 'afsluttet');
-      $case->set('klagefrist', $this->fristClock->computeKlagefrist($decided, 4));
-      $case->setStatus('afgoerelse');
-      $case->setRevisionLogMessage('Afgørelse: afslag. Klagevejledning: Afgørelsen kan påklages til Ankestyrelsen inden 4 uger (demo-seed).');
-      $case->save();
-
-      $this->auditLogger->log('case_decision', (string) $case->id(), 'afslag', 'success', [
-        'demo_seed' => TRUE,
-        'command' => 'aabenforms:demo:seed-klage-case',
-      ]);
+      $result = $this->seeder->seed((int) $options['days-ago'], (bool) $options['reset']);
     }
     catch (\Throwable $e) {
       $this->logger()->error(dt('Seeding failed: @message', ['@message' => $e->getMessage()]));
       return self::EXIT_FAILURE;
     }
 
-    $this->io()->success(dt('Seeded case #@id for Karen Christensen: @type, afslag decided @decided, klagefrist @frist.', [
-      '@id' => $case->id(),
-      '@type' => self::CASE_TYPE,
-      '@decided' => date('Y-m-d', $decided),
-      '@frist' => date('Y-m-d', (int) $case->get('klagefrist')->value),
-    ]));
-    $this->io()->writeln(dt('Seed a MitID session for Karen with: drush aabenforms:seed-mitid-session karen'));
+    $frist = $result['klagefrist'] === NULL ? '-' : date('Y-m-d', $result['klagefrist']);
+    switch ($result['status']) {
+      case KlageDemoSeeder::STATUS_EXISTS:
+        if ($result['appealable']) {
+          $this->io()->success(dt('Birthe already has a decided merudgifter case: #@id (klagefrist @frist). Nothing to do.', [
+            '@id' => $result['case_id'],
+            '@frist' => $frist,
+          ]));
+        }
+        else {
+          $this->io()->warning(dt('Birthe\'s merudgifter case #@id is no longer appealable (already appealed or closed). Re-run with --reset to seed a fresh one.', [
+            '@id' => $result['case_id'],
+          ]));
+        }
+        break;
+
+      case KlageDemoSeeder::STATUS_RESET:
+        $this->io()->success(dt('Case #@previous was spent; seeded fresh case #@id for Birthe Jensen: afslag decided @decided, klagefrist @frist.', [
+          '@previous' => $result['previous_case_id'],
+          '@id' => $result['case_id'],
+          '@decided' => date('Y-m-d', (int) $result['afgoerelse_dato']),
+          '@frist' => $frist,
+        ]));
+        break;
+
+      default:
+        $this->io()->success(dt('Seeded case #@id for Birthe Jensen: merudgifter, afslag decided @decided, klagefrist @frist.', [
+          '@id' => $result['case_id'],
+          '@decided' => date('Y-m-d', (int) $result['afgoerelse_dato']),
+          '@frist' => $frist,
+        ]));
+    }
+    $this->io()->writeln(dt('Seed a MitID session for Birthe with: drush aabenforms:seed-mitid-session birthe'));
     $this->io()->writeln(dt('Then: curl "$BASE/api/prefill/klage?session=<workflow id>"'));
     return self::EXIT_SUCCESS;
   }

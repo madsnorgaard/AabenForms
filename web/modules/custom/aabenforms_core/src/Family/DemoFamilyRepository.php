@@ -20,11 +20,11 @@ namespace Drupal\aabenforms_core\Family;
  * - Pupil aged 15+: Emil's brother Oliver (born 2010) is over 15, so Digital
  *   Post about Oliver goes to Oliver himself, not the parents.
  * - No minor children: Mikkel Jensen has none, exercising the empty branch.
- * - Adult child: Mikkel is the son of Karen Christensen (born 1948, Digital
+ * - Adult child: Mikkel is the son of Birthe Jensen (born 1948, Digital
  *   Post exempt). This is a plain family relation with NO custody semantics:
  *   it never appears in childrenOf()/guardiansOf(), which only answer
  *   foraeldremyndighed questions. It exists so a relative-assists scenario
- *   (Mikkel helping Karen with a klage) has a registered relation to show,
+ *   (Mikkel helping Birthe with a klage) has a registered relation to show,
  *   see adultChildrenOf() and parentsOf().
  *
  * This is demo/test scaffolding only: it backs the family lookup service when
@@ -39,7 +39,7 @@ final class DemoFamilyRepository {
 
   private const SOFIE = '2506924015';
 
-  private const KAREN = '2403482210';
+  private const BIRTHE = '2403482210';
 
   private const MIKKEL = '1502856234';
 
@@ -120,7 +120,7 @@ final class DemoFamilyRepository {
    * them up by accident.
    */
   private const ADULT_CHILDREN = [
-    self::KAREN => [
+    self::BIRTHE => [
       [
         'cpr' => self::MIKKEL,
         'first_name' => 'Mikkel',
@@ -204,7 +204,7 @@ final class DemoFamilyRepository {
    * Returns the parents of an adult person, where the demo data knows them.
    *
    * The inverse of adultChildrenOf(): lets a scenario starting from the adult
-   * child (Mikkel) find the parent being assisted (Karen).
+   * child (Mikkel) find the parent being assisted (Birthe).
    *
    * @param string $childCpr
    *   The adult child's CPR number.

@@ -48,9 +48,9 @@ class PrefillControllerTest extends KernelTestBase {
   ];
 
   /**
-   * Karen's synthetic CPR (DemoPersonas::get('karen')).
+   * Birthe's synthetic CPR (DemoPersonas::get('birthe')).
    */
-  protected const KAREN_CPR = '2403482210';
+  protected const BIRTHE_CPR = '2403482210';
 
   /**
    * Freja's synthetic CPR (DemoPersonas::get('freja')).
@@ -233,7 +233,7 @@ class PrefillControllerTest extends KernelTestBase {
   }
 
   /**
-   * Klage: Karen's decided afslag case is offered for case_id.
+   * Klage: Birthe's decided afslag case is offered for case_id.
    */
   public function testKlagePrefillOffersOwnCases(): void {
     $now = $this->container->get('datetime.time')->getRequestTime();
@@ -245,7 +245,7 @@ class PrefillControllerTest extends KernelTestBase {
       'afgoerelse_type' => 'afslag',
       'afgoerelse_dato' => $now - (10 * 86400),
       'klagefrist' => $now + (18 * 86400),
-      'subject_cpr_hash' => CaseLookup::hashCpr(self::KAREN_CPR),
+      'subject_cpr_hash' => CaseLookup::hashCpr(self::BIRTHE_CPR),
     ]);
     $case->save();
     // Somebody else's case must never show up.
@@ -257,12 +257,12 @@ class PrefillControllerTest extends KernelTestBase {
       'subject_cpr_hash' => CaseLookup::hashCpr(self::FREJA_CPR),
     ])->save();
 
-    $session = $this->seed('karen');
+    $session = $this->seed('birthe');
     $result = $this->prefill('klage', $session);
 
     $this->assertSame(200, $result['status']);
     $body = $result['body'];
-    $this->assertSame('Karen Christensen', $body['session']['name']);
+    $this->assertSame('Birthe Jensen', $body['session']['name']);
     $this->assertTrue($body['session']['digital_post_exempt'], 'The Digital Post exemption rides along from the persona');
 
     $this->assertSame('240348-XXXX', $body['fields']['applicant_cpr']['value']);
@@ -284,7 +284,7 @@ class PrefillControllerTest extends KernelTestBase {
 
     $rows = $this->auditRows('klage');
     $this->assertArrayHasKey('prefill_cases', $rows);
-    $this->assertSame(hash('sha256', self::KAREN_CPR), $rows['prefill_cases']['identifier_hash']);
+    $this->assertSame(hash('sha256', self::BIRTHE_CPR), $rows['prefill_cases']['identifier_hash']);
     $this->assertSame((int) $rows['prefill_cases']['id'], $cases['audit_id']);
   }
 
@@ -301,7 +301,7 @@ class PrefillControllerTest extends KernelTestBase {
    * A seeded demo session is refused off DDEV, even though it exists.
    */
   public function testSeededSessionIsRefusedOutsideDdev(): void {
-    $session = $this->seed('karen');
+    $session = $this->seed('birthe');
     putenv('DDEV_HOSTNAME');
     $result = $this->prefill('klage', $session);
     $this->assertSame(403, $result['status']);

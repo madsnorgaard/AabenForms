@@ -138,6 +138,11 @@ class MitIdCprExtractor {
       'city' => $claims['city'] ?? NULL,
       'municipality_code' => $claims['municipality_code'] ?? NULL,
 
+      // Digital Post exemption (mock IdP only). Real MitID issues no such
+      // claim; in production the authority consults the Digital Post
+      // kontaktregister. Carried so demo flows can route letters to paper.
+      'digital_post_exempt' => filter_var($claims['digital_post_exempt'] ?? FALSE, FILTER_VALIDATE_BOOLEAN),
+
       // Authentication metadata.
     // NSIS level (substantial/high)
       'assurance_level' => $claims['acr'] ?? NULL,

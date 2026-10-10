@@ -5,12 +5,11 @@ namespace Drupal\aabenforms_mitid;
 /**
  * Canonical set of demo citizens for testing gated flows.
  *
- * Freja, Mikkel, Sofie and Lars mirror the users carrying a `cpr` attribute
- * in the mock IdP realm (`.ddev/mocks/keycloak/realms/danish-gov-test.json`),
- * address claims included. Karen is the digital-inclusion persona (elderly,
- * Digital Post exempt, helped by adult son Mikkel) and is deliberately
- * NOT the realm's karen.christensen, who is a 1970-born MitID Erhverv
- * business owner with a different CPR. They all exist so a developer or
+ * Freja, Mikkel, Sofie, Lars and Birthe mirror the users carrying a `cpr`
+ * attribute in the mock IdP realm
+ * (`.ddev/mocks/keycloak/realms/danish-gov-test.json`), address claims
+ * included. Birthe is the digital-inclusion persona (elderly, Digital Post
+ * exempt, helped by adult son Mikkel). They all exist so a developer or
  * kommune admin can drive a MitID-gated flow through
  * its happy path without a live MitID/NemLog-in authentication - see the
  * `aabenforms:seed-mitid-session` Drush command and the modeler's
@@ -37,9 +36,11 @@ final class DemoPersonas {
    * `digital_post_exempt` marks a citizen who is fritaget for Digital Post
    * (bekendtgoerelse om fritagelse af fysiske personer fra tilslutning til
    * Offentlig Digital Post). The flag rides along into the seeded session so
-   * a flow can route Karen's decision letters to physical post. It is a
-   * demo attribute: a real MitID login carries no such claim, the authority
-   * looks it up in the Digital Post kontaktregister (SF1601 fritagelse).
+   * a flow can route Birthe's decision letters to physical post. It is a
+   * demo attribute (the mock realm issues it as a claim, see
+   * MitIdCprExtractor): a real MitID login carries no such claim, the
+   * authority looks it up in the Digital Post kontaktregister (SF1601
+   * fritagelse).
    */
   private const PERSONAS = [
     'freja' => [
@@ -91,14 +92,14 @@ final class DemoPersonas {
       'assurance_level' => 'substantial',
     ],
     // Digital inclusion persona: 78 years old, exempt from Digital Post,
-    // parent of Mikkel (see DemoFamilyRepository::adultChildrenOf()). No
-    // email on purpose - Karen is reached by physical letter.
-    'karen' => [
+    // parent of Mikkel (see DemoFamilyRepository::adultChildrenOf()).
+    // Decision letters go by physical post regardless of the email.
+    'birthe' => [
       'cpr' => '2403482210',
-      'name' => 'Karen Christensen',
-      'given_name' => 'Karen',
-      'family_name' => 'Christensen',
-      'email' => '',
+      'name' => 'Birthe Jensen',
+      'given_name' => 'Birthe',
+      'family_name' => 'Jensen',
+      'email' => 'birthe.jensen@example.dk',
       'birthdate' => '1948-03-24',
       'street' => 'Skovvejen 12, st. tv.',
       'postal_code' => '8000',

@@ -32,7 +32,7 @@ final class AabenformsMitidCommands extends DrushCommands {
    * "Test as demo citizen" action which binds it to your browser session.
    *
    * @param string $persona
-   *   Persona slug: freja, mikkel, sofie, lars or karen (elderly, Digital
+   *   Persona slug: freja, mikkel, sofie, lars or birthe (elderly, Digital
    *   Post exempt). Use 'list' to see them all.
    * @param array $options
    *   Command options.
@@ -43,8 +43,8 @@ final class AabenformsMitidCommands extends DrushCommands {
    *   of a random one.
    * @usage drush aabenforms:seed-mitid-session freja
    *   Seed Freja Nielsen and print the workflow id.
-   * @usage drush aabenforms:seed-mitid-session karen
-   *   Seed Karen Christensen for the klage / digital-inclusion scenario.
+   * @usage drush aabenforms:seed-mitid-session birthe
+   *   Seed Birthe Jensen for the klage / digital-inclusion scenario.
    * @usage drush aabenforms:seed-mitid-session list
    *   List the available demo personas.
    */

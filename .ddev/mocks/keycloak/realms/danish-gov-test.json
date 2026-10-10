@@ -224,6 +224,20 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "name": "digital_post_exempt",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "digital_post_exempt",
+            "claim.name": "digital_post_exempt",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     },
@@ -356,6 +370,35 @@
         "family_name": ["Andersen"],
         "assurance_level": ["http://eidas.europa.eu/LoA/substantial"],
         "description": ["Middle-aged citizen, Aarhus resident"]
+      },
+      "realmRoles": ["user"]
+    },
+    {
+      "username": "birthe.jensen",
+      "firstName": "Birthe",
+      "lastName": "Jensen",
+      "email": "birthe.jensen@example.dk",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test1234",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "cpr": ["2403482210"],
+        "birthdate": ["1948-03-24"],
+        "given_name": ["Birthe"],
+        "family_name": ["Jensen"],
+        "street": ["Skovvejen 12, st. tv."],
+        "postal_code": ["8000"],
+        "city": ["Aarhus C"],
+        "municipality_code": ["0751"],
+        "digital_post_exempt": ["true"],
+        "assurance_level": ["http://eidas.europa.eu/LoA/substantial"],
+        "description": ["Elderly citizen (born 1948), Digital Post exempt, mother of Mikkel Jensen - klage / digital inclusion scenario"]
       },
       "realmRoles": ["user"]
     },
