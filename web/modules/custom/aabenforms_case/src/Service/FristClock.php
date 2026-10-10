@@ -86,6 +86,31 @@ class FristClock {
   }
 
   /**
+   * Adds whole calendar weeks to a timestamp (no working-day math).
+   *
+   * Calendar arithmetic in Europe/Copenhagen, so a local midnight stays a
+   * local midnight across a daylight-saving change.
+   *
+   * Used for periods counted in calendar weeks, e.g. the sygedagpenge
+   * opfølgning horizon (the kommune vurderer the case within 8 weeks,
+   * borger.dk "Sygedagpenge, hvis du er ledig").
+   *
+   * @param int $startTs
+   *   The Unix timestamp the period starts from.
+   * @param int $weeks
+   *   The number of calendar weeks (negative values count as 0).
+   *
+   * @return int
+   *   The Unix timestamp $weeks weeks later.
+   */
+  public function addCalendarWeeks(int $startTs, int $weeks): int {
+    return (new \DateTimeImmutable('@' . $startTs))
+      ->setTimezone(new \DateTimeZone(self::TZ))
+      ->modify(sprintf('+%d weeks', max(0, $weeks)))
+      ->getTimestamp();
+  }
+
+  /**
    * Returns the traffic-light state for a deadline.
    *
    * @param int $dueTs

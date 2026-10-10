@@ -373,7 +373,10 @@ class SendDigitalPostAction extends AabenFormsActionBase {
    * Replaces [token] placeholders in a template.
    *
    * Only subject + body templates go through this; literal strings pass
-   * through unchanged.
+   * through unchanged. ECA wraps scalar token data set by actions in a data
+   * transfer object, so those are unwrapped via getString(). Values are
+   * HTML-escaped: templates are HTML, token values are data (register
+   * answers, citizen input) and must never become markup.
    */
   private function renderTemplate(string $template): string {
     if ($template === '' || !str_contains($template, '[')) {
@@ -383,8 +386,11 @@ class SendDigitalPostAction extends AabenFormsActionBase {
       '/\[([^\]]+)\]/',
       function ($m) {
         $value = $this->tokenService->getTokenData($m[1]);
+        if (is_object($value) && method_exists($value, 'getString')) {
+          $value = $value->getString();
+        }
         if (is_string($value) || is_numeric($value)) {
-          return (string) $value;
+          return htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         }
         return $m[0];
       },
