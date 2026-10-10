@@ -112,6 +112,15 @@ class MitIdController extends ControllerBase {
     // Validate that it's an internal path to prevent open redirect attacks.
     $returnUrl = $this->sanitizeReturnUrl($request, (string) ($request->query->get('return_url') ?? '/'));
 
+    // ?login_hint= is only a username suggestion forwarded to the IdP as the
+    // standard OIDC login_hint; the person still has to authenticate there.
+    // It grants no identity or session capability. Strictly validated.
+    $rawHint = $request->query->get('login_hint');
+    $loginHint = MitIdOidcClient::sanitizeLoginHint($rawHint);
+    if ($rawHint !== NULL && $loginHint === NULL) {
+      $this->getLogger('aabenforms_mitid')->warning('Ignored malformed login_hint (length @len).', ['@len' => strlen((string) $rawHint)]);
+    }
+
     // Generate authorization URL.
     // ?fresh=1 forces the IdP to re-authenticate instead of reusing its SSO
     // session (prompt=login). It can only make login stricter, never looser;
@@ -119,6 +128,7 @@ class MitIdController extends ControllerBase {
     $result = $this->oidcClient->getAuthorizationUrl([
       'redirect_uri' => Url::fromRoute('aabenforms_mitid.callback', [], ['absolute' => TRUE])->toString(),
       'force_login' => $request->query->get('fresh') === '1',
+      'login_hint' => $loginHint,
     ]);
 
     // Store state and workflow ID in session for CSRF protection.

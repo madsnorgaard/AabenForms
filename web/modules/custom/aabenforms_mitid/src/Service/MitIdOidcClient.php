@@ -112,6 +112,27 @@ class MitIdOidcClient implements IdentityProviderInterface {
   }
 
   /**
+   * Allowed shape of an OIDC login_hint (a plain username suggestion).
+   */
+  public const LOGIN_HINT_PATTERN = '/^[a-z0-9][a-z0-9._-]{0,63}$/';
+
+  /**
+   * Returns the login hint if it is a well-formed username, else NULL.
+   *
+   * @param mixed $hint
+   *   The raw hint.
+   *
+   * @return string|null
+   *   The validated hint or NULL.
+   */
+  public static function sanitizeLoginHint(mixed $hint): ?string {
+    if (!is_string($hint) || $hint === '') {
+      return NULL;
+    }
+    return preg_match(self::LOGIN_HINT_PATTERN, $hint) === 1 ? $hint : NULL;
+  }
+
+  /**
    * Generates MitID authorization URL.
    *
    * @param array $options
@@ -160,6 +181,13 @@ class MitIdOidcClient implements IdentityProviderInterface {
     ];
     if (!empty($options['force_login'])) {
       $params['prompt'] = 'login';
+    }
+    // Standard OIDC login_hint: a username suggestion only. The person must
+    // still authenticate at the IdP. Re-validated here so no caller can pass
+    // anything but a plain username through to the IdP.
+    $loginHint = self::sanitizeLoginHint($options['login_hint'] ?? NULL);
+    if ($loginHint !== NULL) {
+      $params['login_hint'] = $loginHint;
     }
 
     $codeVerifier = '';
