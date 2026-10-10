@@ -1,0 +1,11 @@
+services:
+  aabenforms_case.drush_commands:
+    class: Drupal\aabenforms_case\Drush\AabenformsCaseCommands
+    arguments:
+      - '@entity_type.manager'
+      - '@aabenforms_case.frist_clock'
+      - '@aabenforms_case.case_lookup'
+      - '@aabenforms_core.audit_logger'
+      - '@datetime.time'
+    tags:
+      - { name: drush.command }

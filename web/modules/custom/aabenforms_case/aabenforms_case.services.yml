@@ -3,3 +3,15 @@ services:
     class: Drupal\aabenforms_case\Service\FristClock
     arguments:
       - '@config.factory'
+
+  # Case-by-CPR index. Hash-only lookup, see CaseLookup for the rationale.
+  aabenforms_case.case_lookup:
+    class: Drupal\aabenforms_case\Service\CaseLookup
+    arguments:
+      - '@entity_type.manager'
+      - '@aabenforms_core.cpr_access'
+
+  # Demo stand-in for eIndkomst. Swap the class for a Serviceplatformen
+  # client when the kommune's data agreement is in place.
+  aabenforms_case.income_lookup:
+    class: Drupal\aabenforms_case\Service\DemoIncomeLookup

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_case\Plugin\Action;
 
+use Drupal\aabenforms_case\Service\DemoIncomeLookup;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Form\FormStateInterface;
@@ -46,8 +47,14 @@ class FetchIncomeAction extends CaseActionBase {
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->cprAccess = $container->get('aabenforms_core.cpr_access');
+    $instance->incomeLookup = $container->get('aabenforms_case.income_lookup');
     return $instance;
   }
+
+  /**
+   * The income lookup (demo rail until eIndkomst is wired).
+   */
+  protected DemoIncomeLookup $incomeLookup;
 
   /**
    * {@inheritdoc}
@@ -103,15 +110,20 @@ class FetchIncomeAction extends CaseActionBase {
         return;
       }
 
-      // DEMO derivation - deterministic per CPR. Production: SF eIndkomst.
-      $lastDigit = (int) substr($digits, -1);
-      $income = $lastDigit < 5 ? 150000 : 400000;
+      // Shared with the prefill endpoint so both report the same figure.
+      // Demo derivation until a Serviceplatformen eIndkomst client lands.
+      $income = $this->incomeLookup->lookup($digits);
+      if ($income === NULL) {
+        $this->recordStep('Indkomstopslag', 'Intet CPR at slå op.', 'failed');
+        return;
+      }
+      $demo = $this->incomeLookup->isDemoMode();
 
       $this->setTokenValue($resultToken, (string) $income);
-      $this->recordStep('Indkomstopslag', sprintf('Husstandsindkomst hentet: %d kr. (demo).', $income));
+      $this->recordStep('Indkomstopslag', sprintf('Husstandsindkomst hentet: %d kr.%s', $income, $demo ? ' (demo).' : '.'));
       $this->auditLogger->log('income_lookup', $digits, 'friplads', 'success', [
         'action_id' => $this->getPluginId(),
-        'demo' => TRUE,
+        'demo' => $demo,
       ]);
     }
     catch (\Throwable $e) {

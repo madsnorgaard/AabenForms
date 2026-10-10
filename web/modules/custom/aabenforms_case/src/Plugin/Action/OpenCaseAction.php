@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_case\Plugin\Action;
 
+use Drupal\aabenforms_case\Service\CaseLookup;
 use Drupal\aabenforms_case\Service\FristClock;
 use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Form\FormStateInterface;
@@ -21,7 +22,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * SF2900 distribute) can act on it.
  *
  * Privacy: the case stores only a reference to the submission, never the raw
- * CPR - that stays encrypted on the submission.
+ * CPR - that stays encrypted on the submission. What it does carry is a
+ * SHA-256 of the applicant CPR (subject_cpr_hash) so the citizen can later be
+ * offered "my cases" without any decryption, see CaseLookup.
  */
 #[Action(
   id: 'aabenforms_case_open',
@@ -40,11 +43,17 @@ class OpenCaseAction extends CaseActionBase {
   protected FristClock $fristClock;
 
   /**
+   * The case-by-CPR index helper.
+   */
+  protected CaseLookup $caseLookup;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
     $instance->fristClock = $container->get('aabenforms_case.frist_clock');
+    $instance->caseLookup = $container->get('aabenforms_case.case_lookup');
     return $instance;
   }
 
@@ -136,6 +145,10 @@ class OpenCaseAction extends CaseActionBase {
         'submission_ref' => $submissionId,
         'modtagelsesdato' => $now,
         'frist_due' => $due,
+        // Hash-only subject index (never the CPR itself), so the klage form
+        // can offer the citizen their own cases. NULL when the form has no
+        // applicant CPR.
+        'subject_cpr_hash' => $submission !== NULL ? $this->caseLookup->subjectHashFromSubmission($submission) : NULL,
       ]);
       // Attribute the founding revision (who opened the case), like every
       // transition revision does.
