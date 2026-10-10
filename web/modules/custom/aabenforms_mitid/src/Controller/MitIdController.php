@@ -283,47 +283,19 @@ class MitIdController extends ControllerBase {
     // wire: the SPA only needs it for display (masked), and citizen flows read
     // the real CPR server-side from this same MitID session, not from the
     // response. mitid_uuid/auth_time/issuer/tokens stay server-side only.
-    $cpr = (string) ($session['cpr'] ?? '');
     $this->auditLogger->logWorkflowAccess($session_id, 'session_data_read', 'success', [
       'assurance_level' => $session['assurance_level'] ?? 'unknown',
     ]);
 
-    $address = $this->sessionManager->getAddressFromSession($session_id);
-
+    // One builder for every citizen-facing view of a session (this endpoint
+    // and the prefill endpoint share it), so the masking rule lives once.
     return new JsonResponse([
       'data' => [
         'type' => 'mitid-session',
         'id' => $session_id,
-        'attributes' => [
-          'name' => $session['name'] ?? $session['given_name'] ?? '',
-          'cpr' => $this->maskCpr($cpr),
-          'email' => $session['email'] ?? '',
-          'expiry' => $session['expires_at'] ?? '',
-          'given_name' => $session['given_name'] ?? '',
-          'family_name' => $session['family_name'] ?? '',
-          'birthdate' => $session['birthdate'] ?? '',
-          'address' => $address,
-          'assurance_level' => $session['assurance_level'] ?? '',
-        ],
+        'attributes' => $this->sessionManager->getPublicAttributes($session_id) ?? [],
       ],
     ]);
-  }
-
-  /**
-   * Masks a CPR to DDMMYY-XXXX for display, never exposing the serial.
-   *
-   * @param string $cpr
-   *   The full CPR, or empty.
-   *
-   * @return string
-   *   The masked CPR, or empty when none was present.
-   */
-  protected function maskCpr(string $cpr): string {
-    $digits = preg_replace('/\D/', '', $cpr);
-    if (strlen($digits) < 6) {
-      return '';
-    }
-    return substr($digits, 0, 6) . '-XXXX';
   }
 
 }

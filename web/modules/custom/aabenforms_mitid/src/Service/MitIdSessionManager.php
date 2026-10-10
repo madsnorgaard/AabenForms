@@ -317,6 +317,63 @@ class MitIdSessionManager implements SessionManagerInterface {
   }
 
   /**
+   * Masks a CPR to DDMMYY-XXXX for display, never exposing the serial.
+   *
+   * The one masking rule for everything that leaves the server about a
+   * session (the session endpoint, the prefill endpoint, co-guardian hints).
+   * Keep it here so no second implementation can drift to leaking more.
+   *
+   * @param string $cpr
+   *   The full CPR, or empty.
+   *
+   * @return string
+   *   The masked CPR, or empty when none was present.
+   */
+  public static function maskCpr(string $cpr): string {
+    $digits = preg_replace('/\D/', '', $cpr) ?? '';
+    if (strlen($digits) < 6) {
+      return '';
+    }
+    return substr($digits, 0, 6) . '-XXXX';
+  }
+
+  /**
+   * Builds the citizen-safe view of a session for the SPA.
+   *
+   * This is what /mitid/session/{id} returns and what the prefill endpoint
+   * reuses for its identity source: the CPR is masked, and mitid_uuid,
+   * auth_time, issuer and tokens never leave the server. Reading it is NOT
+   * audited here - callers audit, because they know the purpose.
+   *
+   * @param string $workflow_id
+   *   The workflow instance ID.
+   *
+   * @return array|null
+   *   The attributes (name, cpr (masked), email, expiry, given_name,
+   *   family_name, birthdate, address, assurance_level, digital_post_exempt,
+   *   demo_seeded), or NULL when there is no valid session.
+   */
+  public function getPublicAttributes(string $workflow_id): ?array {
+    $session = $this->getSession($workflow_id);
+    if (!$session) {
+      return NULL;
+    }
+    return [
+      'name' => $session['name'] ?? $session['given_name'] ?? '',
+      'cpr' => self::maskCpr((string) ($session['cpr'] ?? '')),
+      'email' => $session['email'] ?? '',
+      'expiry' => $session['expires_at'] ?? '',
+      'given_name' => $session['given_name'] ?? '',
+      'family_name' => $session['family_name'] ?? '',
+      'birthdate' => $session['birthdate'] ?? '',
+      'address' => $this->getAddressFromSession($workflow_id),
+      'assurance_level' => $session['assurance_level'] ?? '',
+      'digital_post_exempt' => !empty($session['digital_post_exempt']),
+      'demo_seeded' => !empty($session['demo_seeded']),
+    ];
+  }
+
+  /**
    * Gets address from workflow session.
    *
    * Returns NULL when no address keys are present (the typical case for real
