@@ -165,8 +165,13 @@ class AuditLogger {
    *   The result status.
    * @param array<string, mixed> $context
    *   Additional context data.
+   *
+   * @return int|null
+   *   The id of the audit row written, or NULL when the write failed. Callers
+   *   that hand data to a citizen (the prefill endpoint) echo this id so the
+   *   disclosure can be tied back to its audit row.
    */
-  public function log(string $action, string $identifier, string $purpose, string $status, array $context = []): void {
+  public function log(string $action, string $identifier, string $purpose, string $status, array $context = []): ?int {
     $request = $this->requestStack->getCurrentRequest();
     $ip_address = $request ? $request->getClientIp() : 'CLI';
 
@@ -184,7 +189,7 @@ class AuditLogger {
     ];
 
     try {
-      $this->database->insert('aabenforms_audit_log')
+      $id = $this->database->insert('aabenforms_audit_log')
         ->fields($entry)
         ->execute();
 
@@ -198,12 +203,14 @@ class AuditLogger {
 
       // Refresh the AabenForms admin dashboard's recent-activity panel.
       Cache::invalidateTags(['aabenforms_dashboard:activity']);
+      return is_numeric($id) ? (int) $id : NULL;
     }
     catch (\Exception $e) {
       $this->logger->error('Failed to write audit log: {error}', [
         'error' => $e->getMessage(),
         'action' => $action,
       ]);
+      return NULL;
     }
   }
 
