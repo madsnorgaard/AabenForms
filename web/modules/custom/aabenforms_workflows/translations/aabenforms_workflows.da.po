@@ -330,3 +330,272 @@ msgstr "Opret og administrér godkendelsesarbejdsgange fra skabeloner"
 
 msgid "All ECA flows grouped by citizen journey"
 msgstr "Alle ECA-flows grupperet efter borgerforløb"
+
+# Parent approval (citizen-facing) and the skoleskift school-leader decision.
+
+msgid "Parent Approval"
+msgstr "Medunderskrift fra forælder"
+
+msgid "Parent Approval - MitID Login"
+msgstr "Medunderskrift - log ind med MitID"
+
+msgid "Parent Approval - MitID Complete"
+msgstr "Medunderskrift - MitID gennemført"
+
+msgid "Approval Complete"
+msgstr "Din beslutning er modtaget"
+
+msgid "Parent Approval Required"
+msgstr "Din medunderskrift er nødvendig"
+
+msgid "Parent @number"
+msgstr "Forælder @number"
+
+msgid "Child:"
+msgstr "Barn:"
+
+msgid "Request:"
+msgstr "Anmodning:"
+
+msgid "To protect your privacy and verify your identity, you must authenticate with MitID before reviewing this request."
+msgstr "For at beskytte dine oplysninger og bekræfte, hvem du er, skal du logge ind med MitID, før du kan se anmodningen."
+
+msgid "Login with MitID"
+msgstr "Log ind med MitID"
+
+msgid "What is MitID?"
+msgstr "Hvad er MitID?"
+
+msgid "MitID is the official digital identity solution used by Danish public authorities. It ensures that only you can access and approve this request."
+msgstr "MitID er det offentliges digitale identitet. Den sikrer, at kun du kan se og godkende anmodningen."
+
+msgid "If you have questions about this request, please contact the case worker handling your case."
+msgstr "Har du spørgsmål til anmodningen, så kontakt den sagsbehandler, der har din sag."
+
+msgid "Review and Approve Request"
+msgstr "Se og underskriv anmodningen"
+
+msgid "You are authenticated via MitID"
+msgstr "Du er logget ind med MitID"
+
+msgid "This page is secure and your identity has been verified. Your decision will be recorded and the case worker will be notified."
+msgstr "Siden er sikker, og din identitet er bekræftet. Din beslutning bliver registreret, og sagsbehandleren får besked."
+
+msgid "Child Information"
+msgstr "Oplysninger om barnet"
+
+msgid "Child Name"
+msgstr "Barnets navn"
+
+msgid "CPR Number"
+msgstr "CPR-nummer"
+
+msgid "Note: Some information is masked for privacy as parents are registered as living apart."
+msgstr "Bemærk: Nogle oplysninger er skjult af hensyn til privatlivet, fordi forældrene er registreret på hver sin adresse."
+
+msgid "Request Details"
+msgstr "Om anmodningen"
+
+msgid "Description"
+msgstr "Beskrivelse"
+
+msgid "Submitted"
+msgstr "Indsendt"
+
+msgid "Your Decision"
+msgstr "Din beslutning"
+
+msgid "Do you approve this request?"
+msgstr "Godkender du anmodningen?"
+
+msgid "Yes, I approve this request"
+msgstr "Ja, jeg godkender anmodningen"
+
+msgid "No, I do not approve this request"
+msgstr "Nej, jeg godkender ikke anmodningen"
+
+msgid "Comments (optional)"
+msgstr "Bemærkninger (valgfrit)"
+
+msgid "Add any comments or concerns about this request."
+msgstr "Skriv eventuelle bemærkninger eller betænkeligheder ved anmodningen."
+
+msgid "Submit Decision"
+msgstr "Send din beslutning"
+
+msgid "Security validation failed. Please try again or request a new approval link."
+msgstr "Sikkerhedskontrollen fejlede. Prøv igen, eller bed om et nyt link."
+
+msgid "The submission could not be found."
+msgstr "Ansøgningen blev ikke fundet."
+
+msgid "This request has already been processed."
+msgstr "Anmodningen er allerede behandlet."
+
+msgid "Your MitID session has expired. Please open the approval link again to re-authenticate."
+msgstr "Dit MitID-login er udløbet. Åbn linket igen, og log ind på ny."
+
+msgid "Security verification failed. Please contact the case worker."
+msgstr "Sikkerhedskontrollen fejlede. Kontakt sagsbehandleren."
+
+msgid "An error occurred. Please contact support."
+msgstr "Der opstod en fejl. Kontakt support."
+
+msgid "Thank you. Your approval has been recorded."
+msgstr "Tak. Din godkendelse er registreret."
+
+msgid "Your response has been recorded. The case worker will be notified."
+msgstr "Dit svar er registreret. Sagsbehandleren får besked."
+
+msgid "An error occurred while saving your response. Please try again or contact support."
+msgstr "Dit svar kunne ikke gemmes. Prøv igen, eller kontakt support."
+
+msgid "Thank you for approving this request. The case worker has been notified and will proceed with processing."
+msgstr "Tak for din godkendelse. Sagsbehandleren har fået besked og behandler sagen videre."
+
+msgid "Your response has been recorded. The case worker has been notified of your decision."
+msgstr "Dit svar er registreret. Sagsbehandleren har fået besked om din beslutning."
+
+msgid "Decision Recorded"
+msgstr "Beslutningen er registreret"
+
+msgid "You may now close this window."
+msgstr "Du kan nu lukke vinduet."
+
+msgid "If you have any questions, please contact the case worker handling this request."
+msgstr "Har du spørgsmål, så kontakt den sagsbehandler, der har anmodningen."
+
+msgid "Expired Link"
+msgstr "Linket er udløbet"
+
+msgid "This approval link has expired. Please contact the case worker for a new link."
+msgstr "Linket er udløbet. Kontakt sagsbehandleren for at få et nyt."
+
+msgid "Invalid Link"
+msgstr "Ugyldigt link"
+
+msgid "This approval link is invalid. The URL may have been truncated by your email client - please copy and paste the full link, or contact the case worker for a fresh one."
+msgstr "Linket er ugyldigt. Det kan være blevet afkortet - kopiér hele linket, eller kontakt sagsbehandleren for at få et nyt."
+
+msgid "Already Processed"
+msgstr "Allerede behandlet"
+
+msgid "School transfers awaiting decision"
+msgstr "Skoleskift til afgørelse"
+
+msgid "Decide school transfer"
+msgstr "Afgør skoleskift"
+
+msgid "Decision sent"
+msgstr "Afgørelsen er sendt"
+
+msgid "Applications that both custody holders have signed. Open a case to approve or reject the school transfer; the decision letter goes to both parents through Digital Post."
+msgstr "Ansøgninger, som begge forældremyndighedsindehavere har underskrevet. Åbn en sag for at godkende eller afvise skoleskiftet. Afgørelsesbrevet sendes til begge forældre med Digital Post."
+
+msgid "Open case"
+msgstr "Åbn sag"
+
+msgid "Case"
+msgstr "Sag"
+
+msgid "Child"
+msgstr "Barn"
+
+msgid "Schools"
+msgstr "Skoler"
+
+msgid "Signed by"
+msgstr "Underskrevet af"
+
+msgid "Next step"
+msgstr "Næste skridt"
+
+msgid "No school transfers await a decision."
+msgstr "Der er ingen skoleskift, der venter på afgørelse."
+
+msgid "Case #@id"
+msgstr "Sag #@id"
+
+msgid "Application"
+msgstr "Ansøgning"
+
+msgid "Current school"
+msgstr "Nuværende skole"
+
+msgid "Requested school"
+msgstr "Ønsket skole"
+
+msgid "Reason given by the parents"
+msgstr "Forældrenes begrundelse"
+
+msgid "Applicant"
+msgstr "Ansøger"
+
+msgid "Co-signer"
+msgstr "Medunderskriver"
+
+msgid "signed with MitID"
+msgstr "underskrevet med MitID"
+
+msgid "not signed"
+msgstr "ikke underskrevet"
+
+msgid "This application has already been decided or is not ready for a decision."
+msgstr "Ansøgningen er allerede afgjort eller er ikke klar til afgørelse."
+
+msgid "Decision"
+msgstr "Afgørelse"
+
+msgid "Approve school transfer"
+msgstr "Godkend skoleskift"
+
+msgid "Reject"
+msgstr "Afvis"
+
+msgid "Reason for the rejection"
+msgstr "Begrundelse for afslaget"
+
+msgid "Required when you reject. The parents can appeal the decision."
+msgstr "Skal udfyldes, når du afviser. Forældrene kan klage over afgørelsen."
+
+msgid "Send decision"
+msgstr "Send afgørelse"
+
+msgid "Your account is not registered as an employee in the organisation, so you cannot make the decision."
+msgstr "Din bruger er ikke registreret som medarbejder i organisationen, så du kan ikke træffe afgørelsen."
+
+msgid "Choose a decision."
+msgstr "Vælg en afgørelse."
+
+msgid "Give a reason for the rejection."
+msgstr "Skriv en begrundelse for afslaget."
+
+msgid "The decision is registered on the case and the decision letter has been sent."
+msgstr "Afgørelsen er registreret på sagen, og afgørelsesbrevet er sendt."
+
+msgid "The decision has not been registered on the case. Check the flow log."
+msgstr "Afgørelsen er ikke registreret på sagen. Se flowets log."
+
+msgid "No decision registered"
+msgstr "Ingen afgørelse registreret"
+
+msgid "School transfer approved"
+msgstr "Skoleskift godkendt"
+
+msgid "School transfer rejected"
+msgstr "Skoleskift afvist"
+
+msgid "Appeal deadline"
+msgstr "Klagefrist"
+
+msgid "Decision letter sent to"
+msgstr "Afgørelsesbrev sendt til"
+
+msgid "Log out and return to the demo"
+msgstr "Log ud og vend tilbage til demoen"
+
+msgid "Back to the list"
+msgstr "Tilbage til listen"
+
+msgid "Decide school transfer applications"
+msgstr "Afgør ansøgninger om skoleskift"
