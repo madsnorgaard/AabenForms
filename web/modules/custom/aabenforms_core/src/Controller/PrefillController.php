@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_core\Controller;
 
+use Drupal\aabenforms_core\Employment\EmploymentLookupInterface;
 use Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Prefill\LegalBasis;
@@ -50,8 +51,9 @@ use Symfony\Component\HttpFoundation\Request;
  * @endcode
  *
  * The CPR is only ever returned masked (DDMMYY-XXXX), via the single masking
- * rule in MitIdSessionManager. household_income is a virtual key (no form
- * element carries it); every other key is an element of the form.
+ * rule in MitIdSessionManager. household_income, employer_name and
+ * employment_history are virtual keys (no form element carries them); every
+ * other key is an element of the form.
  *
  * Trust model: the workflow id is the bearer capability the citizen got at
  * login (unguessable, 15 min). Demo-seeded sessions are honoured only on
@@ -121,8 +123,17 @@ class PrefillController extends ControllerBase {
 
   /**
    * Webforms whose bound flow looks up household income.
+   *
+   * Not merudgifter: the servicelov §41 merudgiftsydelse for a child does not
+   * depend on the parents' income, so fetching it would breach data
+   * minimisation (DBF art. 5(1)(c)).
    */
-  protected const INCOME_WEBFORMS = ['merudgifter', 'friplads'];
+  protected const INCOME_WEBFORMS = ['friplads'];
+
+  /**
+   * Webforms whose bound flow checks employment (beskæftigelseskrav).
+   */
+  protected const EMPLOYMENT_WEBFORMS = ['sygedagpenge'];
 
   /**
    * Webforms whose bound flow resolves one of the citizen's cases.
@@ -165,6 +176,11 @@ class PrefillController extends ControllerBase {
   protected PupilEnrolmentLookupInterface $enrolmentLookup;
 
   /**
+   * The employment + employer sickness report lookup (demo rail today).
+   */
+  protected EmploymentLookupInterface $employmentLookup;
+
+  /**
    * The flood service for rate limiting.
    */
   protected FloodInterface $flood;
@@ -200,6 +216,7 @@ class PrefillController extends ControllerBase {
     $instance->cprAccess = $container->get('aabenforms_core.cpr_access');
     $instance->familyLookup = $container->get('aabenforms_core.family_lookup');
     $instance->enrolmentLookup = $container->get('aabenforms_core.pupil_enrolment');
+    $instance->employmentLookup = $container->get('aabenforms_core.employment_lookup');
     $instance->flood = $container->get('flood');
     $instance->time = $container->get('datetime.time');
     foreach ([
@@ -276,6 +293,7 @@ class PrefillController extends ControllerBase {
     $this->addFamily($fields, $elements, $cpr, $workflow_id, $webform_id, $legal_basis, $fetched_at);
     $this->addIncome($fields, $webform_id, $cpr, $workflow_id, $legal_basis, $fetched_at);
     $this->addCases($fields, $elements, $webform_id, $cpr, $workflow_id, $legal_basis, $fetched_at);
+    $this->addEmployment($fields, $elements, $webform_id, $cpr, $workflow_id, $legal_basis, $fetched_at);
 
     $not_asked = [];
     foreach ($elements as $key => $element) {
@@ -555,6 +573,79 @@ class PrefillController extends ControllerBase {
       $audit_id,
       $cases
     );
+  }
+
+  /**
+   * Employment source: employer + beskæftigelseskrav, and the sick report.
+   *
+   * Two lookups, two audit rows: eIndkomst (employer, hours in the reference
+   * period) and NemRefusion (the employer's report of the first sick day).
+   * Pay is deliberately not returned: the kommune needs it to calculate the
+   * benefit, the citizen's browser does not (data minimisation).
+   */
+  protected function addEmployment(array &$fields, array $elements, string $webform_id, string $cpr, string $workflow_id, string $legal_basis, string $fetched_at): void {
+    if ($cpr === '' || !in_array($webform_id, self::EMPLOYMENT_WEBFORMS, TRUE)) {
+      return;
+    }
+    $mode = $this->employmentLookup->isDemoMode() ? 'demo' : 'live';
+
+    $employment = $this->lookupSafely(fn () => $this->employmentLookup->employment($cpr), $status);
+    $audit_id = $this->auditLogger->log('prefill_employment', $cpr, $webform_id, $status, [
+      'workflow_id' => $workflow_id,
+      'found' => $employment !== NULL,
+      'mode' => $mode,
+    ]);
+    if ($employment !== NULL) {
+      $source = [
+        'register' => 'eIndkomst',
+        'contract' => 'eIndkomst (Skatteforvaltningen) - integration ikke etableret',
+        'mode' => $mode,
+        'label' => (string) $this->t('From the income register (eIndkomst)'),
+      ];
+      $fields['employer_name'] = $this->entry($employment['employer_name'], $source, $legal_basis, $fetched_at, $audit_id);
+      if (isset($elements['employer_cvr'])) {
+        $fields['employer_cvr'] = $this->entry($employment['employer_cvr'], $source, $legal_basis, $fetched_at, $audit_id);
+      }
+      $fields['employment_history'] = $this->entry([
+        'total_hours' => $employment['total_hours'],
+        'required_hours' => EmploymentLookupInterface::REQUIRED_HOURS,
+        'reference_months' => EmploymentLookupInterface::REFERENCE_MONTHS,
+        'requirement_met' => $employment['requirement_met'],
+        'months' => $employment['months'],
+      ], $source, $legal_basis, $fetched_at, $audit_id);
+    }
+
+    $report = $this->lookupSafely(fn () => $this->employmentLookup->sicknessReport($cpr), $status);
+    $report_audit = $this->auditLogger->log('prefill_sickness_report', $cpr, $webform_id, $status, [
+      'workflow_id' => $workflow_id,
+      'found' => $report !== NULL,
+      'mode' => $mode,
+    ]);
+    if ($report !== NULL && isset($elements['first_sick_day'])) {
+      $fields['first_sick_day'] = $this->entry($report['first_sick_day'], [
+        'register' => 'NemRefusion',
+        'contract' => 'NemRefusion (Udbetaling Danmark) - integration ikke etableret',
+        'mode' => $mode,
+        'label' => (string) $this->t('From your employer\'s sickness report (NemRefusion)'),
+      ], $legal_basis, $fetched_at, $report_audit) + [
+        'employer_period_end' => $report['employer_period_end'],
+      ];
+    }
+  }
+
+  /**
+   * Runs a register lookup, turning an exception into a failure status.
+   */
+  protected function lookupSafely(callable $lookup, ?string &$status): ?array {
+    try {
+      $status = 'success';
+      return $lookup();
+    }
+    catch (\Exception $e) {
+      $this->getLogger('aabenforms_core')->error('Prefill lookup failed: {message}', ['message' => $e->getMessage()]);
+      $status = 'failure';
+      return NULL;
+    }
   }
 
   /**

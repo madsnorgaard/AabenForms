@@ -35,6 +35,8 @@ final class LegalBasis {
     'klage' => 'Forvaltningsloven §25, Retssikkerhedsloven §66',
     'building_permit' => 'Byggeloven §16',
     'friplads' => 'Dagtilbudsloven §43, Forvaltningsloven §7, DBF art. 6(1)(e)',
+    // Beskæftigelseskravet for lønmodtagere (240 timer / 6 måneder).
+    'sygedagpenge' => 'Sygedagpengeloven §32, Forvaltningsloven §7, DBF art. 6(1)(e)',
   ];
 
   /**

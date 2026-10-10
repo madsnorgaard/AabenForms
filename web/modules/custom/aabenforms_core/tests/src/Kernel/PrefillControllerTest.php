@@ -17,8 +17,9 @@ use Symfony\Component\HttpFoundation\Request;
  * Tests GET /api/prefill/{webform_id}?session= end to end (issue #250).
  *
  * Seeds demo MitID sessions on a simulated DDEV host and asserts the payload
- * for the merudgifter form (identity + children + income) and the klage form
- * (identity + cases), the audit trail each lookup leaves, and the gates
+ * for the merudgifter form (identity + children, no income), the klage form
+ * (identity + cases), the sygedagpenge form (identity + employment + the
+ * employer's sickness report), the audit trail each lookup leaves, and the gates
  * (missing/unknown session, demo session off DDEV, closed form).
  *
  * @group aabenforms_core
@@ -165,7 +166,12 @@ class PrefillControllerTest extends KernelTestBase {
   }
 
   /**
-   * Merudgifter: identity, two custody children (demo), income (demo).
+   * Mikkel's synthetic CPR (DemoPersonas::get('mikkel')).
+   */
+  protected const MIKKEL_CPR = '1502856234';
+
+  /**
+   * Merudgifter: identity and two custody children (demo), never income.
    */
   public function testMerudgifterPrefillWithProvenance(): void {
     $session = $this->seed('freja');
@@ -206,11 +212,9 @@ class PrefillControllerTest extends KernelTestBase {
     $this->assertSame('080375-XXXX', $children['options'][0]['other_guardian']['cpr']);
     $this->assertSame($children['audit_id'], $fields['child_name']['audit_id'], 'One lookup, one audit row, shared by both child keys');
 
-    // Income on the demo eIndkomst rail: Freja's last digit 1 -> low band.
-    $income = $fields['household_income'];
-    $this->assertSame(150000, $income['value']);
-    $this->assertSame('eIndkomst', $income['source']['register']);
-    $this->assertSame('demo', $income['source']['mode']);
+    // SEL §41 does not depend on the parents' income: it is not fetched
+    // (data minimisation).
+    $this->assertArrayNotHasKey('household_income', $fields);
 
     // Not asked: what the registers cannot answer. Hidden workflow_id is not
     // a question either.
@@ -221,7 +225,7 @@ class PrefillControllerTest extends KernelTestBase {
     $rows = $this->auditRows('merudgifter');
     $actions = array_keys($rows);
     sort($actions);
-    $this->assertSame(['prefill_children', 'prefill_identity', 'prefill_income'], $actions);
+    $this->assertSame(['prefill_children', 'prefill_identity'], $actions);
     $hash = hash('sha256', self::FREJA_CPR);
     foreach ($rows as $row) {
       $this->assertSame($hash, $row['identifier_hash']);
@@ -229,7 +233,76 @@ class PrefillControllerTest extends KernelTestBase {
     }
     $this->assertSame((int) $rows['prefill_identity']['id'], $cpr['audit_id']);
     $this->assertSame((int) $rows['prefill_children']['id'], $children['audit_id']);
-    $this->assertSame((int) $rows['prefill_income']['id'], $income['audit_id']);
+  }
+
+  /**
+   * Sygedagpenge: identity, employer + beskæftigelseskrav, first sick day.
+   */
+  public function testSygedagpengePrefillWithEmployment(): void {
+    Webform::create([
+      'id' => 'sygedagpenge',
+      'title' => 'Sygedagpenge - oplysningsskema',
+      'elements' => Yaml::encode([
+        'workflow_id' => ['#type' => 'hidden'],
+        'applicant_cpr' => ['#type' => 'cpr_field', '#title' => 'CPR'],
+        'employer_cvr' => ['#type' => 'textfield', '#title' => 'CVR'],
+        'first_sick_day' => ['#type' => 'date', '#title' => 'Første sygedag'],
+        'sickness_description' => ['#type' => 'textarea', '#title' => 'Hvad kan du ikke'],
+        'expected_duration' => ['#type' => 'select', '#title' => 'Varighed', '#options' => ['unknown' => 'Ved ikke']],
+        'in_treatment' => ['#type' => 'radios', '#title' => 'Behandling', '#options' => ['ja' => 'Ja', 'nej' => 'Nej']],
+        'contact_phone' => ['#type' => 'tel', '#title' => 'Telefon'],
+      ]),
+    ])->save();
+
+    $result = $this->prefill('sygedagpenge', $this->seed('mikkel'));
+    $this->assertSame(200, $result['status']);
+    $this->assertStringContainsString('no-store', $result['cache_control']);
+    $body = $result['body'];
+    $fields = $body['fields'];
+    $legal = LegalBasis::for('sygedagpenge');
+    $this->assertTrue(LegalBasis::has('sygedagpenge'));
+    $this->assertStringContainsString('Sygedagpengeloven', $legal);
+
+    $this->assertSame('150285-XXXX', $fields['applicant_cpr']['value']);
+    $json = json_encode($body);
+    $this->assertStringNotContainsString(self::MIKKEL_CPR, $json, 'The raw CPR never leaves the server');
+    $this->assertStringNotContainsString('31500', $json, 'Pay is not sent to the browser');
+
+    // Employer + history from the demo eIndkomst rail, one audit row.
+    $this->assertSame('12345678', $fields['employer_cvr']['value']);
+    $this->assertStringContainsString('(demo)', $fields['employer_name']['value']);
+    $history = $fields['employment_history']['value'];
+    $this->assertTrue($history['requirement_met']);
+    $this->assertSame(240, $history['required_hours']);
+    $this->assertCount(6, $history['months']);
+    $this->assertSame(array_sum(array_column($history['months'], 'hours')), $history['total_hours']);
+    foreach (['employer_name', 'employer_cvr', 'employment_history'] as $key) {
+      $this->assertSame('eIndkomst', $fields[$key]['source']['register']);
+      $this->assertSame('demo', $fields[$key]['source']['mode'], 'No eIndkomst integration: employment is demo');
+      $this->assertSame($legal, $fields[$key]['legal_basis']);
+    }
+    $this->assertSame($fields['employer_cvr']['audit_id'], $fields['employment_history']['audit_id']);
+
+    // First sick day from the employer's report (demo NemRefusion).
+    $sick = $fields['first_sick_day'];
+    $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}$/', $sick['value']);
+    $this->assertSame('NemRefusion', $sick['source']['register']);
+    $this->assertSame('demo', $sick['source']['mode']);
+    $end = new \DateTimeImmutable($sick['employer_period_end']);
+    $this->assertSame(29, (int) (new \DateTimeImmutable($sick['value']))->diff($end)->days, '30 calendar-day arbejdsgiverperiode');
+
+    $this->assertSame(['sickness_description', 'expected_duration', 'in_treatment', 'contact_phone'], $body['not_asked']);
+
+    $rows = $this->auditRows('sygedagpenge');
+    $actions = array_keys($rows);
+    sort($actions);
+    $this->assertSame(['prefill_employment', 'prefill_identity', 'prefill_sickness_report'], $actions);
+    foreach ($rows as $row) {
+      $this->assertSame(hash('sha256', self::MIKKEL_CPR), $row['identifier_hash']);
+      $this->assertStringNotContainsString(self::MIKKEL_CPR, (string) $row['context']);
+    }
+    $this->assertSame((int) $rows['prefill_employment']['id'], $fields['employer_cvr']['audit_id']);
+    $this->assertSame((int) $rows['prefill_sickness_report']['id'], $sick['audit_id']);
   }
 
   /**

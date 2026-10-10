@@ -98,3 +98,6 @@ msgstr "Fra dine sager hos kommunen"
 
 msgid "From pupil data at STIL (Styrelsen for IT og Læring)"
 msgstr "Fra elevdata hos STIL (Styrelsen for IT og Læring)"
+
+msgid "From your employer's sickness report (NemRefusion)"
+msgstr "Fra din arbejdsgivers sygemelding (NemRefusion)"
