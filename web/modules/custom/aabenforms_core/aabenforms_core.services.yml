@@ -106,3 +106,8 @@ services:
 
   Drupal\aabenforms_core\Employment\EmploymentLookupInterface:
     alias: aabenforms_core.employment_lookup
+
+  # Absolute URLs into the citizen frontend, from the allowlisted
+  # CORS_ALLOW_ORIGIN only (never request input).
+  aabenforms_core.frontend_url:
+    class: Drupal\aabenforms_core\Service\FrontendUrl

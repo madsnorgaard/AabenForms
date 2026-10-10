@@ -6,6 +6,8 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\aabenforms_core\Service\CprAccess;
+use Drupal\aabenforms_core\Service\FrontendUrl;
+use Drupal\Core\Routing\TrustedRedirectResponse;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
 use Drupal\aabenforms_workflows\Service\ApprovalTokenService;
 use Drupal\aabenforms_workflows\Service\ParentCprVerifier;
@@ -109,6 +111,20 @@ class ParentApprovalForm extends FormBase {
   protected CprAccess $cprAccess;
 
   /**
+   * Builds return URLs into the citizen frontend (allowlisted origin only).
+   *
+   * @var \Drupal\aabenforms_core\Service\FrontendUrl|null
+   */
+  protected ?FrontendUrl $frontendUrl;
+
+  /**
+   * Webforms whose co-sign ends back in the frontend demo, with the path.
+   */
+  protected const FRONTEND_RETURN = [
+    'school_transfer' => ['/demo/skoleskift', ['som' => 'lars', 'medunderskrevet' => '1']],
+  ];
+
+  /**
    * Constructs a ParentApprovalForm object.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
@@ -127,6 +143,8 @@ class ParentApprovalForm extends FormBase {
    *   The ECA content entity types service.
    * @param \Drupal\aabenforms_core\Service\CprAccess $cpr_access
    *   The CPR access helper, used to decrypt the stored child CPR for display.
+   * @param \Drupal\aabenforms_core\Service\FrontendUrl|null $frontend_url
+   *   The frontend URL builder.
    */
   public function __construct(
     EntityTypeManagerInterface $entity_type_manager,
@@ -137,6 +155,7 @@ class ParentApprovalForm extends FormBase {
     EventDispatcherInterface $event_dispatcher,
     ContentEntityTypes $entity_types,
     CprAccess $cpr_access,
+    ?FrontendUrl $frontend_url = NULL,
   ) {
     $this->entityTypeManager = $entity_type_manager;
     $this->tokenService = $token_service;
@@ -146,6 +165,7 @@ class ParentApprovalForm extends FormBase {
     $this->eventDispatcher = $event_dispatcher;
     $this->entityTypes = $entity_types;
     $this->cprAccess = $cpr_access;
+    $this->frontendUrl = $frontend_url;
   }
 
   /**
@@ -160,7 +180,8 @@ class ParentApprovalForm extends FormBase {
       $container->get('logger.factory')->get('aabenforms_workflows'),
       $container->get('event_dispatcher'),
       $container->get('eca.service.content_entity_types'),
-      $container->get('aabenforms_core.cpr_access')
+      $container->get('aabenforms_core.cpr_access'),
+      $container->get('aabenforms_core.frontend_url'),
     );
   }
 
@@ -400,6 +421,16 @@ class ParentApprovalForm extends FormBase {
         '@sid' => $submission_id,
       ]);
 
+      // A school transfer co-sign returns the parent to the frontend receipt.
+      // The URL is built from the allowlisted frontend origin and a fixed
+      // path, never from request input; the receipt itself is loaded with
+      // the parent's own MitID session, not from this URL.
+      $frontend = $this->frontendReturnUrl((string) $submission->getWebform()?->id(), (string) $action);
+      if ($frontend !== NULL) {
+        $form_state->setResponse(new TrustedRedirectResponse($frontend));
+        return;
+      }
+
       // Success message.
       $message = $action === 'approve'
         ? $this->t('Thank you. Your approval has been recorded.')
@@ -418,6 +449,25 @@ class ParentApprovalForm extends FormBase {
       ]);
       $this->messenger()->addError($this->t('An error occurred while saving your response. Please try again or contact support.'));
     }
+  }
+
+  /**
+   * The frontend return URL after a co-sign, or NULL for the Drupal page.
+   *
+   * @param string $webform_id
+   *   The submission's webform id.
+   * @param string $action
+   *   The parent's action (approve or reject).
+   *
+   * @return string|null
+   *   An absolute frontend URL, or NULL to keep the default completion page.
+   */
+  public function frontendReturnUrl(string $webform_id, string $action): ?string {
+    if ($action !== 'approve' || !isset(self::FRONTEND_RETURN[$webform_id]) || $this->frontendUrl === NULL) {
+      return NULL;
+    }
+    [$path, $query] = self::FRONTEND_RETURN[$webform_id];
+    return $this->frontendUrl->build($path, $query);
   }
 
 }
