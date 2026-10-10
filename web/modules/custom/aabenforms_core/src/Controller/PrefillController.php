@@ -410,6 +410,13 @@ class PrefillController extends ControllerBase {
     $schools = [];
     if (isset($elements[self::SCHOOL_KEY]) && in_array($webform_id, self::ENROLMENT_WEBFORMS, TRUE)) {
       $schools = $this->addEnrolment($fields, $children, $options, $cpr, $workflow_id, $webform_id, $legal_basis, $fetched_at);
+      // Carry the school on each child option too (index-aligned, as twins
+      // can share a masked CPR), so the child choice can show it directly.
+      foreach ($options as $i => $option) {
+        if (isset($schools[$i])) {
+          $options[$i][self::SCHOOL_KEY] = $schools[$i];
+        }
+      }
     }
 
     if (isset($elements['child_name'])) {
