@@ -127,8 +127,12 @@ class MitIdController extends ControllerBase {
     }
 
     // Generate authorization URL.
+    // ?fresh=1 forces the IdP to re-authenticate instead of reusing its SSO
+    // session (prompt=login). It can only make login stricter, never looser;
+    // used when a second person signs on the same device (co-signing parent).
     $result = $this->oidcClient->getAuthorizationUrl([
       'redirect_uri' => Url::fromRoute('aabenforms_mitid.callback', [], ['absolute' => TRUE])->toString(),
+      'force_login' => $request->query->get('fresh') === '1',
     ]);
 
     // Store state and workflow ID in session for CSRF protection.

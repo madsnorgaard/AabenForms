@@ -158,6 +158,9 @@ class MitIdOidcClient implements IdentityProviderInterface {
       'acr_values' => $acrValues,
       'response_mode' => 'query',
     ];
+    if (!empty($options['force_login'])) {
+      $params['prompt'] = 'login';
+    }
 
     $codeVerifier = '';
     if ((bool) ($config->get('pkce_enabled') ?? TRUE)) {
