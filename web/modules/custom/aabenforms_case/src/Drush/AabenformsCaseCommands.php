@@ -91,7 +91,7 @@ final class AabenformsCaseCommands extends DrushCommands {
         ]));
     }
     $this->io()->writeln(dt('Seed a MitID session for Birthe with: drush aabenforms:seed-mitid-session birthe'));
-    $this->io()->writeln(dt('Then: curl "$BASE/api/prefill/klage?session=<workflow id>"'));
+    $this->io()->writeln(dt('Then: curl -H "Authorization: Bearer <workflow id>" "$BASE/api/prefill/klage"'));
     return self::EXIT_SUCCESS;
   }
 
