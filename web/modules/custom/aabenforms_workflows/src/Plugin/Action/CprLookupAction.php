@@ -156,7 +156,7 @@ class CprLookupAction extends AabenFormsActionBase {
       $this->setTokenValue($this->configuration['result_token'], $demoPerson);
       $this->setResultStatus('found');
       $this->log('CPR lookup ran in demo mode (no Serviceplatformen certificate).', [], 'info');
-      $this->recordStep('CPR Registry Lookup', 'Demo: CPR-opslag simuleret med testdata. Rigtige Serviceplatformen-opslag kraever klientcertifikat.', 'completed');
+      $this->recordStep('CPR Registry Lookup', 'Demo: CPR-opslag simuleret med testdata. Rigtige Serviceplatformen-opslag kræver klientcertifikat.', 'completed');
       return;
     }
 

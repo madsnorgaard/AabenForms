@@ -143,7 +143,7 @@ class CvrLookupAction extends AabenFormsActionBase {
       $this->setTokenValue($this->configuration['result_token'], $demoCompany);
       $this->setResultStatus('found');
       $this->log('CVR lookup ran in demo mode (no Serviceplatformen certificate).', [], 'info');
-      $this->recordStep('CVR Registry Lookup', 'Demo: CVR-opslag simuleret med testdata. Rigtige Serviceplatformen-opslag kraever klientcertifikat.', 'completed');
+      $this->recordStep('CVR Registry Lookup', 'Demo: CVR-opslag simuleret med testdata. Rigtige Serviceplatformen-opslag kræver klientcertifikat.', 'completed');
       return;
     }
 

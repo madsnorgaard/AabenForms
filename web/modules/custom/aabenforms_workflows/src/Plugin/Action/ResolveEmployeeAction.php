@@ -100,7 +100,7 @@ class ResolveEmployeeAction extends AabenFormsActionBase {
   public function execute(): void {
     if ($this->account->isAnonymous()) {
       $this->setResult('', 'failed');
-      $this->recordStep('Employee identity', 'Afvist: interne anmodninger kraever, at medarbejderen er logget ind.', 'failed');
+      $this->recordStep('Employee identity', 'Afvist: interne anmodninger kræver, at medarbejderen er logget ind.', 'failed');
       return;
     }
 
