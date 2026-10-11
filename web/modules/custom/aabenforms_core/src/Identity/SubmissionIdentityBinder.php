@@ -6,6 +6,7 @@ namespace Drupal\aabenforms_core\Identity;
 
 use Drupal\aabenforms_core\Exception\SubmissionIntegrityException;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
+use Drupal\aabenforms_core\Identity\Representation;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
@@ -22,6 +23,10 @@ use Drupal\webform\WebformInterface;
  *    rejected (and audited), so a recipient can never be steered.
  *  - The child is resolved only among the applicant's own custody children.
  *    The other custody holder always comes from the register.
+ *  - Acting on behalf of someone (on_behalf_of): only for a person the
+ *    verified session holds a representation for, covering this form. The
+ *    represented person becomes the applicant, the authenticated person is
+ *    recorded as actor_cpr with the basis. Anything else is rejected.
  *  - custody_status (sole / joint_*) is derived from the register. A sole
  *    claim on joint custody is rejected, so the co-signature cannot be
  *    skipped. Whether the parents agree stays the applicant's statement; the
@@ -55,6 +60,8 @@ class SubmissionIdentityBinder {
    *   The submitted values.
    * @param string $workflowId
    *   The MitID workflow id, for the audit context only.
+   * @param array $representations
+   *   The verified session's representations (see Representation).
    *
    * @return array
    *   The values with applicant, child, other parent and custody bound.
@@ -62,16 +69,55 @@ class SubmissionIdentityBinder {
    * @throws \Drupal\aabenforms_core\Exception\SubmissionIntegrityException
    *   When a claim contradicts the session or the register.
    */
-  public function bind(WebformInterface $webform, string $sessionCpr, array $data, string $workflowId): array {
+  public function bind(WebformInterface $webform, string $sessionCpr, array $data, string $workflowId, array $representations = []): array {
     $elements = $webform->getElementsDecodedAndFlattened();
-    $data = $this->bindApplicant($webform, $elements, $sessionCpr, $data, $workflowId);
-    return $this->bindFamily($webform, $elements, $sessionCpr, $data, $workflowId);
+    $applicantCpr = $this->bindRepresentation($webform, $elements, $sessionCpr, $data, $workflowId, $representations);
+    $data = $this->bindApplicant($webform, $elements, $applicantCpr, $data, $workflowId);
+    return $this->bindFamily($webform, $elements, $applicantCpr, $data, $workflowId);
+  }
+
+  /**
+   * Resolves who the submission is for; records the actor when on behalf.
+   *
+   * @return string
+   *   The applicant (subject) CPR: the session person, or the represented
+   *   person when the form allows acting on behalf and the session holds a
+   *   representation covering it.
+   */
+  protected function bindRepresentation(WebformInterface $webform, array $elements, string $sessionCpr, array &$data, string $workflowId, array $representations): string {
+    $requested = $data['on_behalf_of'] ?? '';
+    // Only forms that declare who acted can be submitted on behalf of anyone.
+    if (!isset($elements['on_behalf_of'], $elements['actor_cpr'])) {
+      unset($data['on_behalf_of'], $data['actor_cpr'], $data['representation_basis'], $data['representation_copy']);
+      return $sessionCpr;
+    }
+    if ($requested === '' || $requested === NULL) {
+      $data['actor_cpr'] = '';
+      $data['representation_basis'] = '';
+      $data['representation_copy'] = '0';
+      return $sessionCpr;
+    }
+    $representation = Representation::find($representations, $requested, (string) $webform->id());
+    if ($representation === NULL) {
+      $this->reject(SubmissionIntegrityException::REPRESENTATION_DENIED, 403, $sessionCpr, $webform, $workflowId);
+    }
+    $data['actor_cpr'] = $sessionCpr;
+    $data['representation_basis'] = $representation['basis'];
+    // Whether the actor may get copies of letters to the subject is the
+    // representation's scope, never the client's choice.
+    $data['representation_copy'] = in_array(Representation::SCOPE_POST_COPY, $representation['scopes'], TRUE) ? '1' : '0';
+    $this->auditLogger->log('submit_on_behalf', $sessionCpr, (string) $webform->id(), 'success', [
+      'basis' => $representation['basis'],
+      'subject_hash' => hash('sha256', 'cpr:' . $representation['cpr']),
+      'workflow_id' => $workflowId,
+    ]);
+    return $representation['cpr'];
   }
 
   /**
    * The first CPR element is always the verified applicant.
    */
-  protected function bindApplicant(WebformInterface $webform, array $elements, string $sessionCpr, array $data, string $workflowId): array {
+  protected function bindApplicant(WebformInterface $webform, array $elements, string $applicantCpr, array $data, string $workflowId): array {
     // Same authority as the presave encryption hook (#172), so the field
     // bound here is always one the encryption covers.
     foreach ($elements as $key => $element) {
@@ -79,10 +125,10 @@ class SubmissionIdentityBinder {
         continue;
       }
       $submitted = self::normalize((string) ($data[$key] ?? ''));
-      if ($submitted !== '' && !str_contains($submitted, 'X') && $submitted !== $sessionCpr) {
-        $this->reject(SubmissionIntegrityException::IDENTITY_MISMATCH, 403, $sessionCpr, $webform, $workflowId);
+      if ($submitted !== '' && !str_contains($submitted, 'X') && $submitted !== $applicantCpr) {
+        $this->reject(SubmissionIntegrityException::IDENTITY_MISMATCH, 403, $applicantCpr, $webform, $workflowId);
       }
-      $data[$key] = $sessionCpr;
+      $data[$key] = $applicantCpr;
       break;
     }
     return $data;

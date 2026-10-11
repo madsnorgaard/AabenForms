@@ -8,6 +8,7 @@ use Drupal\aabenforms_core\Employment\EmploymentLookupInterface;
 use Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
 use Drupal\aabenforms_core\Http\SessionBearer;
+use Drupal\aabenforms_core\Identity\Representation;
 use Drupal\aabenforms_core\Prefill\LegalBasis;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
@@ -288,6 +289,35 @@ class PrefillController extends ControllerBase {
 
     $public = $this->sessionManager->getPublicAttributes($workflow_id) ?? [];
     $cpr = preg_replace('/\D/', '', (string) ($session['cpr'] ?? '')) ?? '';
+
+    // Acting on behalf (?subject=<index>): the index only points into the
+    // representations the verified session holds; it carries no identity.
+    // The lookups then run for the represented person, within the
+    // representation's scope, and the read is audited against the actor.
+    $acting_for = NULL;
+    $actor_public = $public;
+    $subject = $request->query->get('subject');
+    if ($subject !== NULL && $subject !== '') {
+      $representation = Representation::find((array) ($session['representations'] ?? []), $subject, $webform_id);
+      if ($representation === NULL) {
+        $this->auditLogger->log('prefill_on_behalf', $cpr, $webform_id, 'failure', ['workflow_id' => $workflow_id]);
+        return $this->error('No representation covers this form', 403);
+      }
+      $this->auditLogger->log('prefill_on_behalf', $cpr, $webform_id, 'success', [
+        'workflow_id' => $workflow_id,
+        'basis' => $representation['basis'],
+        'subject_hash' => hash('sha256', 'cpr:' . $representation['cpr']),
+      ]);
+      $acting_for = [
+        'name' => $representation['name'],
+        'cpr' => $this->sessionManager::maskCpr($representation['cpr']),
+        'basis' => $representation['basis'],
+      ];
+      // The represented person is the applicant: their name and masked CPR,
+      // nothing else from the actor's own session.
+      $public = ['name' => $representation['name'], 'cpr' => $acting_for['cpr']] + array_fill_keys(array_keys($public), '');
+      $cpr = $representation['cpr'];
+    }
     $elements = $webform->getElementsDecodedAndFlattened();
     $legal_basis = LegalBasis::for($webform_id);
     $fetched_at = $this->fetchedAt();
@@ -311,12 +341,15 @@ class PrefillController extends ControllerBase {
       'webform' => $webform_id,
       'fields' => $fields,
       'not_asked' => $not_asked,
+      // Always the authenticated person (the actor), also when acting for
+      // someone else.
       'session' => [
-        'name' => $public['name'] ?? '',
-        'assurance_level' => $public['assurance_level'] ?? '',
-        'digital_post_exempt' => (bool) ($public['digital_post_exempt'] ?? FALSE),
-        'seeded' => (bool) ($public['demo_seeded'] ?? FALSE),
+        'name' => $actor_public['name'] ?? '',
+        'assurance_level' => $actor_public['assurance_level'] ?? '',
+        'digital_post_exempt' => (bool) ($actor_public['digital_post_exempt'] ?? FALSE),
+        'seeded' => (bool) ($actor_public['demo_seeded'] ?? FALSE),
       ],
+      'acting_for' => $acting_for,
     ]);
     // Personal data keyed by a bearer capability: never let a shared cache
     // (Drupal page cache, a proxy) hold it.

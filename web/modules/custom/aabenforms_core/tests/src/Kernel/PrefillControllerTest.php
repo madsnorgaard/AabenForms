@@ -119,8 +119,8 @@ class PrefillControllerTest extends KernelTestBase {
    * @return array{status:int, body:array|null, cache_control:string}
    *   The HTTP status, decoded body and Cache-Control header.
    */
-  protected function prefill(string $webform_id, ?string $session): array {
-    $request = Request::create('/api/prefill/' . $webform_id);
+  protected function prefill(string $webform_id, ?string $session, array $query = []): array {
+    $request = Request::create('/api/prefill/' . $webform_id, 'GET', $query);
     if ($session !== NULL) {
       $request->headers->set('Authorization', 'Bearer ' . $session);
     }
@@ -361,6 +361,43 @@ class PrefillControllerTest extends KernelTestBase {
     $this->assertArrayHasKey('prefill_cases', $rows);
     $this->assertSame(hash('sha256', self::BIRTHE_CPR), $rows['prefill_cases']['identifier_hash']);
     $this->assertSame((int) $rows['prefill_cases']['id'], $cases['audit_id']);
+  }
+
+  /**
+   * Mikkel, with Birthe's digital fuldmagt, sees Birthe's cases for a klage.
+   */
+  public function testKlagePrefillOnBehalfWithFuldmagt(): void {
+    $storage = $this->container->get('entity_type.manager')->getStorage('aabenforms_case');
+    $case = $storage->create([
+      'title' => 'Merudgifter - afslag (demo)',
+      'case_type' => 'merudgifter',
+      'status' => 'afgoerelse',
+      'afgoerelse_type' => 'afslag',
+      'subject_cpr_hash' => CaseLookup::hashCpr(self::BIRTHE_CPR),
+    ]);
+    $case->save();
+
+    $mikkel = $this->seed('mikkel');
+    // Acting for oneself: no own cases, and nobody else's either.
+    $own = $this->prefill('klage', $mikkel);
+    $this->assertSame([], $own['body']['fields']['case_id']['options'] ?? []);
+    $this->assertNull($own['body']['acting_for']);
+
+    $result = $this->prefill('klage', $mikkel, ['subject' => '0']);
+    $this->assertSame(200, $result['status']);
+    $body = $result['body'];
+    $this->assertSame(['name' => 'Birthe Jensen', 'cpr' => '240348-XXXX', 'basis' => 'fuldmagt'], $body['acting_for']);
+    $this->assertSame('Mikkel Jensen', $body['session']['name'], 'The session block is the actor');
+    $this->assertSame('240348-XXXX', $body['fields']['applicant_cpr']['value'], 'The applicant is the represented person');
+    $this->assertSame((int) $case->id(), $body['fields']['case_id']['value']);
+    $this->assertStringNotContainsString(self::BIRTHE_CPR, $result['raw'] ?? json_encode($body));
+    $this->assertArrayHasKey('prefill_on_behalf', $this->auditRows('klage'));
+
+    // Outside the fuldmagt's scope, or a made-up index: refused.
+    $this->assertSame(403, $this->prefill('merudgifter', $mikkel, ['subject' => '0'])['status']);
+    $this->assertSame(403, $this->prefill('klage', $mikkel, ['subject' => '3'])['status']);
+    // Without any fuldmagt: refused.
+    $this->assertSame(403, $this->prefill('klage', $this->seed('freja'), ['subject' => '0'])['status']);
   }
 
   /**

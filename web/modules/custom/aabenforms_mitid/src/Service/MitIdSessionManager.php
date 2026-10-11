@@ -4,6 +4,7 @@ namespace Drupal\aabenforms_mitid\Service;
 
 use Drupal\aabenforms_core\Identity\SessionManagerInterface;
 use Drupal\aabenforms_core\Demo\DemoEnvironment;
+use Drupal\aabenforms_core\Identity\Representation;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_mitid\DemoPersonas;
 use Drupal\Component\Datetime\TimeInterface;
@@ -470,6 +471,8 @@ class MitIdSessionManager implements SessionManagerInterface {
       'assurance_level' => $session['assurance_level'] ?? '',
       'digital_post_exempt' => !empty($session['digital_post_exempt']),
       'demo_seeded' => !empty($session['demo_seeded']),
+      // Whom this person may act for: names and masked CPRs only.
+      'representations' => Representation::publicView((array) ($session['representations'] ?? [])),
     ];
   }
 

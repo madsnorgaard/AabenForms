@@ -129,6 +129,12 @@ class VerifyAppealOwnershipAction extends AabenFormsActionBase {
         $this->recordStep('Klageberettigelse', 'Klager er part i sagen (MitID-verificeret).');
         return;
       }
+      if ($result === AppealOwnershipVerifier::RESULT_MATCH_ON_BEHALF) {
+        $this->setTokenValue($resultToken, TRUE);
+        $this->setTokenValue($resultToken . '_status', 'verified');
+        $this->recordStep('Klageberettigelse', 'Klagen er indgivet på vegne af parten med digital fuldmagt (MitID-verificeret).');
+        return;
+      }
       $this->denied($resultToken, sprintf('Klager er ikke part i sagen (%s).', $result));
     }
     catch (\Throwable $e) {
@@ -157,8 +163,8 @@ class VerifyAppealOwnershipAction extends AabenFormsActionBase {
     }
     $request = $this->requestStack->getCurrentRequest();
     if ($request) {
-      $fromRequest = $request->attributes->get(self::REQUEST_WORKFLOW_ATTR)
-        ?? $request->query->get('workflow_id');
+      // Never a URL query param: a session id must not travel in a URL.
+      $fromRequest = $request->attributes->get(self::REQUEST_WORKFLOW_ATTR);
       if (is_string($fromRequest) && $fromRequest !== '') {
         return $fromRequest;
       }

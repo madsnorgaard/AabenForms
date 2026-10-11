@@ -24,6 +24,15 @@ events:
         id: mitid_validate
         condition: ''
 conditions:
+  gate_receipt_copy:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[webform_submission:values:representation_copy:raw]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
   gate_mitid_ok:
     plugin: eca_scalar
     configuration:
@@ -96,6 +105,36 @@ actions:
     configuration:
       case_id_token: '[webform_submission:values:case_id]'
       grounds_token: '[webform_submission:values:klage_begrundelse]'
+    successors:
+      -
+        id: send_receipt
+        condition: ''
+  send_receipt:
+    label: 'Send kvittering for klagen'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:applicant_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Kvittering: din klage er modtaget'
+      body_template: '<p>Vi har modtaget din klage over afgørelsen i sag nr. [webform_submission:values:case_id]. Kommunen genvurderer afgørelsen og giver dig besked.</p>'
+      type: 'Digital Post'
+      result_token: klage_receipt_result
+    successors:
+      -
+        id: send_receipt_copy
+        condition: gate_receipt_copy
+  send_receipt_copy:
+    label: 'Send kopi til den, der klagede på vegne af parten'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:actor_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Kopi: klage indgivet med digital fuldmagt'
+      body_template: '<p>Du har indgivet en klage over afgørelsen i sag nr. [webform_submission:values:case_id] på vegne af en anden med digital fuldmagt. Kvitteringen er sendt til parten. Dette er din kopi.</p>'
+      type: 'Digital Post'
+      result_token: klage_receipt_copy_result
     successors: {  }
   deny_identity:
     label: 'Afvis: identitet ikke bekræftet'

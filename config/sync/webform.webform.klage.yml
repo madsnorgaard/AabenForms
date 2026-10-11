@@ -29,6 +29,20 @@ elements: |
     '#title': 'Begrundelse for klagen'
     '#required': true
     '#rows': 6
+  on_behalf_of:
+    '#type': hidden
+    '#title': 'Klager på vegne af'
+    '#description': 'Indeks i den MitID-verificerede fuldmagt. Tom, når borgeren klager selv.'
+  actor_cpr:
+    '#type': hidden
+    '#title': 'Indgivet af (CPR)'
+    '#description': 'Sættes af serveren fra MitID-sessionen, når klagen indgives på vegne af en anden. Krypteres ved modtagelse.'
+  representation_basis:
+    '#type': hidden
+    '#title': 'Grundlag for at handle på vegne af'
+  representation_copy:
+    '#type': hidden
+    '#title': 'Kopi af breve til den, der handler'
 css: ''
 javascript: ''
 settings:
