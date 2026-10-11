@@ -11,3 +11,10 @@ services:
       - '@entity_type.manager'
     tags:
       - { name: drush.command }
+  aabenforms_workflows.drush_school_leader:
+    class: Drupal\aabenforms_workflows\Drush\SchoolLeaderCommands
+    arguments:
+      - '@entity_type.manager'
+      - '@aabenforms_workflows.org_chart'
+    tags:
+      - { name: drush.command }

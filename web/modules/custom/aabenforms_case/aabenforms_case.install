@@ -1,0 +1,127 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the ÅbenForms Case module.
+ */
+
+declare(strict_types=1);
+
+use Drupal\aabenforms_case\Entity\AabenformsCase;
+use Drupal\webform\WebformSubmissionInterface;
+
+/**
+ * Add the subject CPR hash and decision date fields to cases.
+ *
+ * The subject_cpr_hash field is a SHA-256 of the applicant CPR used only as
+ * a lookup key (so a citizen can be offered "my cases" without the raw CPR
+ * ever being stored on the case); afgoerelse_dato records when a decision
+ * was made.
+ * See AabenformsCase::subjectCprHashFieldDefinition() for the privacy
+ * rationale. Fresh installs get both from baseFieldDefinitions().
+ */
+function aabenforms_case_update_11001(): string {
+  $manager = \Drupal::entityDefinitionUpdateManager();
+  $installed = [];
+  if ($manager->getFieldStorageDefinition('subject_cpr_hash', 'aabenforms_case') === NULL) {
+    $manager->installFieldStorageDefinition('subject_cpr_hash', 'aabenforms_case', 'aabenforms_case', AabenformsCase::subjectCprHashFieldDefinition());
+    $installed[] = 'subject_cpr_hash';
+  }
+  if ($manager->getFieldStorageDefinition('afgoerelse_dato', 'aabenforms_case') === NULL) {
+    $manager->installFieldStorageDefinition('afgoerelse_dato', 'aabenforms_case', 'aabenforms_case', AabenformsCase::afgoerelseDatoFieldDefinition());
+    $installed[] = 'afgoerelse_dato';
+  }
+  return $installed === []
+    ? 'Case fields subject_cpr_hash and afgoerelse_dato already present.'
+    : 'Installed case field(s): ' . implode(', ', $installed) . '.';
+}
+
+/**
+ * Backfill subject_cpr_hash and afgoerelse_dato on existing cases.
+ *
+ * Runs in batches. The hash is derived by decrypting each case's submission
+ * CPR at this one point of use and storing only the digest; the decision
+ * date is taken from the first revision that entered "afgoerelse". Both are
+ * written straight to the storage tables rather than through save(): the
+ * entity's preSave() forbids touching a closed (lukket) case and would mint
+ * a new audited revision per case, and a backfill of a derived index is
+ * neither a casework change nor something to record as one.
+ */
+function aabenforms_case_update_11002(array &$sandbox): string {
+  $database = \Drupal::database();
+  $storage = \Drupal::entityTypeManager()->getStorage('aabenforms_case');
+  /** @var \Drupal\aabenforms_case\Service\CaseLookup $lookup */
+  $lookup = \Drupal::service('aabenforms_case.case_lookup');
+
+  if (!isset($sandbox['ids'])) {
+    $sandbox['ids'] = array_values($storage->getQuery()->accessCheck(FALSE)->sort('id')->execute());
+    $sandbox['total'] = count($sandbox['ids']);
+    $sandbox['hashed'] = 0;
+    $sandbox['dated'] = 0;
+  }
+
+  $batch = array_splice($sandbox['ids'], 0, 50);
+  foreach ($storage->loadMultiple($batch) as $case) {
+    if (!$case instanceof AabenformsCase) {
+      continue;
+    }
+    $fields = [];
+
+    if ($case->getSubjectCprHash() === NULL && $case->getSubmissionId() !== NULL) {
+      $submission = \Drupal::entityTypeManager()->getStorage('webform_submission')->load($case->getSubmissionId());
+      if ($submission instanceof WebformSubmissionInterface) {
+        $hash = $lookup->subjectHashFromSubmission($submission);
+        if ($hash !== NULL) {
+          $fields['subject_cpr_hash'] = $hash;
+          $sandbox['hashed']++;
+        }
+      }
+    }
+
+    if ($case->getAfgoerelseDato() === NULL) {
+      $vids = $storage->getQuery()
+        ->accessCheck(FALSE)
+        ->allRevisions()
+        ->condition('id', $case->id())
+        ->condition('status', 'afgoerelse')
+        ->sort('vid', 'ASC')
+        ->range(0, 1)
+        ->execute();
+      if ($vids !== []) {
+        $revision = $storage->loadRevision((int) array_key_first($vids));
+        if ($revision instanceof AabenformsCase && $revision->getRevisionCreationTime() !== NULL) {
+          $fields['afgoerelse_dato'] = (int) $revision->getRevisionCreationTime();
+          $sandbox['dated']++;
+        }
+      }
+    }
+
+    if ($fields === []) {
+      continue;
+    }
+    $database->update('aabenforms_case')
+      ->fields($fields)
+      ->condition('id', $case->id())
+      ->execute();
+    if (isset($fields['afgoerelse_dato'])) {
+      // afgoerelse_dato is revisionable: keep the current revision row in step
+      // with the base table so a revision load shows the same date.
+      $database->update('aabenforms_case_revision')
+        ->fields(['afgoerelse_dato' => $fields['afgoerelse_dato']])
+        ->condition('vid', $case->getRevisionId())
+        ->execute();
+    }
+  }
+
+  $sandbox['#finished'] = $sandbox['total'] === 0 ? 1 : 1 - (count($sandbox['ids']) / $sandbox['total']);
+  if ($sandbox['#finished'] >= 1) {
+    $storage->resetCache();
+    return sprintf(
+      'Backfilled %d of %d cases with a subject CPR hash and %d with a decision date.',
+      $sandbox['hashed'],
+      $sandbox['total'],
+      $sandbox['dated']
+    );
+  }
+  return sprintf('Backfilling cases: %d remaining.', count($sandbox['ids']));
+}

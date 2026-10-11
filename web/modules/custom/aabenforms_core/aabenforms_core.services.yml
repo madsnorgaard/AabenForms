@@ -87,3 +87,27 @@ services:
 
   Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface:
     alias: aabenforms_core.family_lookup
+
+  # STIL elevdata is not integrated; the demo rail always reports demo mode.
+  aabenforms_core.pupil_enrolment:
+    class: Drupal\aabenforms_core\Enrolment\DemoPupilEnrolment
+    arguments:
+      - '@?aabenforms_institution.registry'
+
+  Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface:
+    alias: aabenforms_core.pupil_enrolment
+
+  # eIndkomst (employment) and NemRefusion (employer sickness report) are not
+  # integrated; the demo rail always reports demo mode.
+  aabenforms_core.employment_lookup:
+    class: Drupal\aabenforms_core\Employment\DemoEmploymentLookup
+    arguments:
+      - '@datetime.time'
+
+  Drupal\aabenforms_core\Employment\EmploymentLookupInterface:
+    alias: aabenforms_core.employment_lookup
+
+  # Absolute URLs into the citizen frontend, from the allowlisted
+  # CORS_ALLOW_ORIGIN only (never request input).
+  aabenforms_core.frontend_url:
+    class: Drupal\aabenforms_core\Service\FrontendUrl

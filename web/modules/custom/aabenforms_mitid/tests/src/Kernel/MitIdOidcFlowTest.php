@@ -202,6 +202,28 @@ class MitIdOidcFlowTest extends KernelTestBase {
   }
 
   /**
+   * Tests that a valid login_hint is forwarded and an invalid one dropped.
+   */
+  public function testLoginHint(): void {
+    $authData = $this->oidcClient->getAuthorizationUrl(['login_hint' => 'birthe.jensen', 'force_login' => TRUE]);
+    $query = [];
+    parse_str((string) parse_url($authData['url'], PHP_URL_QUERY), $query);
+    $this->assertSame('birthe.jensen', $query['login_hint'] ?? NULL);
+    $this->assertSame('login', $query['prompt'] ?? NULL, 'fresh/force_login still works alongside login_hint');
+
+    foreach (['', 'Birthe', '.birthe', 'a b', 'x&prompt=none', 'a@b.dk', str_repeat('a', 65), ['x']] as $bad) {
+      $authData = $this->oidcClient->getAuthorizationUrl(['login_hint' => $bad]);
+      $query = [];
+      parse_str((string) parse_url($authData['url'], PHP_URL_QUERY), $query);
+      $this->assertArrayNotHasKey('login_hint', $query, 'Invalid hint dropped: ' . var_export($bad, TRUE));
+      $this->assertArrayNotHasKey('prompt', $query);
+    }
+
+    $authData = $this->oidcClient->getAuthorizationUrl();
+    $this->assertStringNotContainsString('login_hint', $authData['url']);
+  }
+
+  /**
    * Tests token exchange (authorization code → access token).
    */
   public function testTokenExchange(): void {

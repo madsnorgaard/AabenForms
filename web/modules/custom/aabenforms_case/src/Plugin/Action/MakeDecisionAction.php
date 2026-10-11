@@ -169,6 +169,7 @@ class MakeDecisionAction extends CaseActionBase {
 
       $now = $this->time->getRequestTime();
       $case->set('afgoerelse_type', $type);
+      $case->set('afgoerelse_dato', $now);
       // The klagefrist clock is NOT started here: it runs from when the citizen
       // is notified (FVL meddelelseskrav), so aabenforms_case_set_klagefrist
       // stamps it on the branch where the decision letter is confirmed sent.

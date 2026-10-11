@@ -1,0 +1,260 @@
+uuid: 17ce832d-2446-40c8-aace-0ea01c48f612
+langcode: da
+status: true
+dependencies:
+  module:
+    - aabenforms_case
+    - aabenforms_digital_post_eca
+    - aabenforms_workflows
+    - eca_content
+    - modeler_api
+third_party_settings:
+  modeler_api:
+    modeler_id: workflow_modeler
+    label: sygedagpenge_flow
+id: sygedagpenge_flow
+weight: null
+template: null
+# Sygedagpenge (lønmodtager). Legal facts from borger.dk "Sygedagpenge, hvis
+# du er lønmodtager" (read 2026-10-10): beskæftigelseskrav 240 timer / 6
+# afsluttede kalendermåneder, 40 timer i mindst 5 af dem; arbejdsgiverperiode
+# 30 kalenderdage; klage til kommunen inden 4 uger, derefter Ankestyrelsen.
+# Opfølgning: kommunen vurderer inden for 8 uger (borger.dk "Sygedagpenge,
+# hvis du er ledig"); 8 uger efter første sygedag som dato for første
+# opfølgningssamtale er en demo-forenkling.
+events:
+  on_submission:
+    plugin: 'content_entity:insert'
+    configuration:
+      type: 'webform_submission sygedagpenge'
+    successors:
+      -
+        id: mitid_validate
+        condition: ''
+conditions:
+  gate_mitid_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[sygedagpenge_mitid_valid_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_mitid_deny:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[sygedagpenge_mitid_valid_status]'
+      right: verified
+      operator: equal
+      type: value
+      case: false
+  gate_employment_met:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[sygedagpenge_employment_status]'
+      right: met
+      operator: equal
+      type: value
+      case: false
+  gate_employment_not_met:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[sygedagpenge_employment_status]'
+      right: met
+      operator: equal
+      type: value
+      case: false
+  gate_letter_ok:
+    plugin: eca_scalar
+    configuration:
+      negate: false
+      left: '[digital_post_result_status]'
+      right: success
+      operator: equal
+      type: value
+      case: false
+  gate_letter_fail:
+    plugin: eca_scalar
+    configuration:
+      negate: true
+      left: '[digital_post_result_status]'
+      right: success
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  mitid_validate:
+    label: 'Validér MitID-session'
+    plugin: aabenforms_mitid_validate
+    configuration:
+      workflow_id_token: workflow_id_sygedagpenge
+      result_token: sygedagpenge_mitid_valid
+      session_data_token: sygedagpenge_session
+    successors:
+      -
+        id: open_case
+        condition: gate_mitid_ok
+      -
+        id: deny_identity
+        condition: gate_mitid_deny
+  deny_identity:
+    label: 'Afvis: identitet ikke bekræftet'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: sygedagpenge_denied
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Oplysningsskemaet blev ikke behandlet, fordi din identitet ikke kunne bekræftes med MitID. Log ind med MitID og prøv igen.'
+    successors: {  }
+  open_case:
+    label: 'Åbn sag (sygedagpenge)'
+    plugin: aabenforms_case_open
+    configuration:
+      case_type: sygedagpenge
+      case_id_token: case_id
+    successors:
+      -
+        id: journal_case
+        condition: ''
+  journal_case:
+    label: 'Journalisér sag (SF1470)'
+    plugin: aabenforms_case_journal
+    configuration:
+      case_id_token: '[case_id]'
+    successors:
+      -
+        id: employment_check
+        condition: ''
+  employment_check:
+    label: 'Tjek beskæftigelseskrav (eIndkomst + NemRefusion, demo)'
+    plugin: aabenforms_employment_check
+    configuration:
+      cpr_token: '[webform_submission:values:applicant_cpr:raw]'
+      first_sick_day_token: '[webform_submission:values:first_sick_day:raw]'
+      result_token: sygedagpenge_employment
+      opfoelgning_weeks: 8
+    successors:
+      -
+        id: transition_oplyst
+        condition: ''
+  transition_oplyst:
+    label: 'Oplys sag'
+    plugin: aabenforms_case_transition
+    configuration:
+      case_id_token: '[case_id]'
+      target_status: oplyst
+      log_message: 'Sag oplyst: identitet bekræftet, journaliseret, beskæftigelse og sygemelding hentet.'
+    successors:
+      -
+        id: decide_medhold
+        condition: gate_employment_met
+      -
+        id: partshoering_open
+        condition: gate_employment_not_met
+  decide_medhold:
+    label: 'Afgørelse: ret til sygedagpenge'
+    plugin: aabenforms_case_decide
+    configuration:
+      case_id_token: '[case_id]'
+      afgoerelse_type: medhold
+      klagevejledning: ''
+      klagefrist_uger: 4
+      partshoering_exemption: ''
+    successors:
+      -
+        id: letter_medhold
+        condition: ''
+  letter_medhold:
+    label: 'Send afgørelsesbrev (ret til sygedagpenge)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:applicant_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Afgørelse: du har ret til sygedagpenge'
+      body_template: '<p>Du har ret til sygedagpenge fra kommunen.</p><p><strong>Det har vi lagt vægt på:</strong></p><ul><li>Din arbejdsgiver, [sygedagpenge_employment_employer], har meldt dig syg fra [sygedagpenge_employment_first_sick_day].</li><li>Du har arbejdet [sygedagpenge_employment_hours] timer i de seneste 6 hele kalendermåneder. Kravet er mindst 240 timer.</li><li>Din arbejdsgiver betaler løn eller sygedagpenge de første 30 kalenderdage (til og med [sygedagpenge_employment_employer_period_end]). Derefter udbetaler kommunen sygedagpenge.</li></ul><p><strong>Det sker nu:</strong> Kommunen kontakter dig senest [sygedagpenge_employment_opfoelgning] til den første opfølgningssamtale. Samtalen kan foregå i telefonen eller ved et møde.</p><p>Demo: Oplysningerne om beskæftigelse og sygemelding kommer fra en demo-kilde, ikke fra eIndkomst og NemRefusion.</p>'
+      type: 'Digital Post'
+      result_token: digital_post_result
+    successors:
+      -
+        id: done_medhold
+        condition: gate_letter_ok
+      -
+        id: letter_failed
+        condition: gate_letter_fail
+  done_medhold:
+    label: 'Distribuér til fagsystem (SF2900)'
+    plugin: aabenforms_case_sf2900_distribute
+    configuration:
+      case_id_token: '[case_id]'
+    successors: {  }
+  letter_failed:
+    label: 'Brev ikke afsendt - sag afventer'
+    plugin: aabenforms_workflow_deny
+    configuration:
+      event_type: sygedagpenge_letter_failed
+      step_label: 'Afgørelsesbrev ikke afsendt'
+      message: 'Afgørelsen er truffet, men afgørelsesbrevet kunne ikke afsendes. Sagen forbliver åben og afventer fornyet afsendelse - den er ikke lukket, og klagefristen er ikke startet.'
+    successors: {  }
+  partshoering_open:
+    label: 'Åbn partshøring (FVL §19)'
+    plugin: aabenforms_case_partshoering
+    configuration:
+      case_id_token: '[case_id]'
+      state: afventer
+    successors:
+      -
+        id: partshoering_close
+        condition: ''
+  partshoering_close:
+    label: 'Afslut partshøring'
+    plugin: aabenforms_case_partshoering
+    configuration:
+      case_id_token: '[case_id]'
+      state: afsluttet
+    successors:
+      -
+        id: decide_afslag
+        condition: ''
+  decide_afslag:
+    label: 'Afgørelse: afslag (beskæftigelseskrav ikke opfyldt)'
+    plugin: aabenforms_case_decide
+    configuration:
+      case_id_token: '[case_id]'
+      afgoerelse_type: afslag
+      klagevejledning: 'Hvis du ikke er enig i afgørelsen, skal du klage til kommunen inden 4 uger. Hvis kommunen fastholder afgørelsen, sender vi din klage videre til Ankestyrelsen, som tager stilling til den.'
+      klagefrist_uger: 4
+      partshoering_exemption: ''
+    successors:
+      -
+        id: letter_afslag
+        condition: ''
+  letter_afslag:
+    label: 'Send afgørelsesbrev (afslag + klagevejledning)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:applicant_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Afgørelse: sygedagpenge'
+      body_template: '<p>Du har ikke ret til sygedagpenge fra kommunen.</p><p><strong>Begrundelse:</strong> For at få sygedagpenge som lønmodtager skal du have arbejdet mindst 240 timer i de seneste 6 hele kalendermåneder før første sygedag og mindst 40 timer i hver af mindst 5 af månederne. Vi har fundet [sygedagpenge_employment_hours] timer.</p><p><strong>Klagevejledning:</strong> Hvis du ikke er enig i afgørelsen, skal du klage til kommunen inden 4 uger. Hvis kommunen fastholder afgørelsen, sender vi din klage videre til Ankestyrelsen.</p><p>Demo: Oplysningerne om beskæftigelse kommer fra en demo-kilde, ikke fra eIndkomst.</p>'
+      type: 'Digital Post'
+      result_token: digital_post_result
+    successors:
+      -
+        id: set_klagefrist
+        condition: gate_letter_ok
+      -
+        id: letter_failed
+        condition: gate_letter_fail
+  set_klagefrist:
+    label: 'Start klagefrist (brev afsendt)'
+    plugin: aabenforms_case_set_klagefrist
+    configuration:
+      case_id_token: '[case_id]'
+      klagefrist_uger: 4
+    successors: {  }

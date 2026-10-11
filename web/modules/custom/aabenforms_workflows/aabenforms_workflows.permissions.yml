@@ -4,3 +4,8 @@ administer workflows:
   title: 'Administer ÅbenForms workflows'
   description: 'Create, edit and delete ECA flows through the template browser, the workflow wizard and the flow graph. Grants full control over which municipal decisions are automated, so treat it as an administrative permission.'
   restrict access: true
+
+decide school transfer:
+  title: 'Decide school transfer applications'
+  description: 'School leaders: see co-signed school transfer applications (masked CPR only) and approve or reject them. The decision flow additionally requires the user to be an employee in the org chart.'
+  restrict access: true

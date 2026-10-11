@@ -1,91 +1,74 @@
 <#import "template.ftl" as layout>
+<#-- DKFDS-styled mock MitID login (Keycloak 23 template contract).
+     login_hint is only a username suggestion: when Keycloak prefills the
+     username from it we show it read-only, but the person must still type
+     the password. "Ikke dig?" lets another username be typed. -->
+<#assign hinted = (login.username!'')?has_content && !messagesPerField.existsError('username','password') && !(usernameHidden??)>
 <@layout.registrationLayout displayMessage=!messagesPerField.existsError('username','password') displayInfo=false; section>
     <#if section = "header">
-        <span class="aabenforms-hidden-title">${msg("loginAccountTitle")}</span>
+        ${msg("loginAccountTitle")}
     <#elseif section = "form">
-        <div class="aabenforms-brand-header">
-            <div class="aabenforms-brand-row">
-                <img src="${url.resourcesPath}/img/logo.svg" alt="ÅbenForms" class="aabenforms-logo" />
-                <span class="aabenforms-brand-mark">MitID - Demo</span>
-            </div>
-            <p class="aabenforms-brand-tag">${msg("aabenformsBrandTagline")}</p>
-        </div>
-        <div class="aabenforms-demo-banner" role="note">
-            <span class="aabenforms-demo-banner-icon" aria-hidden="true">●</span>
-            <div>
-                <strong>${msg("aabenformsDemoBannerTitle")}</strong>
-                <span class="aabenforms-demo-banner-body">${msg("aabenformsDemoBannerBody")}</span>
+        <div class="alert alert-warning" role="note">
+            <div class="alert-body">
+                <p class="alert-heading">${msg("aabenformsDemoBannerTitle")}</p>
+                <p class="alert-text">${msg("aabenformsDemoBannerBody")}</p>
             </div>
         </div>
-        <h2 class="aabenforms-pagetitle">${msg("loginAccountTitle")}</h2>
 
-        <div id="kc-form">
-            <div id="kc-form-wrapper">
-                <#if realm.password>
-                    <form id="kc-form-login" class="aabenforms-form" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-                        <#if !usernameHidden??>
-                            <div class="aabenforms-field">
-                                <label for="username" class="aabenforms-label">
-                                    <#if !realm.loginWithEmailAllowed>${msg("username")}<#elseif !realm.registrationEmailAsUsername>${msg("usernameOrEmail")}<#else>${msg("email")}</#if>
-                                </label>
-                                <input
-                                    tabindex="2"
-                                    id="username"
-                                    class="aabenforms-input"
-                                    name="username"
-                                    value="${(login.username!'')}"
-                                    type="text"
-                                    autofocus
-                                    autocomplete="username"
-                                    aria-invalid="<#if messagesPerField.existsError('username','password')>true</#if>"
-                                />
-                                <#if messagesPerField.existsError('username','password')>
-                                    <span id="input-error" class="aabenforms-error" aria-live="polite">
-                                        ${kcSanitize(messagesPerField.getFirstError('username','password'))?no_esc}
-                                    </span>
-                                </#if>
+        <#if realm.password>
+            <form id="kc-form-login" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post" novalidate>
+                <#if !usernameHidden??>
+                    <#if hinted>
+                        <#-- Keycloak's restart keeps the login_hint client note, so
+                             "Ikke dig?" reveals the editable username field instead
+                             (pure CSS :target, no JS). -->
+                        <div class="form-group af-hinted-wrap">
+                            <div class="af-hinted" id="kc-hinted-user">
+                                <p class="af-hinted-text">${msg("aabenformsLoggingInAs")} <strong id="kc-hinted-username">${login.username}</strong></p>
+                                <a id="kc-restart-login" class="af-link" href="#af-change-user">${msg("aabenformsNotYou")}</a>
                             </div>
-                        </#if>
-
-                        <div class="aabenforms-field">
-                            <label for="password" class="aabenforms-label">${msg("password")}</label>
-                            <input
-                                tabindex="3"
-                                id="password"
-                                class="aabenforms-input"
-                                name="password"
-                                type="password"
-                                autocomplete="current-password"
-                                aria-invalid="<#if messagesPerField.existsError('username','password')>true</#if>"
-                            />
+                            <div class="af-change-user" id="af-change-user">
+                                <label for="username" class="form-label">${msg("username")}</label>
+                                <input id="username" class="form-input" name="username" value="${login.username}" type="text"
+                                       autocomplete="username" autocapitalize="none" spellcheck="false" />
+                            </div>
                         </div>
-
-                        <div class="aabenforms-helper-row">
-                            <span class="aabenforms-helper">${msg("aabenformsCredentialHint")}</span>
+                    <#else>
+                        <div class="form-group<#if messagesPerField.existsError('username','password')> form-error</#if>">
+                            <label for="username" class="form-label">${msg("username")}</label>
+                            <#if messagesPerField.existsError('username','password')>
+                                <span id="input-error" class="form-error-message" aria-live="polite">
+                                    <span class="sr-only">${msg("aabenformsErrorPrefix")}</span>
+                                    ${kcSanitize(messagesPerField.getFirstError('username','password'))?no_esc}
+                                </span>
+                            </#if>
+                            <input id="username" class="form-input" name="username" value="${(login.username!'')}" type="text"
+                                   autofocus autocomplete="username" autocapitalize="none" spellcheck="false"
+                                   <#if messagesPerField.existsError('username','password')>aria-invalid="true" aria-describedby="input-error"</#if> />
                         </div>
-
-                        <input type="hidden" id="id-hidden-input" name="credentialId" <#if auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
-
-                        <div id="kc-form-buttons" class="aabenforms-actions">
-                            <button
-                                tabindex="4"
-                                class="aabenforms-button-primary"
-                                name="login"
-                                id="kc-login"
-                                type="submit"
-                            >
-                                <span class="aabenforms-button-label">${msg("doLogIn")}</span>
-                                <span class="aabenforms-button-arrow" aria-hidden="true">→</span>
-                            </button>
-                        </div>
-                    </form>
+                    </#if>
                 </#if>
-            </div>
-        </div>
 
-        <div class="aabenforms-foot">
-            <p class="aabenforms-foot-line">${msg("aabenformsFooterLicense")}</p>
-            <p class="aabenforms-foot-line">${msg("aabenformsFooterReturn")}</p>
+                <div class="form-group">
+                    <label for="password" class="form-label">${msg("password")}</label>
+                    <input id="password" class="form-input" name="password" type="password" autocomplete="current-password"
+                           <#if hinted>autofocus</#if>
+                           <#if messagesPerField.existsError('username','password')>aria-invalid="true" aria-describedby="input-error"</#if> />
+                </div>
+
+                <p class="form-hint af-demo-hint">${msg("aabenformsCredentialHint")}</p>
+
+                <input type="hidden" id="id-hidden-input" name="credentialId" <#if auth.selectedCredential?has_content>value="${auth.selectedCredential}"</#if>/>
+
+                <div id="kc-form-buttons" class="af-actions">
+                    <button class="button button-primary" name="login" id="kc-login" type="submit">${msg("doLogIn")}</button>
+                </div>
+            </form>
+        </#if>
+
+        <div class="af-foot">
+            <p>${msg("aabenformsFooterReturn")}</p>
+            <p>${msg("aabenformsFooterLicense")}</p>
         </div>
     </#if>
 </@layout.registrationLayout>

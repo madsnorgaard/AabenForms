@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 64" fill="none" role="img" aria-label="ÅbenForms">
-  <!-- Icon: identical to /favicon.svg (blue square + white BPMN grid). -->
-  <rect width="64" height="64" rx="12" fill="#0071b9"/>
-  <g fill="#ffffff" transform="translate(8 8) scale(2.0833)">
-    <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/>
-  </g>
-  <!-- Wordmark, white on the navy login header band. -->
-  <text x="80" y="43" fill="#ffffff" font-family="'Atkinson Hyperlegible Next', system-ui, -apple-system, sans-serif" font-weight="700" font-size="28" letter-spacing="0.5">ÅbenForms</text>
-</svg>

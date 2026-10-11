@@ -40,6 +40,21 @@ class MitIdSessionManager implements SessionManagerInterface {
   private const STORE_COLLECTION = 'aabenforms_mitid_sessions';
 
   /**
+   * Collection holding the id_token of a revoked session until IdP logout.
+   *
+   * Revoking a session kills the bearer capability at once, but the
+   * RP-initiated logout that follows (/mitid/logout) still needs the
+   * id_token as id_token_hint. It is parked here, keyed by workflow id,
+   * server-side only and never readable through any endpoint.
+   */
+  private const LOGOUT_HINT_COLLECTION = 'aabenforms_mitid_logout_hints';
+
+  /**
+   * How long a parked logout hint lives (5 minutes).
+   */
+  protected const LOGOUT_HINT_EXPIRATION = 300;
+
+  /**
    * The keyvalue-expirable factory.
    *
    * @var \Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface
@@ -262,6 +277,77 @@ class MitIdSessionManager implements SessionManagerInterface {
   }
 
   /**
+   * Revokes a MitID session (citizen logout).
+   *
+   * Deletes the session so its workflow id stops working as a capability, and
+   * parks the raw id_token (if any) for the RP-initiated IdP logout. Always
+   * audits `mitid_session_revoked`, also when nothing existed, so callers can
+   * answer uniformly (no existence oracle).
+   *
+   * @param string $workflow_id
+   *   The workflow instance ID.
+   *
+   * @return bool
+   *   TRUE when a live session existed and was removed.
+   */
+  public function revokeSession(string $workflow_id): bool {
+    $existed = FALSE;
+    try {
+      $session = $this->store()->get($workflow_id);
+      $existed = is_array($session);
+      if ($existed && !empty($session['id_token']) && is_string($session['id_token'])) {
+        $this->keyValue->get(self::LOGOUT_HINT_COLLECTION)
+          ->setWithExpire($workflow_id, $session['id_token'], self::LOGOUT_HINT_EXPIRATION);
+      }
+      $this->store()->delete($workflow_id);
+    }
+    catch (\Exception $e) {
+      $this->logger->error('Failed to revoke MitID session: {error}', [
+        'error' => $e->getMessage(),
+        'workflow_id' => $workflow_id,
+      ]);
+    }
+
+    $this->auditLogger->logWorkflowAccess(
+      $workflow_id,
+      'mitid_session_revoked',
+      $existed ? 'success' : 'not_found',
+      []
+    );
+
+    return $existed;
+  }
+
+  /**
+   * Returns and consumes the id_token to use as IdP logout id_token_hint.
+   *
+   * Reads it from the live session or from the hint parked by
+   * revokeSession(). The parked hint is deleted on read (single use).
+   * Server-side only: never expose the result to a client.
+   *
+   * @param string $workflow_id
+   *   The workflow instance ID.
+   *
+   * @return string|null
+   *   The raw id_token, or NULL when none is available.
+   */
+  public function takeLogoutIdToken(string $workflow_id): ?string {
+    try {
+      $session = $this->store()->get($workflow_id);
+      if (is_array($session) && !empty($session['id_token']) && is_string($session['id_token'])) {
+        return $session['id_token'];
+      }
+      $hints = $this->keyValue->get(self::LOGOUT_HINT_COLLECTION);
+      $token = $hints->get($workflow_id);
+      $hints->delete($workflow_id);
+      return is_string($token) && $token !== '' ? $token : NULL;
+    }
+    catch (\Exception $e) {
+      return NULL;
+    }
+  }
+
+  /**
    * Checks if a valid MitID session exists for a workflow.
    *
    * @param string $workflow_id
@@ -313,6 +399,65 @@ class MitIdSessionManager implements SessionManagerInterface {
       'email' => $session['email'] ?? NULL,
       'assurance_level' => $session['assurance_level'] ?? NULL,
       'mitid_uuid' => $session['mitid_uuid'] ?? NULL,
+    ];
+  }
+
+  /**
+   * Masks a CPR to DDMMYY-XXXX for display, never exposing the serial.
+   *
+   * The one masking rule for everything that leaves the server about a
+   * session (the session endpoint, the prefill endpoint, co-guardian hints).
+   * Keep it here so no second implementation can drift to leaking more.
+   *
+   * @param string $cpr
+   *   The full CPR, or empty.
+   *
+   * @return string
+   *   The masked CPR, or empty when none was present.
+   */
+  public static function maskCpr(string $cpr): string {
+    $digits = preg_replace('/\D/', '', $cpr) ?? '';
+    if (strlen($digits) < 6) {
+      return '';
+    }
+    return substr($digits, 0, 6) . '-XXXX';
+  }
+
+  /**
+   * Builds the citizen-safe view of a session for the SPA.
+   *
+   * This is what /mitid/session/{id} returns and what the prefill endpoint
+   * reuses for its identity source: the CPR is masked, and mitid_uuid,
+   * auth_time, issuer and tokens (access_token, id_token - the id_token is
+   * kept only as the IdP logout hint) never leave the server. Fields are
+   * allow-listed below; never spread $session into the result. Reading it is NOT
+   * audited here - callers audit, because they know the purpose.
+   *
+   * @param string $workflow_id
+   *   The workflow instance ID.
+   *
+   * @return array|null
+   *   The attributes (name, cpr (masked), email, expiry, given_name,
+   *   family_name, birthdate, address, assurance_level, digital_post_exempt,
+   *   demo_seeded), or NULL when there is no valid session.
+   */
+  public function getPublicAttributes(string $workflow_id): ?array {
+    $session = $this->getSession($workflow_id);
+    if (!$session) {
+      return NULL;
+    }
+    return [
+      'name' => $session['name'] ?? $session['given_name'] ?? '',
+      'cpr' => self::maskCpr((string) ($session['cpr'] ?? '')),
+      'email' => $session['email'] ?? '',
+      'expiry' => $session['expires_at'] ?? '',
+      'given_name' => $session['given_name'] ?? '',
+      'family_name' => $session['family_name'] ?? '',
+      'birthdate' => $session['birthdate'] ?? '',
+      'address' => $this->getAddressFromSession($workflow_id),
+      'assurance_level' => $session['assurance_level'] ?? '',
+      'digital_post_exempt' => !empty($session['digital_post_exempt']),
+      'demo_seeded' => !empty($session['demo_seeded']),
     ];
   }
 

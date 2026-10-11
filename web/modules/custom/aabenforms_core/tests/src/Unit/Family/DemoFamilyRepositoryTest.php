@@ -114,4 +114,31 @@ class DemoFamilyRepositoryTest extends UnitTestCase {
     $this->assertSame([], $this->repository->guardiansOf('9999999999'));
   }
 
+  /**
+   * Birthe's adult son Mikkel is a relation, never a custody child.
+   *
+   * @covers ::adultChildrenOf
+   * @covers ::parentsOf
+   * @covers ::childrenOf
+   */
+  public function testAdultChildCarriesNoCustodySemantics(): void {
+    $birthe = '2403482210';
+    $mikkel = '1502856234';
+
+    $sons = $this->repository->adultChildrenOf($birthe);
+    $this->assertCount(1, $sons);
+    $this->assertSame('Mikkel Jensen', $sons[0]['full_name']);
+    $this->assertSame($mikkel, $sons[0]['cpr']);
+    $this->assertSame('son', $sons[0]['relation']);
+    $this->assertArrayNotHasKey('guardians', $sons[0]);
+
+    $this->assertSame([$birthe], $this->repository->parentsOf($mikkel));
+
+    // No custody in either direction.
+    $this->assertSame([], $this->repository->childrenOf($birthe));
+    $this->assertSame([], $this->repository->guardiansOf($mikkel));
+    $this->assertSame([], $this->repository->adultChildrenOf($mikkel));
+    $this->assertSame([], $this->repository->parentsOf($birthe));
+  }
+
 }

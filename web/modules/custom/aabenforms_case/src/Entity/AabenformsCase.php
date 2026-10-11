@@ -130,6 +130,30 @@ class AabenformsCase extends RevisionableContentEntityBase implements Aabenforms
 
   /**
    * {@inheritdoc}
+   */
+  public function getSubjectCprHash(): ?string {
+    $value = $this->get('subject_cpr_hash')->value;
+    return is_string($value) && $value !== '' ? $value : NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setSubjectCprHash(?string $hash): static {
+    $this->set('subject_cpr_hash', $hash === '' ? NULL : $hash);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getAfgoerelseDato(): ?int {
+    $value = $this->get('afgoerelse_dato')->value;
+    return $value === NULL ? NULL : (int) $value;
+  }
+
+  /**
+   * {@inheritdoc}
    *
    * Enforces the lawful lifecycle at the storage layer so no save path - not
    * the admin edit form, JSON:API, Views Bulk Operations, nor a stray
@@ -289,6 +313,10 @@ class AabenformsCase extends RevisionableContentEntityBase implements Aabenforms
       ->setRevisionable(TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
+    $fields['afgoerelse_dato'] = static::afgoerelseDatoFieldDefinition();
+
+    $fields['subject_cpr_hash'] = static::subjectCprHashFieldDefinition();
+
     $fields['journal_ref'] = BaseFieldDefinition::create('string')
       ->setLabel(new TranslatableMarkup('Journal reference'))
       ->setDescription(new TranslatableMarkup('Reference returned by the Sags- og Dokumentindeks (SF1470) registration.'))
@@ -314,6 +342,52 @@ class AabenformsCase extends RevisionableContentEntityBase implements Aabenforms
     $fields += static::revisionLogBaseFieldDefinitions($entity_type);
 
     return $fields;
+  }
+
+  /**
+   * The decision-date field, shared by baseFieldDefinitions() and updates.
+   *
+   * Stamped by aabenforms_case_decide when the afgoerelse is recorded. The
+   * klagefrist still runs from notification (SetKlagefristAction), this is
+   * the date of the decision itself, shown to the citizen when they pick a
+   * case to appeal.
+   */
+  public static function afgoerelseDatoFieldDefinition(): BaseFieldDefinition {
+    return BaseFieldDefinition::create('timestamp')
+      ->setLabel(new TranslatableMarkup('Decision date (afgørelsesdato)'))
+      ->setDescription(new TranslatableMarkup('When the decision was recorded on the case.'))
+      ->setRevisionable(TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+  }
+
+  /**
+   * The subject-CPR-hash field, shared by baseFieldDefinitions() and updates.
+   *
+   * Privacy rationale: a citizen must be able to find "my cases" (the klage
+   * form offers the decided cases to appeal), but the case entity never
+   * stores the CPR (it stays AES-encrypted on the submission, which cannot
+   * be queried in SQL). So the case carries only a SHA-256 of the bare
+   * 10-digit CPR, the same function the audit log applies, used purely as a
+   * lookup key: the hash is never shown, never decrypted, and cannot be
+   * turned back into the CPR by the platform. Note the honest limit: the
+   * CPR space is small enough that an attacker holding the hash column
+   * could enumerate it offline, so the column is personal data under GDPR
+   * and is protected like the rest of the table (not like a public value).
+   * A keyed HMAC would close that gap but would also break parity with the
+   * existing audit-log hashes; revisit together when the audit log moves to
+   * a keyed hash.
+   *
+   * Not revisionable: the subject of a case never changes, and a per-revision
+   * copy would only multiply the hashed identifier at rest.
+   */
+  public static function subjectCprHashFieldDefinition(): BaseFieldDefinition {
+    return BaseFieldDefinition::create('string')
+      ->setLabel(new TranslatableMarkup('Subject CPR hash'))
+      ->setDescription(new TranslatableMarkup('SHA-256 of the applicant CPR, lookup key only. The raw CPR stays encrypted on the submission.'))
+      ->setSetting('max_length', 64)
+      ->setRevisionable(FALSE)
+      ->setDisplayConfigurable('view', FALSE)
+      ->setDisplayConfigurable('form', FALSE);
   }
 
   /**

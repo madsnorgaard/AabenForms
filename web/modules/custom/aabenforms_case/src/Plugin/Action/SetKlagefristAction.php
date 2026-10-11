@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace Drupal\aabenforms_case\Plugin\Action;
 
 use Drupal\aabenforms_case\Entity\AabenformsCase;
+use Drupal\aabenforms_case\Service\FristClock;
 use Drupal\Core\Action\Attribute\Action;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\eca\Attribute\EcaAction;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * ECA Action: start the appeal deadline (klagefrist) clock on a decided case.
@@ -29,6 +31,20 @@ use Drupal\eca\Attribute\EcaAction;
   version_introduced: '1.1.0',
 )]
 class SetKlagefristAction extends CaseActionBase {
+
+  /**
+   * The deadline clock (owns the klagefrist arithmetic).
+   */
+  protected FristClock $fristClock;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
+    $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
+    $instance->fristClock = $container->get('aabenforms_case.frist_clock');
+    return $instance;
+  }
 
   /**
    * {@inheritdoc}
@@ -99,7 +115,7 @@ class SetKlagefristAction extends CaseActionBase {
       }
 
       $now = $this->time->getRequestTime();
-      $case->set('klagefrist', $now + ($uger * 7 * 86400));
+      $case->set('klagefrist', $this->fristClock->computeKlagefrist($now, $uger));
       $case->setNewRevision(TRUE);
       $case->setRevisionLogMessage(sprintf('Klagefrist startet (afgørelsesbrev afsendt): %d uger.', $uger));
       $case->setRevisionCreationTime($now);

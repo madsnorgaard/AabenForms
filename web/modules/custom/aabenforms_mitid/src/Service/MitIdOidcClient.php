@@ -112,6 +112,27 @@ class MitIdOidcClient implements IdentityProviderInterface {
   }
 
   /**
+   * Allowed shape of an OIDC login_hint (a plain username suggestion).
+   */
+  public const LOGIN_HINT_PATTERN = '/^[a-z0-9][a-z0-9._-]{0,63}$/';
+
+  /**
+   * Returns the login hint if it is a well-formed username, else NULL.
+   *
+   * @param mixed $hint
+   *   The raw hint.
+   *
+   * @return string|null
+   *   The validated hint or NULL.
+   */
+  public static function sanitizeLoginHint(mixed $hint): ?string {
+    if (!is_string($hint) || $hint === '') {
+      return NULL;
+    }
+    return preg_match(self::LOGIN_HINT_PATTERN, $hint) === 1 ? $hint : NULL;
+  }
+
+  /**
    * Generates MitID authorization URL.
    *
    * @param array $options
@@ -158,6 +179,16 @@ class MitIdOidcClient implements IdentityProviderInterface {
       'acr_values' => $acrValues,
       'response_mode' => 'query',
     ];
+    if (!empty($options['force_login'])) {
+      $params['prompt'] = 'login';
+    }
+    // Standard OIDC login_hint: a username suggestion only. The person must
+    // still authenticate at the IdP. Re-validated here so no caller can pass
+    // anything but a plain username through to the IdP.
+    $loginHint = self::sanitizeLoginHint($options['login_hint'] ?? NULL);
+    if ($loginHint !== NULL) {
+      $params['login_hint'] = $loginHint;
+    }
 
     $codeVerifier = '';
     if ((bool) ($config->get('pkce_enabled') ?? TRUE)) {
@@ -183,6 +214,45 @@ class MitIdOidcClient implements IdentityProviderInterface {
       'code_verifier' => $codeVerifier,
       'nonce' => $nonce,
     ];
+  }
+
+  /**
+   * Builds the IdP RP-initiated logout (end_session) URL.
+   *
+   * The endpoint comes from config `end_session_endpoint`; when unset and the
+   * authorization endpoint is a Keycloak one (/protocol/openid-connect/auth),
+   * the sibling /protocol/openid-connect/logout is used (the value Keycloak
+   * publishes as end_session_endpoint in its discovery document).
+   *
+   * @param string|null $id_token
+   *   The raw id_token for id_token_hint, or NULL. Without it Keycloak shows
+   *   its own logout confirmation page.
+   * @param string $post_logout_redirect_uri
+   *   Absolute URL to return to; must be registered on the IdP client.
+   *
+   * @return string|null
+   *   The logout URL, or NULL when no end_session endpoint is known.
+   */
+  public function getEndSessionUrl(?string $id_token, string $post_logout_redirect_uri): ?string {
+    $config = $this->configFactory->get('aabenforms_mitid.settings');
+    $endpoint = (string) ($config->get('end_session_endpoint') ?? '');
+    if ($endpoint === '') {
+      $authorize = (string) ($config->get('authorization_endpoint') ?? '');
+      if (preg_match('#^(https?://.+/protocol/openid-connect)/auth$#', $authorize, $m)) {
+        $endpoint = $m[1] . '/logout';
+      }
+    }
+    if ($endpoint === '') {
+      return NULL;
+    }
+
+    $params = ['client_id' => (string) $config->get('client_id')];
+    if ($id_token !== NULL && $id_token !== '') {
+      $params['id_token_hint'] = $id_token;
+    }
+    $params['post_logout_redirect_uri'] = $post_logout_redirect_uri;
+
+    return $endpoint . (str_contains($endpoint, '?') ? '&' : '?') . http_build_query($params);
   }
 
   /**

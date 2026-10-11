@@ -235,7 +235,9 @@ class ParentApprovalController extends ControllerBase {
    */
   protected function buildMitIdLoginPage($submission, int $parent_number, string $token): array {
     $child_name = $submission->getElementData('child_name');
-    $request_details = $submission->getElementData('request_details');
+    // Forms other than parent_request_form (e.g. school_transfer) carry the
+    // free-text summary under another key, so fall back and never pass NULL.
+    $request_details = (string) ($submission->getElementData('request_details') ?? $submission->getElementData('reason') ?? $submission->getElementData('details') ?? '');
 
     return [
       '#theme' => 'parent_approval_login',
@@ -418,6 +420,19 @@ class ParentApprovalController extends ControllerBase {
     }
 
     $workflow_id = sprintf('parent_approval_%d_p%d', $submission_id, $parent_number);
+    // Since #175 /mitid/login mints its own workflow id instead of using the
+    // scoped id requested by mitidRedirect(). The callback records that id in
+    // this browser's server-side Drupal session ('mitid_workflow_id'), so take
+    // it from there - never from the URL - and consume it so it serves exactly
+    // one approval. The CPR gate below remains the authority on WHO this is.
+    if (!$this->mitidSessionManager->hasValidSession($workflow_id) && $request->hasSession()) {
+      $session = $request->getSession();
+      $handover = (string) $session->get('mitid_workflow_id', '');
+      $session->remove('mitid_workflow_id');
+      if ($handover !== '' && $this->mitidSessionManager->hasValidSession($handover)) {
+        $workflow_id = $handover;
+      }
+    }
     if (!$this->mitidSessionManager->hasValidSession($workflow_id)) {
       $this->logger->warning('No valid MitID session for workflow @wid (parent @parent, submission @sid)', [
         '@wid' => $workflow_id,
@@ -497,6 +512,9 @@ class ParentApprovalController extends ControllerBase {
     }
 
     $request->getSession()->set("mitid_authenticated_parent{$parent_number}_{$submission_id}", TRUE);
+    // Server-side binding of the verified MitID session to this one
+    // submission + parent, for ParentApprovalForm's submit-time re-check.
+    $request->getSession()->set("mitid_approval_workflow_parent{$parent_number}_{$submission_id}", $workflow_id);
     $this->logger->info('Parent @parent MitID handoff verified for submission @sid', [
       '@parent' => $parent_number,
       '@sid' => $submission_id,

@@ -396,11 +396,18 @@ class CosignInvitationAction extends AabenFormsActionBase {
    *   The absolute URL.
    */
   protected function buildApprovalUrl(int $slot, int $submissionId, string $token): string {
+    $options = ['absolute' => TRUE];
+    // The letter is Danish, so the link opens the Danish interface (the /da
+    // path prefix) whatever language the submitting request used.
+    $danish = \Drupal::languageManager()->getLanguage('da');
+    if ($danish !== NULL) {
+      $options['language'] = $danish;
+    }
     return Url::fromRoute('aabenforms_workflows.parent_approval', [
       'parent_number' => $slot,
       'submission_id' => $submissionId,
       'token' => $token,
-    ], ['absolute' => TRUE])->toString();
+    ], $options)->toString();
   }
 
   /**
@@ -416,10 +423,10 @@ class CosignInvitationAction extends AabenFormsActionBase {
    */
   protected function buildLetterBody(string $childName, string $approvalUrl): string {
     $regarding = $childName !== ''
-      ? sprintf('<p>Der er indsendt en anmodning, som vedroerer %s, og som kraever din medunderskrift som foraeldremyndighedsindehaver.</p>', htmlspecialchars($childName, ENT_QUOTES, 'UTF-8'))
-      : '<p>Der er indsendt en anmodning, som kraever din medunderskrift som foraeldremyndighedsindehaver.</p>';
+      ? sprintf('<p>Der er indsendt en anmodning, som vedrører %s, og som kræver din medunderskrift som forældremyndighedsindehaver.</p>', htmlspecialchars($childName, ENT_QUOTES, 'UTF-8'))
+      : '<p>Der er indsendt en anmodning, som kræver din medunderskrift som forældremyndighedsindehaver.</p>';
     return $regarding
-      . sprintf('<p>Aabn linket og log ind med MitID for at se anmodningen og afgive din beslutning:</p><p><a href="%s">Se og underskriv anmodningen</a></p>', htmlspecialchars($approvalUrl, ENT_QUOTES, 'UTF-8'))
+      . sprintf('<p>Åbn linket og log ind med MitID for at se anmodningen og afgive din beslutning:</p><p><a href="%s">Se og underskriv anmodningen</a></p>', htmlspecialchars($approvalUrl, ENT_QUOTES, 'UTF-8'))
       . '<p>Linket er gyldigt i 14 dage. Reagerer du ikke inden fristen, behandles sagen manuelt af kommunen.</p>';
   }
 

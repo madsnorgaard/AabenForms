@@ -1,0 +1,7 @@
+services:
+  aabenforms_case.drush_commands:
+    class: Drupal\aabenforms_case\Drush\AabenformsCaseCommands
+    arguments:
+      - '@aabenforms_case.klage_demo_seeder'
+    tags:
+      - { name: drush.command }

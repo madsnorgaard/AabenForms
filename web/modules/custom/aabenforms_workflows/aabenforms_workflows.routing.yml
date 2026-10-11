@@ -150,3 +150,59 @@ aabenforms_workflows.flow_overview:
     _title: 'Flow overview'
   requirements:
     _permission: 'administer workflows'
+
+# Skoleskift: the co-signing parent's receipt, authorised by the parent's own
+# MitID session in the Authorization header (never the URL).
+aabenforms_workflows.school_transfer_receipt:
+  path: '/api/skoleskift/medunderskrift'
+  defaults:
+    _controller: '\Drupal\aabenforms_workflows\Controller\SchoolTransferReceiptController::receipt'
+  methods: [GET]
+  requirements:
+    _access: 'TRUE'
+  options:
+    no_cache: TRUE
+
+# Skoleskift: the school leader's decision (Drupal staff login, not MitID).
+# The decision is saved on the submission, so skoleskift_decision_flow runs
+# and its aabenforms_resolve_employee gate checks this user.
+aabenforms_workflows.school_transfer_inbox:
+  path: '/sagsbehandling/skoleskift'
+  defaults:
+    _controller: '\Drupal\aabenforms_workflows\Controller\SchoolTransferInboxController::inbox'
+    _title: 'School transfers awaiting decision'
+  requirements:
+    _permission: 'decide school transfer'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+
+aabenforms_workflows.school_transfer_decide:
+  path: '/sagsbehandling/skoleskift/{webform_submission}'
+  defaults:
+    _form: '\Drupal\aabenforms_workflows\Form\SchoolTransferDecisionForm'
+    _title: 'Decide school transfer'
+  requirements:
+    _permission: 'decide school transfer'
+    webform_submission: '\d+'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+    parameters:
+      webform_submission:
+        type: 'entity:webform_submission'
+
+aabenforms_workflows.school_transfer_decided:
+  path: '/sagsbehandling/skoleskift/{webform_submission}/afgjort'
+  defaults:
+    _form: '\Drupal\aabenforms_workflows\Form\SchoolTransferDecidedForm'
+    _title: 'Decision sent'
+  requirements:
+    _permission: 'decide school transfer'
+    webform_submission: '\d+'
+  options:
+    _admin_route: TRUE
+    no_cache: TRUE
+    parameters:
+      webform_submission:
+        type: 'entity:webform_submission'

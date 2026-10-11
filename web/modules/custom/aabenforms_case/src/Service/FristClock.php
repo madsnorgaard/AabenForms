@@ -63,6 +63,54 @@ class FristClock {
   }
 
   /**
+   * Computes the appeal deadline (klagefrist) from the notification moment.
+   *
+   * The statutory klagefrist is four weeks in calendar time (RSL §67 stk. 1
+   * for sociale sager), counted from when the citizen is notified of the
+   * decision, not from the decision itself (FVL meddelelseskrav). It is
+   * calendar weeks, not working days, so it does not go through the
+   * per-area hverdage math above. Both SetKlagefristAction and the demo
+   * case seeder use this so the two can never disagree.
+   *
+   * @param int $notifiedTs
+   *   The Unix timestamp the decision letter was dispatched / notified.
+   * @param int $weeks
+   *   The deadline length in weeks (minimum 1, default 4).
+   *
+   * @return int
+   *   The klagefrist Unix timestamp.
+   */
+  public function computeKlagefrist(int $notifiedTs, int $weeks = 4): int {
+    $weeks = max(1, $weeks);
+    return $notifiedTs + ($weeks * 7 * 86400);
+  }
+
+  /**
+   * Adds whole calendar weeks to a timestamp (no working-day math).
+   *
+   * Calendar arithmetic in Europe/Copenhagen, so a local midnight stays a
+   * local midnight across a daylight-saving change.
+   *
+   * Used for periods counted in calendar weeks, e.g. the sygedagpenge
+   * opfølgning horizon (the kommune vurderer the case within 8 weeks,
+   * borger.dk "Sygedagpenge, hvis du er ledig").
+   *
+   * @param int $startTs
+   *   The Unix timestamp the period starts from.
+   * @param int $weeks
+   *   The number of calendar weeks (negative values count as 0).
+   *
+   * @return int
+   *   The Unix timestamp $weeks weeks later.
+   */
+  public function addCalendarWeeks(int $startTs, int $weeks): int {
+    return (new \DateTimeImmutable('@' . $startTs))
+      ->setTimezone(new \DateTimeZone(self::TZ))
+      ->modify(sprintf('+%d weeks', max(0, $weeks)))
+      ->getTimestamp();
+  }
+
+  /**
    * Returns the traffic-light state for a deadline.
    *
    * @param int $dueTs

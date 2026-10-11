@@ -189,4 +189,17 @@ class FristClockTest extends UnitTestCase {
     ];
   }
 
+  /**
+   * The klagefrist is calendar weeks from notification, default four.
+   *
+   * @covers ::computeKlagefrist
+   */
+  public function testKlagefristIsCalendarWeeksFromNotification(): void {
+    $clock = $this->clock([]);
+    $this->assertSame(self::MONDAY_0900 + (4 * 7 * 86400), $clock->computeKlagefrist(self::MONDAY_0900));
+    $this->assertSame(self::MONDAY_0900 + (2 * 7 * 86400), $clock->computeKlagefrist(self::MONDAY_0900, 2));
+    // Never shorter than one week, whatever a flow is configured with.
+    $this->assertSame(self::MONDAY_0900 + (7 * 86400), $clock->computeKlagefrist(self::MONDAY_0900, 0));
+  }
+
 }

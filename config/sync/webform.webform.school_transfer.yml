@@ -91,6 +91,8 @@ elements: |
   caseworker_status:
     '#type': hidden
     '#default_value': pending
+  caseworker_comment:
+    '#type': hidden
 css: ''
 javascript: ''
 settings:

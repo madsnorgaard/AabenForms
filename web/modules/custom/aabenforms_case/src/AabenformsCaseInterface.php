@@ -43,4 +43,19 @@ interface AabenformsCaseInterface extends ContentEntityInterface, EntityChangedI
    */
   public function getSubmissionId(): ?string;
 
+  /**
+   * Gets the SHA-256 hash of the applicant CPR (lookup key only), or NULL.
+   */
+  public function getSubjectCprHash(): ?string;
+
+  /**
+   * Sets the SHA-256 hash of the applicant CPR. NULL or '' clears it.
+   */
+  public function setSubjectCprHash(?string $hash): static;
+
+  /**
+   * Gets the decision (afgoerelse) timestamp, or NULL when not decided.
+   */
+  public function getAfgoerelseDato(): ?int;
+
 }

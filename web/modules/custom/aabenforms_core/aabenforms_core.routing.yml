@@ -67,3 +67,18 @@ aabenforms_core.webform_submit:
     parameters:
       id:
         type: string
+
+aabenforms_core.prefill:
+  path: '/api/prefill/{webform_id}'
+  defaults:
+    _controller: '\Drupal\aabenforms_core\Controller\PrefillController::prefill'
+    _title: 'Prefill webform'
+  requirements:
+    _permission: 'access webform api'
+    webform_id: '[a-z0-9_]+'
+  methods: [GET]
+  options:
+    no_cache: TRUE
+    parameters:
+      webform_id:
+        type: string
