@@ -28,7 +28,6 @@ session:
 
 # Security
 security:
-  validate_tokens: true
   required_assurance_level: 'substantial'  # or 'high'
   
 # Production flag

@@ -69,9 +69,9 @@ over behandlinger med sandsynlig høj risiko:
   (databehandleraftalens bilag C); ingen sekundær anvendelse.
 - **Opbevaringsbegrænsning:** MitID-sessioner udløber automatisk efter 15
   minutter; auditlog renses efter konfigureret retention. Sletning af
-  sagsdata sker i dag efter instruks som dokumenteret manuel procedure;
-  automatiseret retention pr. sagstype er planlagt (issue #91) - se risiko
-  R6.
+  sagsdata sker efter fastsatte frister med den automatiserede
+  retention (issue #91, se RETENTION.md), når kommunen har slået den til;
+  indtil da som dokumenteret manuel procedure - se risiko R6.
 - **Alternativvurdering:** Papir-/blanketbaseret behandling ville indebære
   ringere sikkerhed (ukrypteret transport/opbevaring, ingen auditlog) og
   dårligere borgerretssikkerhed (ingen håndhævet partshøring/frister).
@@ -89,7 +89,7 @@ forholde sig til restrisikoen, før forløbet går i produktion.
 | R3 | Borger opnår afgørelse uden sagsbehandling (manipulation af statusfelter) | 1 | 3 | Server-side guard på afgørelsesfelter; JSON:API read-only; tilstandsmaskine på entitetsniveau | Lav |
 | R4 | MitID-sessionskapabilitet lækker via URL (browserhistorik, Referer, proxylogs) og misbruges inden 15-min-TTL | 2 | 2 | Maskeret CPR i svar, auditlogget opslag inkl. miss (probing er synlig), session bundet til browser-session ved udstedelse | **Åben (mellem): endpointet stoler p.t. på bearer alene; engangskode/HTTPOnly-cookie er planlagt (issue #156)** |
 | R5 | Volumetrisk misbrug/enumeration mod API og MitID-ruter | 2 | 2 | Flood control på webform-submit; sessionsopslag auditlogges | **Åben (mellem): rate limiting på JSON:API og MitID-ruter udestår (issue #142)** |
-| R6 | Data opbevares længere end nødvendigt | 2 | 2 | Dokumenteret manuel sletteprocedure efter instruks; auditlog auto-renses; MitID-TTL | **Åben (mellem): automatiseret retention/sletning pr. sagstype udestår (issue #91); manuel procedure skal aftales i bilag C.4** |
+| R6 | Data opbevares længere end nødvendigt | 2 | 1 | Automatiseret retention efter frister pr. formular, kun for lukkede og ESDH-journaliserede sager, med retlig tilbageholdelse og auditeret sletning (#91); auditlog auto-renses; MitID-TTL | **Lav, når retention er slået til med kommunens frister; indtil da mellem (manuel procedure efter bilag C.4)** |
 | R7 | Digital Post sendes to gange eller til forkert modtager | 2 | 2 | Fail-closed transporttilstand; afsendelseslog med hashet modtager | **Åben (mellem): idempotensnøgle og modtager-fra-verificeret-session er planlagt (issue #73); indtil da manuel kontrol i kritiske forløb** |
 | R8 | Følsomt underretningsindhold ses af uvedkommende internt | 1 | 3 | Rollebaseret adgang, auditlog med formålsangivelse, personlig produktionsadgang | Lav-mellem; kommunens egen rolletildeling er den bærende kontrol |
 | R9 | Registerudfald (Serviceplatformen) blokerer sagsgange | 2 | 1 | Fejl rapporteres ærligt i sagsforløbet (skipped/failed) | Åben (lav): circuit breaker planlagt (issue #72); driftsrisiko, ikke rettighedsrisiko |
@@ -101,7 +101,7 @@ forholde sig til restrisikoen, før forløbet går i produktion.
 |---|---|---|---|
 | R4 | Engangskode eller HTTPOnly-cookie i stedet for kapabilitet i URL | #156 | Før pilot med rigtige borgerdata |
 | R5 | Rate limiting på JSON:API + MitID-ruter | #142 | Før pilot |
-| R6 | Retention-/sletningsmotor pr. sagstype | #91 | Før eller tidligt i pilot; indtil da manuel procedure |
+| R6 | Slå retention til med kommunens frister | #91 (bygget) | Ved pilotstart, efter DPO's fastsættelse af frister |
 | R7 | Idempotensnøgle + modtager fra verificeret session | #73 | Før forløb med bebyrdende afgørelser |
 
 Konklusion (leverandørens indstilling til kommunens DPO): Med de fire

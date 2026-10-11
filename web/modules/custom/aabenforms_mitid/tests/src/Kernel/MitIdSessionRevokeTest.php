@@ -266,6 +266,8 @@ class MitIdSessionRevokeTest extends KernelTestBase {
    */
   public function testLoginRequiresChallengeForTheSpa(): void {
     putenv('CORS_ALLOW_ORIGIN=https://frontend.example');
+    // The test settings are mock-IdP settings: allowed on a marked demo site.
+    putenv('AABENFORMS_DEMO_SITE=1');
     $controller = MitIdController::create($this->container);
     $login = function (array $query) use ($controller) {
       $request = Request::create('/mitid/login', 'GET', $query);
@@ -286,6 +288,13 @@ class MitIdSessionRevokeTest extends KernelTestBase {
     // A backend page on this origin uses the Drupal session: no challenge.
     $this->assertSame(302, $login(['return_url' => '/parent-approval/1/2/x'])->getStatusCode());
     putenv('CORS_ALLOW_ORIGIN');
+
+    // Mock settings outside development and the demo site: no login (#79).
+    $ddev = getenv('DDEV_HOSTNAME');
+    putenv('DDEV_HOSTNAME');
+    putenv('AABENFORMS_DEMO_SITE');
+    $this->assertSame(503, $login(['return_url' => '/'])->getStatusCode());
+    putenv($ddev === FALSE ? 'DDEV_HOSTNAME' : 'DDEV_HOSTNAME=' . $ddev);
   }
 
 }

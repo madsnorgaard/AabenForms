@@ -1,0 +1,32 @@
+# Retention policy for intake copies held by AabenForms (issue #91).
+#
+# AabenForms is not the system of record: the authority's record is the
+# journalised case in the ESDH / SF1470. These values are PLACEHOLDERS. The
+# kommune's DPO must set them per the applicable kassationsbestemmelse before
+# go-live; see docs/compliance/RETENTION.md.
+#
+# A case is only ever purged when it is closed (lukket) AND journalised AND
+# not under legal hold. Open and unjournalised cases are never purged,
+# whatever the numbers below say. A value below 1 disables that scope.
+#
+# Off until the DPO has set the periods: a purge cannot be undone, so it is
+# never switched on by a deploy. Set enabled: true per kommune at go-live.
+enabled: false
+# Only an ESDH reference (the system of record) counts as journalised. Set
+# false only if the DPO decides the SF1470 index reference alone suffices.
+require_esdh_ref: true
+# Days after a case is closed before its intake copy is purged.
+default_days_after_close: 90
+# Per-webform overrides, keyed by the webform machine name of the case's
+# submission. unlinked_submission_days is optional (null = the global value).
+webforms: []
+# Days after the last change before a submission that never became a case is
+# purged.
+unlinked_submission_days: 30
+# Days after sending before a Digital Post log row loses its letter body,
+# MeMo XML (which carries the recipient CPR) and recipient hash. The row
+# itself is kept for idempotency and delivery receipts.
+digital_post_log_days: 180
+# Maximum purge units (a case with its submissions, or one unlinked
+# submission) per cron run, so cron stays fast.
+batch_size: 50

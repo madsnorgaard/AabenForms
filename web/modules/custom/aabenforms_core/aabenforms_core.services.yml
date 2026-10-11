@@ -156,3 +156,30 @@ services:
   # Where demo commands may run: DDEV, or AABENFORMS_DEMO_SITE=1.
   aabenforms_core.demo_environment:
     class: Drupal\aabenforms_core\Demo\DemoEnvironment
+
+  # Retention and right to erasure (#91). Legal holds live in a keyvalue
+  # list, not on the case: a closed case is immutable (see LegalHoldStore).
+  aabenforms_core.legal_hold:
+    class: Drupal\aabenforms_core\Retention\LegalHoldStore
+    arguments: ['@keyvalue', '@current_user', '@datetime.time', '@aabenforms_core.pii_redactor']
+
+  aabenforms_core.retention_manager:
+    class: Drupal\aabenforms_core\Retention\RetentionManager
+    arguments:
+      - '@database'
+      - '@entity_type.manager'
+      - '@config.factory'
+      - '@datetime.time'
+      - '@aabenforms_core.audit_logger'
+      - '@aabenforms_core.legal_hold'
+      - '@lock'
+      - '@logger.factory'
+
+  aabenforms_core.erasure:
+    class: Drupal\aabenforms_core\Retention\ErasureService
+    arguments:
+      - '@aabenforms_core.retention_manager'
+      - '@aabenforms_core.legal_hold'
+      - '@aabenforms_core.audit_logger'
+      - '@aabenforms_core.pii_redactor'
+      - '@database'

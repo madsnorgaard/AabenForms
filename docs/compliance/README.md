@@ -16,11 +16,13 @@ GitHub issue.
 | [DATABEHANDLERAFTALE.md](DATABEHANDLERAFTALE.md) | Data processing agreement following the structure of Datatilsynet's standardkontraktsbestemmelser (art. 28(3)), with bilag A-D filled in for AabenForms | Draft - parties, CVR and signatures to be completed per kommune |
 | [FORTEGNELSE_ART30.md](FORTEGNELSE_ART30.md) | Record of processing activities: art. 30(2) as databehandler, plus the kommune's art. 30(1) input per workflow | Draft - reusable across kommuner |
 | [DPIA_KONSEKVENSANALYSE.md](DPIA_KONSEKVENSANALYSE.md) | Data protection impact assessment (art. 35): CPR, children's and custody data, MitID identity, Digital Post | Draft - risk table reflects verified platform state |
+| [RETENTION.md](RETENTION.md) | Retention and right-to-erasure: what is kept and deleted, the default periods (placeholders for the DPO), legal hold, and the art. 17(3)(b) erasure procedure | Implemented (#91); periods to be set per kommune |
 | [NIS2_INCIDENT_RUNBOOK.md](NIS2_INCIDENT_RUNBOOK.md) | Incident response runbook with the NIS2 and GDPR art. 33/34 notification deadlines | Draft - contact table to be completed per kommune |
+| [TILGAENGELIGHEDSERKLAERING.md](TILGAENGELIGHEDSERKLAERING.md) | Accessibility statement (webtilgængelighedsloven, EN 301 549 / WCAG 2.1 AA) for the citizen frontend; source of https://aabenforms.dk/tilgaengelighed | Published - partially compliant, known gaps listed (#247) |
 
-Out of scope here: tilgaengelighedserklaeringen (accessibility statement)
-depends on the frontend axe/WCAG audit landing first, tracked in
-madsnorgaard/aabenforms-frontend#25.
+The accessibility statement covers AabenForms' own citizen frontend. A
+kommune publishes its own statement for its website on was.digst.dk and can
+link to this one for the self-service solution.
 
 ## How to use in a procurement conversation
 

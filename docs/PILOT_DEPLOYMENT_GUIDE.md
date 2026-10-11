@@ -1,5 +1,7 @@
 # ÅbenForms Pilot Deployment Guide
 
+> **Superseded for go-live decisions** by [runbooks/PILOT_GO_LIVE.md](runbooks/PILOT_GO_LIVE.md), the short and current list. This document is kept as background and is partly out of date.
+
 **Version**: 1.0
 **Last Updated**: February 2026
 **Target Audience**: Project Managers, Municipal IT Coordinators

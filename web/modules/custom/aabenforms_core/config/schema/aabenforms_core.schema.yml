@@ -124,3 +124,43 @@ aabenforms_core.rate_limits:
           window:
             type: integer
             label: 'Window in seconds'
+
+aabenforms_core.retention:
+  type: config_object
+  label: 'ÅbenForms retention policy'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Purge due intake copies on cron'
+    require_esdh_ref:
+      type: boolean
+      label: 'Only an ESDH reference counts as journalised (not the SF1470 index alone)'
+    default_days_after_close:
+      type: integer
+      label: 'Days after case closure before purge (below 1 disables)'
+    webforms:
+      type: sequence
+      label: 'Per-webform overrides'
+      sequence:
+        type: mapping
+        label: 'Webform override'
+        mapping:
+          id:
+            type: string
+            label: 'Webform machine name'
+          days_after_close:
+            type: integer
+            label: 'Days after case closure before purge (below 1 disables)'
+          unlinked_submission_days:
+            type: integer
+            label: 'Days before an unlinked submission is purged (empty uses the global value)'
+            nullable: true
+    unlinked_submission_days:
+      type: integer
+      label: 'Days before a submission that never became a case is purged (below 1 disables)'
+    digital_post_log_days:
+      type: integer
+      label: 'Days before a Digital Post log row is redacted (below 1 disables)'
+    batch_size:
+      type: integer
+      label: 'Maximum purge units per cron run'

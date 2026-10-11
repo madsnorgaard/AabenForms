@@ -1,0 +1,44 @@
+<?php
+
+/**
+ * @file
+ * Install, update and requirements hooks for aabenforms_mitid.
+ */
+
+/**
+ * Implements hook_requirements().
+ */
+function aabenforms_mitid_requirements(string $phase): array {
+  if ($phase !== 'runtime') {
+    return [];
+  }
+  /** @var \Drupal\aabenforms_mitid\Service\MitIdConfigGuard $guard */
+  $guard = \Drupal::service('aabenforms_mitid.config_guard');
+  $problems = $guard->problems();
+  if ($problems === []) {
+    return [];
+  }
+  $allowed = $guard->isAllowed();
+  return [
+    'aabenforms_mitid_mock_settings' => [
+      'title' => t('MitID settings'),
+      'value' => $allowed ? t('Mock IdP settings (allowed: development or demo site)') : t('Mock IdP settings - login is refused'),
+      'description' => t('Set the real client secret and https endpoints, or mark a demo site with AABENFORMS_DEMO_SITE=1. Found: @problems.', ['@problems' => implode(', ', $problems)]),
+      'severity' => $allowed ? REQUIREMENT_WARNING : REQUIREMENT_ERROR,
+    ],
+  ];
+}
+
+/**
+ * Removes the unused security.validate_tokens setting.
+ *
+ * Tokens are always validated (MitIdTokenVerifier); the flag was read by no
+ * code and only suggested that validation could be turned off.
+ */
+function aabenforms_mitid_update_11001(): string {
+  $config = \Drupal::configFactory()->getEditable('aabenforms_mitid.settings');
+  if ($config->get('security.validate_tokens') !== NULL) {
+    $config->clear('security.validate_tokens')->save();
+  }
+  return 'Removed the unused security.validate_tokens setting.';
+}
