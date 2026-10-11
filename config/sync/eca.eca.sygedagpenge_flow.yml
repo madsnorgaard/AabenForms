@@ -226,7 +226,7 @@ actions:
     configuration:
       case_id_token: '[case_id]'
       afgoerelse_type: afslag
-      klagevejledning: 'Hvis du ikke er enig i afgørelsen, skal du klage til kommunen inden 4 uger. Hvis kommunen fastholder afgørelsen, sender vi din klage videre til Ankestyrelsen, som tager stilling til den.'
+      klagevejledning: 'Du kan klage over afgørelsen. Klagen sendes til kommunen, så den er modtaget senest 4 uger efter, at du har modtaget afgørelsen. Kommunen vurderer afgørelsen igen og sender klagen videre til Ankestyrelsen, hvis den fastholdes.'
       klagefrist_uger: 4
       partshoering_exemption: ''
     successors:
@@ -240,8 +240,8 @@ actions:
       recipient_token: '[webform_submission:values:applicant_cpr:raw]'
       recipient_type: cpr
       sender_cvr_token: ''
-      subject_template: 'Afgørelse: sygedagpenge'
-      body_template: '<p>Du har ikke ret til sygedagpenge fra kommunen.</p><p><strong>Begrundelse:</strong> For at få sygedagpenge som lønmodtager skal du have arbejdet mindst 240 timer i de seneste 6 hele kalendermåneder før første sygedag og mindst 40 timer i hver af mindst 5 af månederne. Vi har fundet [sygedagpenge_employment_hours] timer.</p><p><strong>Klagevejledning:</strong> Hvis du ikke er enig i afgørelsen, skal du klage til kommunen inden 4 uger. Hvis kommunen fastholder afgørelsen, sender vi din klage videre til Ankestyrelsen.</p><p>Demo: Oplysningerne om beskæftigelse kommer fra en demo-kilde, ikke fra eIndkomst.</p>'
+      subject_template: 'Afgørelse: afslag på sygedagpenge'
+      body_template: '<p>Du har ikke ret til sygedagpenge fra kommunen.</p><p><strong>Begrundelse:</strong> For at få sygedagpenge som lønmodtager skal du have arbejdet mindst 240 timer i de seneste 6 hele kalendermåneder før første sygedag og mindst 40 timer i hver af mindst 5 af månederne. Vi har fundet [sygedagpenge_employment_hours] timer.</p><p><strong>Klagevejledning:</strong> Hvis du ikke er enig i afgørelsen, kan du klage. Klagen skal sendes til kommunen, så den er modtaget senest 4 uger efter, at du har modtaget afgørelsen. Du kan klage via kommunens selvbetjening (Klage over en afgørelse) eller ved at kontakte kommunen. Kommunen vurderer afgørelsen igen. Fastholder vi den, sender vi klagen videre til Ankestyrelsen, og du får besked.</p><p>Demo: Oplysningerne om beskæftigelse kommer fra en demo-kilde, ikke fra eIndkomst.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors:

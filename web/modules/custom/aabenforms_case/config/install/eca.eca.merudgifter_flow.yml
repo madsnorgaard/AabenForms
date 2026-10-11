@@ -167,7 +167,7 @@ actions:
       recipient_token: '[webform_submission:values:applicant_cpr:raw]'
       recipient_type: cpr
       sender_cvr_token: ''
-      subject_template: 'Afgørelse: merudgiftsydelse (servicelovens §41)'
+      subject_template: 'Afgørelse: bevilling af merudgiftsydelse (servicelovens §41)'
       body_template: '<p>Din ansøgning om dækning af merudgifter er imødekommet (medhold).</p>'
       type: 'Digital Post'
       result_token: digital_post_result
@@ -218,7 +218,7 @@ actions:
     configuration:
       case_id_token: '[case_id]'
       afgoerelse_type: afslag
-      klagevejledning: 'Du kan klage over afgørelsen til Ankestyrelsen. Klagen skal være modtaget senest 4 uger efter, du har fået afgørelsen.'
+      klagevejledning: 'Du kan klage over afgørelsen. Klagen sendes til kommunen, så den er modtaget senest 4 uger efter, at du har modtaget afgørelsen. Kommunen vurderer afgørelsen igen og sender klagen videre til Ankestyrelsen, hvis den fastholdes.'
       klagefrist_uger: 4
     successors:
       -
@@ -231,8 +231,8 @@ actions:
       recipient_token: '[webform_submission:values:applicant_cpr:raw]'
       recipient_type: cpr
       sender_cvr_token: ''
-      subject_template: 'Afgørelse: merudgiftsydelse (servicelovens §41)'
-      body_template: '<p>Din ansøgning om dækning af merudgifter er ikke imødekommet (afslag). Se vedlagte klagevejledning.</p>'
+      subject_template: 'Afgørelse: afslag på merudgiftsydelse (servicelovens §41)'
+      body_template: '<p>Din ansøgning om dækning af merudgifter er ikke imødekommet (afslag).</p><p><strong>Begrundelse:</strong> Du har oplyst nødvendige merudgifter på [webform_submission:values:maanedlig_merudgift] kr. om måneden. For at få dækket merudgifter efter servicelovens § 41 skal de i denne demo udgøre mindst 1.000 kr. om måneden.</p><p><strong>Klagevejledning:</strong> Hvis du ikke er enig i afgørelsen, kan du klage. Klagen skal sendes til kommunen, så den er modtaget senest 4 uger efter, at du har modtaget afgørelsen. Du kan klage via kommunens selvbetjening (Klage over en afgørelse) eller ved at kontakte kommunen. Kommunen vurderer afgørelsen igen. Fastholder vi den, sender vi klagen videre til Ankestyrelsen, og du får besked.</p><p>Demo: Beløbsgrænsen er sat til demoen og er ikke den gældende minimumsgrænse.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors:
