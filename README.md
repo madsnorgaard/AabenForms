@@ -1,113 +1,142 @@
 # AabenForms Backend
 
-Headless Drupal 11 backend for Danish municipal workflow automation.
+Headless Drupal 11 backend for Danish municipal self-service: ECA workflows, prefill from public registers with provenance, MitID, Digital Post and casework.
 
-[![Drupal](https://img.shields.io/badge/Drupal-11-blue)](https://www.drupal.org)
+[![Drupal](https://img.shields.io/badge/Drupal-11.3-blue)](https://www.drupal.org)
 [![PHP](https://img.shields.io/badge/PHP-8.4-purple)](https://www.php.net)
 [![License](https://img.shields.io/badge/License-GPL--2.0-green)](LICENSE.txt)
-[![CI](https://github.com/madsnorgaard/aabenforms/actions/workflows/ci.yml/badge.svg)](https://github.com/madsnorgaard/aabenforms/actions/workflows/ci.yml)
-[![Coding Standards](https://github.com/madsnorgaard/aabenforms/actions/workflows/coding-standards.yml/badge.svg)](https://github.com/madsnorgaard/aabenforms/actions/workflows/coding-standards.yml)
+[![CI](https://github.com/madsnorgaard/AabenForms/actions/workflows/ci.yml/badge.svg)](https://github.com/madsnorgaard/AabenForms/actions/workflows/ci.yml)
+[![Coding Standards](https://github.com/madsnorgaard/AabenForms/actions/workflows/coding-standards.yml/badge.svg)](https://github.com/madsnorgaard/AabenForms/actions/workflows/coding-standards.yml)
 
 ## Status
 
-Pre-pilot POC. Live at https://api.aabenforms.dk with a Nuxt frontend at https://aabenforms.dk. MitID runs against a Keycloak mock; Serviceplatformen (CPR/CVR) and Digital Post run against test or mock endpoints, not live production integrations. For a claim-by-claim account of what works today versus what is demo or planned, see [docs/PROMISES-VS-VERIFIED.md](docs/PROMISES-VS-VERIFIED.md).
+Pre-pilot. Live at https://api.aabenforms.dk, with the Nuxt frontend at https://aabenforms.dk. The production site is single-tenant and holds no real citizen data.
 
-## What it is
+- **Identity:** MitID runs against a mock IdP (Keycloak at auth.aabenforms.dk) until production registration is done.
+- **Integrations:** none run live against government endpoints yet. Each has one of the statuses below.
+- **Detail:** for a claim-by-claim account, see [docs/PROMISES-VS-VERIFIED.md](docs/PROMISES-VS-VERIFIED.md).
 
-A modular platform for Danish kommuner to automate citizen-facing workflows and connect to government services (MitID/NemLog-in, Serviceplatformen, Digital Post). Workflows are built in a visual editor and run as event-driven (ECA) flows.
+| Status | Meaning | Integrations |
+|---|---|---|
+| LIVE | AabenForms' own data | Case register, audit log, institution registry |
+| LIVE-PARAT | Production code is built; it needs a certificate and an agreement | CPR SF1520, CVR SF1530, Digital Post SF1601 (MeMo + SOAP), Beskedfordeler SF1461, NemLog-in OIOSAML 3, SBSYS ESDH |
+| DEMO | Production-shaped contract with demo data | CPR Familie+ SF6006, STIL pupil enrolment, eIndkomst / NemRefusion, SF1470, SF2900, other ESDH connectors, payment, SMS, GIS |
+| Mock IdP | Real protocol, test identities | MitID (OIDC against Keycloak) |
 
-Real today:
+## What it does
 
-- ECA workflow engine with a visual Workflow Modeler (`drupal/modeler`) and execution replay with token inspection
-- 18 municipal ECA flows (building and parking permits, marriage and association booking, citizen service, FOI, address and phone change, company verification, dual-parent approval, HR onboarding, mileage, MED election, caseworker review)
-- MitID OIDC sign-in against a Keycloak mock IdP; CPR (SF1520) and CVR (SF1530) lookup clients
-- Custom Danish webform elements with server-side validation: CPR (format and modulus-11), CVR, Adressevælger address autocomplete
-- Field-level CPR encryption and audit logging (in `aabenforms_core`)
-- Digital Post (SF1601) in `fake_db` and `wiremock` test modes
-- A persistent case (sag) engine: each case carries a lawful status lifecycle and a deadline (frist) clock, and every transition is an auditable revision. The full loop is wired end to end — open a case, journalise it (SF1470), decide it lawfully (FVL §19 partshøring gate + §25 mandatory klagevejledning), send the decision via Digital Post, handle an appeal (genvurdering), and distribute the finished case to a fagsystem via SF2900 where the business receipt closes it. Two flows drive it: a concern report (underretning, statutory 24-hour clock) and an economic free-place application (fripladstilskud, income fetched from CPR → auto-decision → decision letter → SF2900). Cases surface in a caseworker inbox
+- **Flows are configuration, not code.** Workflows are ECA flows edited in the visual Workflow Modeler (`drupal/modeler`). There are 33 flows in `config/sync`, and every run can be inspected in the execution replay.
+- **Known data is not asked again.** `GET /api/prefill/{webform}` runs the register lookups the flow would run. Each value comes back with its source register, contract, legal basis, mode and an audit id, and the CPR is always masked. The frontend shows this as a provenance panel.
+- **Casework end to end.** A case (sag) has a lawful status lifecycle that the entity enforces itself. Its deadline (frist) clock knows Danish holidays and calendar weeks. The flows cover partshøring (FVL §19), decisions with klagevejledning and a computed klagefrist (§25), letters via Digital Post, appeals, ESDH journaling and SF2900 distribution.
+- **Two-party consent.** Skoleskift and similar flows need both custody holders to sign with their own MitID. A staff decision step follows, scoped to the decision maker's own institution through the org chart.
+- **Field-level CPR encryption** (AES-256) and GDPR audit logging, both in `aabenforms_core`. A CPR submission fails hard if the key is missing rather than storing plaintext.
 
-Demo or mock, not production:
+### Demo scenarios
 
-- Payment, SMS, GIS/zoning, payroll and calendar actions are demo mocks
-- Digital Post has no live MeMo/SOAP transport yet; MitID has no live registration; Serviceplatformen needs client certificates before CPR/CVR run live
+These run with the frontend at https://aabenforms.dk/demo:
+
+| Scenario | Flow(s) | What is fetched instead of asked |
+|---|---|---|
+| Byggetilladelse | `building_permit_flow` | Name, CPR, address |
+| Merudgifter (SEL §41) | `merudgifter_flow` | The applicant's children. Income is deliberately not fetched |
+| Skoleskift | `skoleskift_flow`, `skoleskift_cosign_flow`, `skoleskift_decision_flow` | Custody, both parents' CPR and the child's current school. The school leader decides at `/sagsbehandling/skoleskift` |
+| Klage | `klage_flow` | The citizen's cases, the decision and the klagefrist |
+| Sygedagpenge | `sygedagpenge_flow` | Employer and working hours |
+
+Seed and reset demo data with `drush aabenforms:demo:seed-klage-case [--reset]`. Create the school leader account with `drush aabenforms:demo:ensure-skoleleder`. Personas live in the mock realm (`.ddev/mocks/keycloak/realms/danish-gov-test.json`) and in `aabenforms_mitid/src/DemoPersonas.php`.
+
+## Security model
+
+- **Session ids never travel in URLs.** The MitID session id is a bearer capability. Prefill, the session inbox and the co-sign receipt read it only from `Authorization: Bearer` (`aabenforms_core/src/Http/SessionBearer.php`).
+- **Logout ends the IdP session too.** It revokes the MitID session and performs RP-initiated logout with an `id_token_hint`.
+- **Family CPRs are resolved on the server.** A child's and the other parent's CPR come from the family register at submit time, never from the client.
+- **The co-sign binds MitID on the server.** It reads the minted session from the browser's Drupal session, consumes it once, and re-checks the CPR.
+- **Seeded demo sessions only work on DDEV.**
+
+The open items, in order, are tracked in the security programme [#252](https://github.com/madsnorgaard/AabenForms/issues/252). The most important:
+- binding the applicant CPR and register-derived facts at submit;
+- removing the session id from the MitID callback URL (#156);
+- rate limiting the remaining routes (#142);
+- retention and erasure (#91).
 
 ## Architecture
 
 ```
-Nuxt 3 frontend  ->  Drupal 11 backend (JSON:API, ECA, Webform)  ->  Danish gov services
-(aabenforms.dk)      (api.aabenforms.dk)                              MitID, CPR/CVR (Serviceplatformen), Digital Post
+Nuxt 3 frontend  ->  Drupal 11 backend (ECA, Webform, JSON + JSON:API)  ->  Danish public services
+(aabenforms.dk)      (api.aabenforms.dk)                                   MitID / NemLog-in, Serviceplatformen,
+                                                                           Digital Post, KOMBIT, ESDH
 ```
 
-Deployment is orchestrated by the `contabo-infrastructure` repo; a push to `main` rebuilds the Docker image on VPS2.
+Merging to `main` deploys. The deploy is orchestrated by [contabo-infrastructure](https://github.com/madsnorgaard/contabo-infrastructure): it snapshots the database, then runs `drush updb` and `drush cim`. Demo seed commands are run by hand.
+
+## Modules
+
+| Module | What it does |
+|---|---|
+| `aabenforms_core` | Serviceplatformen client, prefill with provenance, legal-basis map, family / enrolment / employment lookups (live-parat or demo), CPR encryption, audit logging, `SessionBearer` |
+| `aabenforms_workflows` | ECA action plugins, parent approval and co-sign, skoleskift receipt and school leader pages, org chart, template wizard |
+| `aabenforms_mitid` | MitID OIDC (PKCE), session store, CPR claim extraction, revoke and RP-initiated logout, demo personas |
+| `aabenforms_nemlogin` | NemLog-in OIOSAML 3 service provider for production citizen login (built, not enabled) |
+| `aabenforms_webform` | Webform elements with server-side validation: CPR (modulus 11), CVR, Adressevælger |
+| `aabenforms_case` | Case entity, lifecycle, frist clock, decision / appeal / journal actions, case lookup, klage demo seeder |
+| `aabenforms_kombit` | SF2900 Fordelingskomponent distribution (demo contract) |
+| `aabenforms_esdh` | ESDH journaling with pluggable connectors: SBSYS (REST), plus demo, GetOrganized, WorkZone and Acadre |
+| `aabenforms_institution` | Institution registry (Institutionsregisteret), leaders and hierarchy-aware routing |
+| `aabenforms_tenant` | Domain-based multi-tenancy (production runs single-tenant) |
+| `aabenforms_digital_post` | SF1601 core with fake_db, wiremock and live MeMo + SOAP transports; submodules `_eca` (actions), `_queue` (retry and dead letter), `_beskedfordeler` (SF1461 receipts), `_session_inbox` (citizen inbox for the demo) |
+
+Contrib core: Drupal 11.3.x (pinned to the 11.3 line on purpose), ECA 3.1.x, Workflow Modeler 1.0.x with Modeler API 1.1.x, Webform 6.3.x.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/madsnorgaard/aabenforms.git backend
+git clone https://github.com/madsnorgaard/AabenForms.git backend
 cd backend
 ddev start
-ddev launch        # admin UI, login admin / admin
+ddev drush uli
 ```
 
-Local URLs: site at https://aabenforms.ddev.site, JSON:API at `/jsonapi`, mail at `:8026`. `ddev start` also boots Keycloak (mock MitID) and WireMock (mock Serviceplatformen) for zero-config local development. The mock realm, test users, and the Keycloak re-import gotcha are documented in [docs/DDEV_MOCK_SERVICES_GUIDE.md](docs/DDEV_MOCK_SERVICES_GUIDE.md).
-
-## Modules
-
-| Module | Status | What it does |
-| --- | --- | --- |
-| `aabenforms_core` | Active | Base services: Serviceplatformen client (SF1520/SF1530), AES-256 field encryption, audit logging, tenant resolver, workflow execution collector |
-| `aabenforms_workflows` | Active | ECA action plugins, the approval system, and the template wizard. Some actions (payment, SMS, GIS, payroll, calendar) are demo mocks |
-| `aabenforms_mitid` | Active | MitID OIDC sign-in, session management, CPR claim extraction |
-| `aabenforms_webform` | Active | Custom webform elements: CPR, CVR, Adressevælger address |
-| `aabenforms_tenant` | Active | Domain-based multi-tenancy (logical, single database) |
-| `aabenforms_case` | Active | Persistent case (sag) entity with a status lifecycle, deadline (frist) clock and audited transition revisions. The lawful lifecycle is enforced at the entity level (any save path, not just the ECA actions); the frist clock skips Danish public holidays. ECA actions to open, journalise (SF1470 demo), decide (FVL §19/§25), appeal and transition cases; ships the underretning, fripladstilskud and klage flows |
-| `aabenforms_kombit` | Active | KOMBIT connectors. SF2900 Fordelingskomponent distribution (demo): hands a decided case to a fagsystem and closes it on the business receipt; real SOAP/STS/OCES3/SFTP behind the same contract later |
-| `aabenforms_esdh` | Active (demo) | Journalises a case into the kommune ESDH (system of record), complementing SF1470 (the index). Pluggable connectors via an `#[EsdhConnector]` plugin type: a demo driver (default) plus production-shaped stubs for GetOrganized, SBSYS, WorkZone and Acadre that fail hard until configured. ECA action `aabenforms_case_esdh_journal` |
-| `aabenforms_digital_post` (+ `_eca`) | Partial | SF1601 Digital Post in `fake_db`/`wiremock`; real MeMo and SOAP transport are planned (issue #77) |
-| `aabenforms_nemlogin` | Planned | NemLog-in Erhverv (business identity), issue #79 |
-
-Encryption and GDPR audit logging are built into `aabenforms_core`. CPR numbers are encrypted at rest (AES-256) on submission and decrypted only at the point of use (registry lookup, Digital Post recipient, audit hashing). The encryption key is read from the `AABENFORMS_CPR_KEY` environment variable (base64 of 32 random bytes, generated with `openssl rand -base64 32`); the key and encryption profile are provisioned automatically by a database update and never stored in git. If the key is missing, a CPR submission now **fails hard** (the encryption throws) rather than silently storing plaintext - it is safer to reject the submission than to write personal data unencrypted (databeskyttelsesloven). A retention and right-to-erasure subsystem does not exist yet and is tracked in issue #91.
-
-## Recent progress
-
-A security pass in June 2026 fixed issues found by a local pressure test, where some steps reported success while the underlying control did nothing:
-
-- #68 parent-CPR consent gate: fail-closed, real caseworker CPR fields, submission-scoped session, re-verified at submit
-- #69 audit integrity: token resolution so CPR/CVR lookups actually run; MitID validation fails closed; honest step statuses
-- #70 execution-replay PII: least-privilege plus a cron self-heal so an armed replay cannot record citizen CPR to a shared store
-- #71 [docs/PROMISES-VS-VERIFIED.md](docs/PROMISES-VS-VERIFIED.md): the claim-vs-verified table
-
-Also in June 2026 the case (sag) engine landed (`aabenforms_case`): a revisionable case entity with a lawful status lifecycle (modtaget → oplyst → partshøring → afgørelse → påklaget → lukket), a configurable per-area deadline (frist) clock, and ECA actions that open a case from a submission and advance it through audited transitions. Two flows run on it — underretning (statutory 24-hour clock) and fripladstilskud (income-gated auto-decision: at/under the threshold the case auto-advances to a decision, above it it waits for manual handling) — and a caseworker inbox lists cases at `/admin/aabenforms/cases` (backend) and `/cases/inbox` (frontend).
-
-The casework loop was then closed: SF1470 journaling, a lawful decision step (FVL §19 partshøring gate + §25 mandatory klagevejledning with a computed klagefrist), the decision letter via Digital Post, an appeal/genvurdering flow (the `paaklaget` state, lodged via a `klage` form), and `aabenforms_kombit`'s SF2900 distribution where the receiving fagsystem's business receipt closes the case. A low-income fripladstilskud now runs the whole lifecycle `modtaget → journaliseret → oplyst → afgørelse → lukket` as audited revisions. All external integrations are demo behind production-shaped contracts (no live certs/SOAP/SFTP).
-
-A second pressure test in July 2026 hardened the casework engine and added ESDH integration ([docs/PRESSURE-TEST-2026-07.md](docs/PRESSURE-TEST-2026-07.md)). The lawful lifecycle is now enforced at the entity level (`AabenformsCase::preSave()`) so no save path can jump a case to an unlawful state or overwrite an audited revision; the frist clock computes working days in Europe/Copenhagen and skips Danish public holidays; an adverse decision requires partshøring `afsluttet` or a recorded FVL §19 stk. 2 exemption; `CprAccess::protect()` fails hard instead of storing plaintext CPR; Digital Post refuses to send on an empty `test_mode`; and the fripladstilskud flow gained a MitID identity gate (it previously auto-decided on an unverified CPR). A new `aabenforms_esdh` module journalises a case into the kommune ESDH (system of record) via pluggable connectors (demo default; GetOrganized/SBSYS/WorkZone/Acadre stubs). The deferred criticals (letter→close failure gating, SF2900 async receipt, klage ownership binding, session-fixation, assurance enforcement) are tracked with fix recipes in the pressure-test report.
-
-## Roadmap
-
-The backlog is in [GitHub issues](https://github.com/madsnorgaard/aabenforms/issues), grouped by label:
-
-- Security ([`security`](https://github.com/madsnorgaard/aabenforms/labels/security)): circuit breaker #72, Digital Post idempotency #73, replay redaction #74, permission registration #75, consent-gate test #54
-- Productionise integrations ([`integration`](https://github.com/madsnorgaard/aabenforms/labels/integration)): Serviceplatformen certs #76, live Digital Post #77, Beskedfordeler #78, MitID production #79, Adressevælger + Datafordeler #80
-- Replace mocks ([`mocks`](https://github.com/madsnorgaard/aabenforms/labels/mocks)): payment #81, SMS #82, GIS/BBR #83
-- Case-system / ESDH handoff ([`esdh`](https://github.com/madsnorgaard/aabenforms/labels/esdh)): `aabenforms_esdh` scaffolds the adapter interface #84 and connector stubs #86 (GetOrganized/SBSYS/WorkZone/Acadre); still open are the transactional outbox #84, live adapters #86, and SF1470 KLE/FORM classification #85
-- Advanced flows ([`flows`](https://github.com/madsnorgaard/aabenforms/labels/flows)): SLA and escalation #87, task inbox and gateways #88, appeals and letters #89, persistent history and templates #90
-- Compliance ([`compliance`](https://github.com/madsnorgaard/aabenforms/labels/compliance)): GDPR retention/erasure #91, WCAG and NIS2/DPA #92
+`ddev start` also boots Keycloak (mock MitID, http://localhost:8080) and WireMock (mock Serviceplatformen). The site is at https://aabenforms.ddev.site and mail at `:8026`. See [docs/DDEV_MOCK_SERVICES_GUIDE.md](docs/DDEV_MOCK_SERVICES_GUIDE.md).
 
 ## Development
 
 ```bash
-ddev drush cr                 # clear cache
-ddev drush config:export -y   # export config
-ddev drush config:import -y   # import config
-ddev exec phpunit -c web/core web/modules/custom/aabenforms_workflows/tests/src/Unit
+ddev drush cr
+ddev exec 'vendor/bin/phpunit -c phpunit.xml --testsuite unit,kernel'
+ddev exec 'vendor/bin/phpcs --standard=Drupal --warning-severity=0 web/modules/custom'
 ```
 
-Workflow admin is at `/admin/config/workflow/eca`; the template wizard is at `/admin/aabenforms/workflow-templates`. See [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) for building flows, [docs/DATA-FLOW.md](docs/DATA-FLOW.md) for how data moves through every flow and where the PII sinks and trust boundaries are, and [docs/](docs/) for the template reference and admin guides.
+- **Importing config locally:** never run a full `drush cim` against the local demo database, because it drifts. Import single files with `.ddev/partial-import.php` instead.
+- **Where things are:**
+  - flows at `/admin/config/workflow/eca`, with "Review flow" for the execution replay;
+  - the template wizard at `/admin/aabenforms/workflow-templates`;
+  - the case inbox at `/admin/aabenforms/cases`.
+- **Further reading:** [docs/WORKFLOW_GUIDE.md](docs/WORKFLOW_GUIDE.md) and [docs/DATA-FLOW.md](docs/DATA-FLOW.md), which covers the PII sinks and trust boundaries.
+
+CI runs PHPUnit (it fails the build), PHPCS on the whole custom tree (errors only), PHPStan level 6 (advisory), Composer validation and the Docker image build.
+
+## Roadmap
+
+The queue is in [GitHub issues](https://github.com/madsnorgaard/AabenForms/issues), sorted by `priority:*` labels:
+
+- **Before any real citizen data (critical / high):**
+  - the security programme #252 and #156;
+  - binding identity at submit (#73, #251);
+  - redaction in the replay store (#74);
+  - retention and erasure (#91);
+  - rate limiting (#142).
+- **Going live:**
+  - Serviceplatformen certificates (#76);
+  - MitID / NemLog-in registration (#79);
+  - the tilgængelighedserklæring (#247);
+  - Digital Post fritagelse (#242);
+  - the async SF2900 receipt (#155).
+- **Digital inclusion** (label `digital-inklusion`): acting on behalf of a citizen (#241), save and resume (#244), plain language (#243), STIL live (#253), inclusion metrics (#246).
+- **Flows:** SLA and escalation (#87), Ankestyrelsen forwarding (#89), gateways (#88), history (#90).
 
 ## Related
 
-- Frontend: [aabenforms-frontend](https://github.com/madsnorgaard/aabenforms-frontend) (Nuxt 3)
+- Frontend: [aabenforms-frontend](https://github.com/madsnorgaard/aabenforms-frontend) (Nuxt 3, DKFDS)
 - Deployment: [contabo-infrastructure](https://github.com/madsnorgaard/contabo-infrastructure)
 
 ## License
