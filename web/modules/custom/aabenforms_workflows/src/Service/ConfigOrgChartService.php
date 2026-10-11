@@ -71,6 +71,14 @@ final class ConfigOrgChartService implements OrgChartServiceInterface {
   /**
    * {@inheritdoc}
    */
+  public function institutionNumbers(string $employee_id): array {
+    $numbers = $this->employees()[$employee_id]['institution_numbers'] ?? [];
+    return is_array($numbers) ? array_values(array_map('strval', $numbers)) : [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function employeeIdForAccountName(string $account_name): string {
     if ($account_name === '') {
       return '';

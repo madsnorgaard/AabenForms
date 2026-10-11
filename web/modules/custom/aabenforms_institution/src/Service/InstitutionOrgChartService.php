@@ -53,4 +53,11 @@ final class InstitutionOrgChartService implements OrgChartServiceInterface {
     return $this->inner->employeeIdForAccountName($account_name);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function institutionNumbers(string $employee_id): array {
+    return $this->inner->institutionNumbers($employee_id);
+  }
+
 }

@@ -15,3 +15,5 @@ employees:
     account_name: skoleleder
     manager_email: leder@example.dk
     tier_limit_cents: 0
+    institution_numbers:
+      - '751104'

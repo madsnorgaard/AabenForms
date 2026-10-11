@@ -17,6 +17,7 @@ use Drupal\key\Entity\Key;
 use Drupal\webform\Entity\Webform;
 use Drupal\webform\Entity\WebformSubmission;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
  * Tests the skoleskift co-signer receipt and the co-sign return redirect.
@@ -202,11 +203,47 @@ class SchoolTransferReceiptTest extends KernelTestBase {
   }
 
   /**
+   * Binds the demo leaders: skoleleder to Risskov, another to Frederiksbjerg.
+   */
+  protected function bindLeaders(): void {
+    $this->config('aabenforms_workflows.org_chart')->set('employees', [
+      'E1003' => ['name' => 'Skoleleder', 'account_name' => 'skoleleder', 'institution_numbers' => ['751104']],
+      'E1004' => ['name' => 'Anden leder', 'account_name' => 'frederiksbjerg', 'institution_numbers' => ['751101']],
+      'E1005' => ['name' => 'Medarbejder', 'account_name' => 'medarbejder'],
+    ])->save();
+  }
+
+  /**
+   * An account by name, as the forms and the list see it.
+   */
+  protected function account(string $name): UserSession {
+    return new UserSession(['uid' => 7, 'name' => $name]);
+  }
+
+  /**
+   * The school leader sees only their own school's cases.
+   */
+  public function testLeaderListIsScopedToTheSchool(): void {
+    $this->bindLeaders();
+    $view = $this->container->get('aabenforms_workflows.school_transfer_case_view');
+    $this->assertSame(['751104'], $view->schoolsFor($this->account('skoleleder')));
+    $this->assertCount(1, $view->awaitingDecision($this->account('skoleleder')));
+    $this->assertTrue($view->isInScope($this->submission, $this->account('skoleleder')));
+
+    // Another school's leader, an employee without a school, a stranger.
+    foreach (['frederiksbjerg', 'medarbejder', 'someone'] as $name) {
+      $this->assertSame([], $view->awaitingDecision($this->account($name)), $name);
+      $this->assertFalse($view->isInScope($this->submission, $this->account($name)), $name);
+    }
+  }
+
+  /**
    * The school leader sees masked CPRs only.
    */
   public function testStaffSummaryIsMasked(): void {
+    $this->bindLeaders();
     $view = $this->container->get('aabenforms_workflows.school_transfer_case_view');
-    $pending = $view->awaitingDecision();
+    $pending = $view->awaitingDecision($this->account('skoleleder'));
     $this->assertCount(1, $pending);
     $summary = $view->staffSummary($pending[0]);
     $this->assertSame('010918-XXXX', $summary['child_cpr_masked']);
@@ -250,19 +287,25 @@ class SchoolTransferReceiptTest extends KernelTestBase {
    * The decision form requires an org-chart employee and a rejection reason.
    */
   public function testDecisionFormGates(): void {
-    $this->config('aabenforms_workflows.org_chart')->set('employees', [
-      'E1003' => ['name' => 'Skoleleder', 'account_name' => 'skoleleder'],
-    ])->save();
+    $this->bindLeaders();
     $sid = (int) $this->submission->id();
     $submit = function (string $account, array $values): array {
-      $this->container->get('current_user')->setAccount(new UserSession(['uid' => 7, 'name' => $account]));
+      $this->container->get('current_user')->setAccount($this->account($account));
       $state = (new FormState())->setValues($values)->addBuildInfo('args', [$this->submission]);
       $this->container->get('form_builder')->submitForm(SchoolTransferDecisionForm::class, $state);
       return array_map('strval', $state->getErrors());
     };
 
-    $errors = $submit('someone', ['decision' => 'approved']);
-    $this->assertStringContainsString('not registered as an employee', implode(' ', $errors));
+    // Outside the school's scope the case cannot even be opened.
+    foreach (['someone', 'medarbejder', 'frederiksbjerg'] as $name) {
+      try {
+        $submit($name, ['decision' => 'approved']);
+        $this->fail("$name opened another school's case");
+      }
+      catch (AccessDeniedHttpException) {
+        // Expected.
+      }
+    }
     $this->assertSame('pending', WebformSubmission::load($sid)->getElementData('caseworker_status'));
 
     $errors = $submit('skoleleder', ['decision' => 'rejected', 'rejection_reason' => '']);

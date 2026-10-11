@@ -29,7 +29,9 @@ final class SchoolLeaderCommands extends DrushCommands {
    * The role gets only "decide school transfer" (no admin permissions). The
    * user must also be an employee in aabenforms_workflows.org_chart (config
    * sync ships E1003 for account "skoleleder"), or the decision flow's
-   * aabenforms_resolve_employee gate denies the decision.
+   * aabenforms_resolve_employee gate denies the decision. Its
+   * institution_numbers decide which school's cases the leader sees (E1003:
+   * Risskov Skole, 751104).
    *
    * @command aabenforms:demo:ensure-skoleleder
    * @option name Account name (default skoleleder).
@@ -88,8 +90,13 @@ final class SchoolLeaderCommands extends DrushCommands {
       '@role' => self::ROLE,
     ]));
 
-    if ($this->orgChart->employeeIdForAccountName($name) === '') {
+    $employeeId = $this->orgChart->employeeIdForAccountName($name);
+    if ($employeeId === '') {
       $this->io()->warning(dt('@name is not in the org chart (aabenforms_workflows.org_chart), so the decision flow will deny the decision. Import config or add the employee.', ['@name' => $name]));
+      return self::EXIT_FAILURE;
+    }
+    if ($this->orgChart->institutionNumbers($employeeId) === []) {
+      $this->io()->warning(dt('@name has no institution_numbers in the org chart, so the case list stays empty. Bind the employee to a school.', ['@name' => $name]));
       return self::EXIT_FAILURE;
     }
     return self::EXIT_SUCCESS;
