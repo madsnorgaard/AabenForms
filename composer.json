@@ -19,10 +19,10 @@
         "drupal/advancedqueue": "^1.6",
         "drupal/bpmn_io": "^3.0",
         "drupal/core-composer-scaffold": "~11.3.14",
-        "drupal/core-project-message": "~11.3.14",
-        "drupal/core-recipe-unpack": "~11.3.14",
+        "drupal/core-project-message": "~11.4.7",
+        "drupal/core-recipe-unpack": "~11.4.7",
         "drupal/core-recommended": "~11.3.14",
-        "drupal/domain": "^2.0@beta",
+        "drupal/domain": "^3.0@beta",
         "drupal/eca": "^3.0",
         "drupal/eca_cm": "^1.0",
         "drupal/encrypt": "^3.2",
@@ -36,7 +36,7 @@
         "drupal/real_aes": "^2.6",
         "drupal/redis": "^1.11",
         "drupal/smtp": "^1.4",
-        "drupal/webform": "^6.3@dev",
+        "drupal/webform": "^6.3",
         "drush/drush": "^13.7",
         "itk-dev/serviceplatformen": "^1.8",
         "onelogin/php-saml": "^4"
@@ -121,6 +121,6 @@
         }
     },
     "require-dev": {
-        "drupal/core-dev": "~11.3.14"
+        "drupal/core-dev": "~11.4.6"
     }
 }

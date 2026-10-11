@@ -1,14 +1,15 @@
 FROM drupal:11-php8.4-apache
 
-# Install necessary packages plus libxml2-dev for the PHP soap extension.
+# Install necessary packages plus libxml2-dev for the PHP soap extension and
+# libxslt1-dev for the xsl extension (required by itk-dev/serviceplatformen >= 1.9).
 # soap is required transitively by itk-dev/serviceplatformen via
 # wsdltophp/packagebase, which aabenforms_digital_post consumes.
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends git nano default-mysql-client unzip libxml2-dev
+    apt-get install -y --no-install-recommends git nano default-mysql-client unzip libxml2-dev libxslt1-dev
 
 # Core PHP extensions not preinstalled in the drupal:11-php8.4 base.
-RUN docker-php-ext-install -j"$(nproc)" soap
+RUN docker-php-ext-install -j"$(nproc)" soap xsl
 
 # Install Redis extension using pecl
 RUN pecl install redis \

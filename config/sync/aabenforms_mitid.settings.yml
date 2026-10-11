@@ -20,3 +20,4 @@ scopes:
 pkce_enabled: true
 accepted_issuers:
   - 'http://localhost:8080/realms/danish-gov-test'
+  - 'https://auth.aabenforms.dk/realms/danish-gov-test'
