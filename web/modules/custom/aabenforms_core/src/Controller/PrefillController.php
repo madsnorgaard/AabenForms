@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_core\Controller;
 
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drupal\aabenforms_core\Employment\EmploymentLookupInterface;
 use Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
@@ -208,6 +209,18 @@ class PrefillController extends ControllerBase {
   protected ?object $caseLookup = NULL;
 
   /**
+   * The klage demo seeder, when aabenforms_case is installed.
+   *
+   * @var \Drupal\aabenforms_case\Service\KlageDemoSeeder|null
+   */
+  protected ?object $klageDemoSeeder = NULL;
+
+  /**
+   * Whether this site may run demo scaffolding (DDEV or the demo site).
+   */
+  protected DemoEnvironment $demoEnvironment;
+
+  /**
    * The income lookup, when aabenforms_case is installed.
    */
   protected ?object $incomeLookup = NULL;
@@ -224,9 +237,11 @@ class PrefillController extends ControllerBase {
     $instance->employmentLookup = $container->get('aabenforms_core.employment_lookup');
     $instance->flood = $container->get('flood');
     $instance->time = $container->get('datetime.time');
+    $instance->demoEnvironment = $container->get('aabenforms_core.demo_environment');
     foreach ([
       'sessionManager' => 'aabenforms_mitid.session_manager',
       'caseLookup' => 'aabenforms_case.case_lookup',
+      'klageDemoSeeder' => 'aabenforms_case.klage_demo_seeder',
       'incomeLookup' => 'aabenforms_case.income_lookup',
     ] as $property => $service) {
       if ($container->has($service)) {
@@ -584,12 +599,41 @@ class PrefillController extends ControllerBase {
   }
 
   /**
+   * Keeps the klage demo runnable: the demo persona always has a case to appeal.
+   *
+   * Only on a demo site (DDEV or AABENFORMS_DEMO_SITE=1) and only for the
+   * demo persona's CPR. The seeder creates a fresh decided case only when
+   * none is appealable any more and never duplicates an appealable one. On a
+   * kommune site this never runs, so prefill stays read-only there.
+   */
+  protected function ensureDemoCase(string $cpr, string $webform_id, string $workflow_id): void {
+    if ($this->klageDemoSeeder === NULL || !$this->demoEnvironment->isDemoAllowed()
+      || !hash_equals($this->klageDemoSeeder::PERSONA_CPR, $cpr)) {
+      return;
+    }
+    try {
+      $result = $this->klageDemoSeeder->seed(10, TRUE);
+      if ($result['status'] !== $this->klageDemoSeeder::STATUS_EXISTS) {
+        $this->auditLogger->log('demo_case_seeded', $cpr, $webform_id, 'success', [
+          'workflow_id' => $workflow_id,
+          'case_id' => $result['case_id'],
+        ]);
+      }
+    }
+    catch (\Throwable $e) {
+      // The demo then shows "nothing to appeal"; prefill itself still works.
+      $this->getLogger('aabenforms_core')->warning('Klage demo case could not be seeded: @m', ['@m' => $e->getMessage()]);
+    }
+  }
+
+  /**
    * Cases source: the citizen's own cases, offered for case_id (klage).
    */
   protected function addCases(array &$fields, array $elements, string $webform_id, string $cpr, string $workflow_id, string $legal_basis, string $fetched_at): void {
     if ($this->caseLookup === NULL || $cpr === '' || !isset($elements['case_id']) || !in_array($webform_id, self::CASE_WEBFORMS, TRUE)) {
       return;
     }
+    $this->ensureDemoCase($cpr, $webform_id, $workflow_id);
     $cases = $this->caseLookup->findByCpr($cpr);
     $audit_id = $this->auditLogger->log('prefill_cases', $cpr, $webform_id, 'success', [
       'workflow_id' => $workflow_id,
