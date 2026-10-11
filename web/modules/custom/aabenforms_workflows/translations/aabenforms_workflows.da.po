@@ -602,3 +602,6 @@ msgstr "Tilbage til listen"
 
 msgid "Decide school transfer applications"
 msgstr "Afgør ansøgninger om skoleskift"
+
+msgid "The CPR number is shown masked to protect the child."
+msgstr "CPR-nummeret vises maskeret af hensyn til barnet."

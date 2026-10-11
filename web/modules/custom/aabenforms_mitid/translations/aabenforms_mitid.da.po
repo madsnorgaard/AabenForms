@@ -16,3 +16,6 @@ msgstr "Logins (24 t)"
 
 msgid "Configure"
 msgstr "Indstil"
+
+msgid "Successfully authenticated with MitID"
+msgstr "Du er logget ind med MitID"

@@ -213,12 +213,10 @@ class ParentApprovalForm extends FormBase {
       '#markup' => '<strong>' . htmlspecialchars($submission->getElementData('child_name')) . '</strong>',
     ];
 
-    // CPR - mask if parents apart per GDPR.
-    $child_cpr = $this->cprAccess->reveal((string) $submission->getElementData('child_cpr'));
-    if (!$this->parentsTogether) {
-      // Mask CPR: show only first 6 digits (birthdate) and last digit.
-      $child_cpr = substr($child_cpr, 0, 6) . '-XXX' . substr($child_cpr, -1);
-    }
+    // CPR - always masked (data minimisation): the date of birth is enough
+    // to recognise the child, and the last digit would reveal the child's
+    // sex. Parents living together or apart see the same.
+    $child_cpr = substr($this->cprAccess->reveal((string) $submission->getElementData('child_cpr')), 0, 6) . '-XXXX';
 
     $form['child_info']['child_cpr'] = [
       '#type' => 'item',
@@ -226,13 +224,9 @@ class ParentApprovalForm extends FormBase {
       '#markup' => '<code>' . htmlspecialchars($child_cpr) . '</code>',
     ];
 
-    if (!$this->parentsTogether) {
-      $form['child_info']['gdpr_notice'] = [
-        '#markup' => '<div class="messages messages--warning">' .
-        $this->t('Note: Some information is masked for privacy as parents are registered as living apart.') .
-        '</div>',
-      ];
-    }
+    $form['child_info']['gdpr_notice'] = [
+      '#markup' => '<p>' . $this->t('The CPR number is shown masked to protect the child.') . '</p>',
+    ];
 
     // Request details section.
     $form['request_info'] = [
