@@ -14,7 +14,7 @@ use Drupal\webform\Entity\Webform;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Tests GET /api/prefill/{webform_id}?session= end to end (issue #250).
+ * Tests GET /api/prefill/{webform_id} with a Bearer session (issue #250).
  *
  * Seeds demo MitID sessions on a simulated DDEV host and asserts the payload
  * for the merudgifter form (identity + children, no income), the klage form
@@ -120,8 +120,10 @@ class PrefillControllerTest extends KernelTestBase {
    *   The HTTP status, decoded body and Cache-Control header.
    */
   protected function prefill(string $webform_id, ?string $session): array {
-    $query = $session === NULL ? [] : ['session' => $session];
-    $request = Request::create('/api/prefill/' . $webform_id, 'GET', $query);
+    $request = Request::create('/api/prefill/' . $webform_id);
+    if ($session !== NULL) {
+      $request->headers->set('Authorization', 'Bearer ' . $session);
+    }
     $response = PrefillController::create($this->container)->prefill($webform_id, $request);
     return [
       'status' => $response->getStatusCode(),
@@ -435,6 +437,10 @@ class PrefillControllerTest extends KernelTestBase {
   public function testMissingOrUnknownSessionIsRejected(): void {
     $this->assertSame(401, $this->prefill('merudgifter', NULL)['status']);
     $this->assertSame(401, $this->prefill('merudgifter', 'wf_does_not_exist')['status']);
+
+    // A session id in the URL is ignored: it would leak via logs and Referer.
+    $request = Request::create('/api/prefill/merudgifter', 'GET', ['session' => $this->seed('freja')]);
+    $this->assertSame(401, PrefillController::create($this->container)->prefill('merudgifter', $request)->getStatusCode());
     $this->assertSame([], $this->auditRows('merudgifter'), 'No lookup ran');
   }
 
