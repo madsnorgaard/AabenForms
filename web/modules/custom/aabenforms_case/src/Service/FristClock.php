@@ -99,8 +99,8 @@ class FristClock {
    * plus aabenforms_case.settings:physical_post_delivery_days calendar days
    * (default 5). Using the later date for "both" is the citizen-favourable
    * reading: the authority cannot assume an exempt citizen saw the digital
-   * copy. The delivery days are a conservative assumption, not law - the
-   * kommune's jurist must confirm the value.
+   * copy. The delivery days are a conservative default, not law: AabenForms
+   * uses 5 (decided 2026-10-11) and a kommune may set its own value.
    *
    * @param int $sentTs
    *   The Unix timestamp the letter was dispatched.
