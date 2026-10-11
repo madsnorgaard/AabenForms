@@ -129,10 +129,10 @@ som driftsansvarlig for AabenForms-platformen.
    anvendt format og sletter derefter samtlige kopier, medmindre EU-ret eller
    national ret kræver opbevaring. Sletningen dokumenteres skriftligt.
 2. Slettefrister for de enkelte oplysningstyper i drift fremgår af bilag C,
-   afsnit C.4. **Ærlig status:** en automatiseret retention-/sletningsmotor
-   pr. sagstype er planlagt, men endnu ikke bygget (GitHub issue #91).
-   Indtil den er i drift, udføres sletning efter instruks som en manuel,
-   dokumenteret driftsprocedure. Auditloggen renses automatisk efter den
+   afsnit C.4. En automatiseret retention-/sletningsmotor er bygget (GitHub
+   issue #91, se `RETENTION.md`). Den slås til, når kommunen har fastsat
+   fristerne pr. sagstype; indtil da udføres sletning efter instruks som en
+   manuel, dokumenteret driftsprocedure. Auditloggen renses automatisk efter den
    konfigurerede retention (standard 5 år).
 
 ## 11. Revision, herunder inspektion
@@ -235,7 +235,7 @@ anvendelse til udvikling/test uden forudgående anonymisering.
   entitetsniveau (forvaltningsloven §§ 19-25 understøttet i datamodellen).
 - TLS på al transport; adgang til produktion via personlige nøgler.
 - Kendte, planlagte forbedringer føres åbent i issue-trackeren, p.t. bl.a.
-  udvidet rate limiting (#142) og automatiseret retention (#91). Status
+  ekstern penetrationstest og nøglerotation (#252). Status
   meddeles kommunen ved væsentlige ændringer.
 
 **C.3 Bistand:** Jf. punkt 8-9; svarfrister for bistand aftales i SLA.

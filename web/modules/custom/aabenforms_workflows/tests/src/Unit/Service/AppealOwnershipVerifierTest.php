@@ -33,10 +33,16 @@ class AppealOwnershipVerifierTest extends UnitTestCase {
    *   CPR the MitID session returns (NULL = no session).
    * @param string|null $caseCpr
    *   Applicant CPR on the case's submission (NULL = no submission/case).
+   * @param array $representations
+   *   The session's representations (who the session person may act for).
    */
-  protected function verifier(?string $sessionCpr, ?string $caseCpr): AppealOwnershipVerifier {
+  protected function verifier(?string $sessionCpr, ?string $caseCpr, array $representations = []): AppealOwnershipVerifier {
     $session = $this->createMock(MitIdSessionManager::class);
     $session->method('getCprFromSession')->willReturn($sessionCpr);
+    $session->method('getSession')->willReturn($sessionCpr === NULL ? NULL : [
+      'cpr' => $sessionCpr,
+      'representations' => $representations,
+    ]);
 
     $cprAccess = $this->createMock(CprAccess::class);
     // reveal() is a pass-through here: the stored value already IS the cpr.
@@ -134,6 +140,25 @@ class AppealOwnershipVerifierTest extends UnitTestCase {
       AppealOwnershipVerifier::RESULT_MISSING_EXPECTED_CPR,
       $this->verifier('0101901234', NULL)->verify('999', 'wf_abc'),
     );
+  }
+
+  /**
+   * A representative with a covering fuldmagt may appeal for the party.
+   *
+   * @covers ::verify
+   */
+  public function testOnBehalfWithCoveringRepresentation(): void {
+    $birthe = '2403482210';
+    $fuldmagt = [['cpr' => $birthe, 'name' => 'Birthe Jensen', 'basis' => 'fuldmagt', 'scopes' => ['klage']]];
+    $this->assertSame(
+      AppealOwnershipVerifier::RESULT_MATCH_ON_BEHALF,
+      $this->verifier('1502856234', $birthe, $fuldmagt)->verify('1', 'wf_abc'),
+    );
+    // A fuldmagt for someone else, or without the appeal scope, is no match.
+    $other = [['cpr' => '0101011234', 'name' => 'X', 'basis' => 'fuldmagt', 'scopes' => ['klage']]];
+    $this->assertSame(AppealOwnershipVerifier::RESULT_MISMATCH, $this->verifier('1502856234', $birthe, $other)->verify('1', 'wf_abc'));
+    $noScope = [['cpr' => $birthe, 'name' => 'Birthe Jensen', 'basis' => 'fuldmagt', 'scopes' => ['sygedagpenge']]];
+    $this->assertSame(AppealOwnershipVerifier::RESULT_MISMATCH, $this->verifier('1502856234', $birthe, $noScope)->verify('1', 'wf_abc'));
   }
 
 }

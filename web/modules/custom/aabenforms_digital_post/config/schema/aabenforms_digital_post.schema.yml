@@ -41,3 +41,9 @@ aabenforms_digital_post.settings:
     live_endpoint:
       type: string
       label: 'Serviceplatformen production endpoint'
+    registration_lookup:
+      type: string
+      label: 'Digital Post registration lookup (demo fixture or live kontaktregister)'
+      constraints:
+        Choice:
+          choices: [demo, live]

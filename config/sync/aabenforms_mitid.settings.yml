@@ -4,7 +4,6 @@ session:
   expiration: 900
   storage: tempstore
 security:
-  validate_tokens: false
   required_assurance_level: substantial
 production: false
 client_id: aabenforms-backend

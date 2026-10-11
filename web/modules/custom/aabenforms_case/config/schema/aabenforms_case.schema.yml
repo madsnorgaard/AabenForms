@@ -15,3 +15,10 @@ aabenforms_case.settings:
           amount:
             type: integer
             label: 'Amount'
+    physical_post_delivery_days:
+      type: integer
+      label: 'Assumed delivery time for a physical decision letter (calendar days); the klagefrist starts from send date plus this. Must be confirmed by the kommune''s jurist.'
+      constraints:
+        Range:
+          min: 0
+          max: 30

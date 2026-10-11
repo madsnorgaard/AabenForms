@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_digital_post_eca\Plugin\Action;
 
+use Drupal\aabenforms_digital_post\DigitalPost\DeliveryChannel;
 use Drupal\aabenforms_digital_post\DigitalPost\DigitalPost;
 use Drupal\aabenforms_digital_post\DigitalPost\Recipient;
 use Drupal\aabenforms_digital_post\DigitalPost\Sender;
 use Drupal\aabenforms_core\Service\CprAccess;
+use Drupal\aabenforms_digital_post\DigitalPost\Result;
 use Drupal\aabenforms_digital_post\Service\DigitalPostSenderInterface;
 use Drupal\aabenforms_workflows\Plugin\Action\AabenFormsActionBase;
 use Drupal\Core\Action\Attribute\Action;
@@ -15,6 +17,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\eca\Attribute\EcaAction;
+use Drupal\webform\WebformSubmissionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -28,6 +31,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * The plugin is intentionally thin - it does not know about SOAP, MeMo
  * XML, certificates, or test modes. All of that lives behind the
  * DigitalPostSender service boundary.
+ *
+ * Digital Post fritagelse (#242): the sender picks the delivery channel
+ * (digital, physical, or both when the registration is unknown). This action
+ * only reports it - on the result token (`delivery_channel`) plus a
+ * `<result_token>_delivery_channel` companion - and records it on the case
+ * opened from the same submission, so aabenforms_case_set_klagefrist can
+ * start the appeal clock from the assumed receipt date. Flows do not change.
  */
 #[Action(
   id: 'aabenforms_digital_post_send',
@@ -257,18 +267,9 @@ class SendDigitalPostAction extends AabenFormsActionBase {
       // NOT a failure: it advances the flow, and the async Beskedfordeler
       // receipt reconciles delivery later.
       $status = $result->isSuccess() ? 'success' : ($result->isPending() ? 'pending' : 'failed');
-      $mode = $this->sender->testMode();
-      $demo = in_array($mode, ['fake_db', 'wiremock'], TRUE);
-      $description = $demo
-        ? sprintf('Demo: Digital Post simuleret (%s).', $mode)
-        : ($result->message ?: 'Digital Post afsendt.');
-      $stepLabels = [
-        'success' => 'Digital Post sent',
-        'pending' => 'Digital Post accepted (awaiting receipt)',
-        'failed' => 'Digital Post failed',
-      ];
+      [$label, $description] = $this->describeStep($result, $status);
       $this->recordStep(
-        label: $stepLabels[$status],
+        label: $label,
         description: $description,
         status: $status === 'failed' ? 'failed' : 'completed',
       );
@@ -277,7 +278,13 @@ class SendDigitalPostAction extends AabenFormsActionBase {
         transactionId: $result->transactionId,
         reasonCode: $result->reasonCode,
         message: $result->message,
+        deliveryChannel: $result->deliveryChannel,
+        registrationStatus: $result->registrationStatus,
+        manualFollowUp: $result->manualFollowUp,
       );
+      if ($status !== 'failed' && $submission !== NULL) {
+        $this->recordChannelOnCase($submission, $result);
+      }
     }
     catch (\Throwable $e) {
       $this->handleError($e, 'SendDigitalPostAction');
@@ -399,6 +406,107 @@ class SendDigitalPostAction extends AabenFormsActionBase {
   }
 
   /**
+   * Builds the execution-step label and citizen-facing description.
+   *
+   * Labels are English source strings like the other steps; descriptions are
+   * Danish (shown in the demo replay). DEMO transports say so explicitly.
+   *
+   * @return array{0:string,1:string}
+   *   The step label and description.
+   */
+  private function describeStep(Result $result, string $status): array {
+    $mode = $this->sender->testMode();
+    $demo = in_array($mode, ['fake_db', 'wiremock'], TRUE);
+    $channel = $result->deliveryChannel;
+
+    if ($status === 'failed') {
+      $label = DeliveryChannel::includesPhysical($channel) ? 'Letter failed' : 'Digital Post failed';
+      $description = $result->reasonCode === Result::REASON_PRINT_UNAVAILABLE
+        ? 'Fysisk brev kan ikke sendes: printkanalen er ikke integreret. Brevet skal sendes manuelt af sagsbehandler.'
+        : ($result->message ?: 'Afsendelse fejlede.');
+      return [$label, $description];
+    }
+
+    if ($channel === DeliveryChannel::PHYSICAL) {
+      return [
+        'Physical letter queued (DEMO)',
+        'Demo: modtageren er fritaget for Digital Post. Brevet er lagt i printkø som fysisk brev (ingen rigtig printintegration).',
+      ];
+    }
+    if ($channel === DeliveryChannel::DIGITAL_AND_PHYSICAL) {
+      return [
+        'Letter sent digitally and as physical letter',
+        sprintf(
+          '%sTilmelding til Digital Post er ukendt. Brevet er sendt både digitalt og som fysisk brev (printkø, DEMO), og sagen er markeret til manuel opfølgning.',
+          $demo ? sprintf('Demo (%s): ', $mode) : '',
+        ),
+      ];
+    }
+
+    $stepLabels = [
+      'success' => 'Digital Post sent',
+      'pending' => 'Digital Post accepted (awaiting receipt)',
+    ];
+    $description = $demo
+      ? sprintf('Demo: Digital Post simuleret (%s).', $mode)
+      : ($result->message ?: 'Digital Post afsendt.');
+    return [$stepLabels[$status], $description];
+  }
+
+  /**
+   * Records the delivery channel on the case opened from this submission.
+   *
+   * Optional coupling: only runs when aabenforms_case is installed and the
+   * case entity carries the delivery_channel field. The query is a system
+   * operation (the flow, not the citizen, is the actor) so it bypasses entity
+   * access; it is scoped to the exact submission id. Never throws - a failed
+   * stamp must not turn a sent letter into a failed send - and skips a closed
+   * case (lukket is immutable).
+   */
+  private function recordChannelOnCase(WebformSubmissionInterface $submission, Result $result): void {
+    $channel = $result->deliveryChannel;
+    if (!in_array($channel, DeliveryChannel::ALL, TRUE)) {
+      return;
+    }
+    try {
+      if (!$this->entityTypeManager->hasDefinition('aabenforms_case')) {
+        return;
+      }
+      $storage = $this->entityTypeManager->getStorage('aabenforms_case');
+      $ids = $storage->getQuery()
+        ->accessCheck(FALSE)
+        ->condition('submission_ref', $submission->id())
+        ->execute();
+      if ($ids === []) {
+        return;
+      }
+      $labels = [
+        DeliveryChannel::DIGITAL => 'Digital Post',
+        DeliveryChannel::PHYSICAL => 'fysisk brev (DEMO printkø)',
+        DeliveryChannel::DIGITAL_AND_PHYSICAL => 'Digital Post og fysisk brev (DEMO printkø), manuel opfølgning',
+      ];
+      foreach ($storage->loadMultiple($ids) as $case) {
+        if (!method_exists($case, 'hasField') || !$case->hasField('delivery_channel')) {
+          continue;
+        }
+        if (method_exists($case, 'getStatus') && $case->getStatus() === 'lukket') {
+          continue;
+        }
+        if ((string) $case->get('delivery_channel')->value === $channel) {
+          continue;
+        }
+        $case->set('delivery_channel', $channel);
+        $case->setNewRevision(TRUE);
+        $case->setRevisionLogMessage(sprintf('Brev afsendt som %s (tx %s).', $labels[$channel], $result->transactionId));
+        $case->save();
+      }
+    }
+    catch (\Throwable $e) {
+      $this->logger->warning('Could not record the delivery channel on the case: @msg', ['@msg' => $e->getMessage()]);
+    }
+  }
+
+  /**
    * Writes the typed Result back into the configured ECA token.
    *
    * The `_status` companion carries the real three-valued outcome so a flow can
@@ -406,7 +514,8 @@ class SendDigitalPostAction extends AabenFormsActionBase {
    * send was ACCEPTED by Serviceplatformen but not yet delivered - the case
    * should advance to await the async receipt, NOT be treated as failed), or
    * `failed`. Keys on the DTO token: success (bool), pending (bool), status,
-   * transaction_id, reason_code, message.
+   * transaction_id, reason_code, message, delivery_channel,
+   * registration_status, manual_followup.
    *
    * @param string $status
    *   One of 'success', 'pending', 'failed'.
@@ -416,8 +525,22 @@ class SendDigitalPostAction extends AabenFormsActionBase {
    *   The failure reason code, or NULL.
    * @param string $message
    *   A human-readable message.
+   * @param string $deliveryChannel
+   *   The channel actually used (DeliveryChannel constants), or ''.
+   * @param string $registrationStatus
+   *   One of registered, exempt, unknown, or '' when no lookup ran.
+   * @param bool $manualFollowUp
+   *   TRUE when a caseworker must confirm delivery.
    */
-  private function setResultToken(string $status, string $transactionId, ?string $reasonCode, string $message): void {
+  private function setResultToken(
+    string $status,
+    string $transactionId,
+    ?string $reasonCode,
+    string $message,
+    string $deliveryChannel = '',
+    string $registrationStatus = '',
+    bool $manualFollowUp = FALSE,
+  ): void {
     $name = (string) $this->configuration['result_token'];
     if ($name === '') {
       return;
@@ -429,7 +552,14 @@ class SendDigitalPostAction extends AabenFormsActionBase {
       'transaction_id' => $transactionId,
       'reason_code' => $reasonCode,
       'message' => $message,
+      // One of digital, physical, digital_and_physical; '' if nothing sent.
+      'delivery_channel' => $deliveryChannel,
+      'registration_status' => $registrationStatus,
+      'manual_followup' => $manualFollowUp,
     ]);
+    // Scalar companion so a flow (or a later action) can read the channel
+    // without unpacking the DTO token.
+    $this->setTokenValue($name . '_delivery_channel', $deliveryChannel);
     // Status-token companion so an eca_scalar gate can branch on the outcome
     // (a DTO token cannot be compared directly). A flow routes the case close
     // on '[<result_token>_status]' == 'success', records the Digital Post

@@ -315,6 +315,8 @@ class AabenformsCase extends RevisionableContentEntityBase implements Aabenforms
 
     $fields['afgoerelse_dato'] = static::afgoerelseDatoFieldDefinition();
 
+    $fields['delivery_channel'] = static::deliveryChannelFieldDefinition();
+
     $fields['subject_cpr_hash'] = static::subjectCprHashFieldDefinition();
 
     $fields['journal_ref'] = BaseFieldDefinition::create('string')
@@ -358,6 +360,30 @@ class AabenformsCase extends RevisionableContentEntityBase implements Aabenforms
       ->setDescription(new TranslatableMarkup('When the decision was recorded on the case.'))
       ->setRevisionable(TRUE)
       ->setDisplayConfigurable('view', TRUE);
+  }
+
+  /**
+   * The delivery-channel field, shared by baseFieldDefinitions() and updates.
+   *
+   * How the decision letter actually went out: digital (Digital Post),
+   * physical (printed letter, the citizen is fritaget for Digital Post) or
+   * digital_and_physical (registration status unknown, both sent). Written by
+   * the Digital Post send action; read by aabenforms_case_set_klagefrist,
+   * because a physical letter has a later assumed receipt date. Revisionable,
+   * so Sagsspor shows when it was recorded.
+   */
+  public static function deliveryChannelFieldDefinition(): BaseFieldDefinition {
+    return BaseFieldDefinition::create('list_string')
+      ->setLabel(new TranslatableMarkup('Delivery channel'))
+      ->setDescription(new TranslatableMarkup('How the decision letter was sent: digital, physical letter, or both.'))
+      ->setRevisionable(TRUE)
+      ->setSetting('allowed_values', [
+        'digital' => 'Digital Post',
+        'physical' => 'Fysisk brev',
+        'digital_and_physical' => 'Digital Post og fysisk brev',
+      ])
+      ->setDisplayConfigurable('view', TRUE)
+      ->setDisplayConfigurable('form', FALSE);
   }
 
   /**

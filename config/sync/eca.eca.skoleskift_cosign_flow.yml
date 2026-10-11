@@ -4,6 +4,7 @@ status: true
 dependencies:
   module:
     - aabenforms_case
+    - aabenforms_institution
     - aabenforms_workflows
     - eca_content
     - modeler_api
@@ -61,4 +62,26 @@ actions:
       additional_data_token: ''
       message_template: 'Den anden forældremyndighedsindehaver har medunderskrevet med MitID (identitet og forældremyndighed kontrolleret). Sagen er klar til skoleleders vurdering.'
       status: success
+    successors:
+      -
+        id: lookup_target_school
+        condition: ''
+  lookup_target_school:
+    label: 'Slå den ønskede skole og dens leder op (institutionsregister)'
+    plugin: aabenforms_institution_lookup
+    configuration:
+      institution_number_token: '[webform_submission:values:target_school:raw]'
+      result_token: target_institution
+    successors:
+      -
+        id: notify_leader
+        condition: ''
+  notify_leader:
+    label: 'Underret skolelederen på arbejdsmail (uden personoplysninger)'
+    plugin: aabenforms_notify_case_handler
+    configuration:
+      recipient_token: '[target_institution_leader_email]'
+      case_id_token: '[skoleskift_case_id]'
+      link_path: /sagsbehandling/skoleskift
+      result_token: leader_notice
     successors: {  }

@@ -107,4 +107,29 @@ class SetKlagefristActionTest extends KernelTestBase {
     $this->assertSame($first, (int) $this->reload((int) $case->id())->get('klagefrist')->value, 'Klagefrist unchanged on re-run');
   }
 
+  /**
+   * A physical letter starts the klagefrist from send date + delivery days.
+   */
+  public function testPhysicalChannelShiftsKlagefrist(): void {
+    $this->config('aabenforms_case.settings')->set('physical_post_delivery_days', 5)->save();
+    $case = $this->caseIn('afgoerelse');
+    $case->set('delivery_channel', 'physical');
+    $case->save();
+    $now = $this->container->get('datetime.time')->getRequestTime();
+    $this->setKlagefrist(4);
+    $this->assertSame($now + (5 * 86400) + (4 * 7 * 86400), (int) $this->reload((int) $case->id())->get('klagefrist')->value);
+  }
+
+  /**
+   * A recorded digital channel keeps the klagefrist exactly as before.
+   */
+  public function testDigitalChannelKeepsKlagefrist(): void {
+    $case = $this->caseIn('afgoerelse');
+    $case->set('delivery_channel', 'digital');
+    $case->save();
+    $now = $this->container->get('datetime.time')->getRequestTime();
+    $this->setKlagefrist(4);
+    $this->assertSame($now + (4 * 7 * 86400), (int) $this->reload((int) $case->id())->get('klagefrist')->value);
+  }
+
 }

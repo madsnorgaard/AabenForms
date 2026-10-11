@@ -68,6 +68,17 @@ final class DemoPersonas {
       'city' => 'Aarhus C',
       'municipality_code' => '0751',
       'assurance_level' => 'substantial',
+      // Digital fuldmagt from Birthe (the parent), covering appeals (klage)
+      // and copies of the letters to Birthe. Mirrors the realm's `fuldmagt`
+      // attribute.
+      'representations' => [
+        [
+          'cpr' => '2403482210',
+          'name' => 'Birthe Jensen',
+          'basis' => 'fuldmagt',
+          'scopes' => ['klage', 'digital_post_copy'],
+        ],
+      ],
     ],
     'sofie' => [
       'cpr' => '2506924015',

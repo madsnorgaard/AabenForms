@@ -54,6 +54,18 @@ final class SettingsForm extends ConfigFormBase {
       '#required' => TRUE,
     ];
 
+    $form['registration_lookup'] = [
+      '#type' => 'radios',
+      '#title' => $this->t('Digital Post registration lookup (fritagelse)'),
+      '#description' => $this->t('Decides whether a citizen is registered for or exempt from Digital Post. Exempt citizens get decisions as physical letters; unknown status sends both and flags manual follow-up.'),
+      '#options' => [
+        'demo' => $this->t('demo - DEMO fixture of the demo personas only. Every other CPR is unknown.'),
+        'live' => $this->t('live - Digital Post kontaktregister. Not integrated yet (#76): answers unknown for every citizen.'),
+      ],
+      '#default_value' => $config->get('registration_lookup') ?: 'demo',
+      '#required' => TRUE,
+    ];
+
     $form['sender'] = [
       '#type' => 'fieldset',
       '#title' => $this->t('Sender'),
@@ -169,6 +181,7 @@ final class SettingsForm extends ConfigFormBase {
     $cvr = preg_replace('/\D+/', '', (string) $form_state->getValue('sender_cvr')) ?? '';
     $this->writeAll($config, [
       'test_mode' => $form_state->getValue('test_mode'),
+      'registration_lookup' => $form_state->getValue('registration_lookup') === 'live' ? 'live' : 'demo',
       'sender_cvr' => $cvr,
       'sender_name' => $form_state->getValue('sender_name'),
       'cert_source' => $form_state->getValue('cert_source'),

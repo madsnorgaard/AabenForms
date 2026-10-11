@@ -1,0 +1,8 @@
+services:
+  aabenforms_core.retention_commands:
+    class: Drupal\aabenforms_core\Drush\RetentionCommands
+    arguments:
+      - '@aabenforms_core.retention_manager'
+      - '@aabenforms_core.erasure'
+    tags:
+      - { name: drush.command }

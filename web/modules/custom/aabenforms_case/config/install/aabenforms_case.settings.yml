@@ -17,3 +17,8 @@ frister:
   default:
     unit: hverdage
     amount: 28
+# Assumed postal delivery time for a physical decision letter (citizen
+# fritaget for Digital Post), in calendar days. The klagefrist for a physical
+# letter starts from send date + this many days. AabenForms' default (5,
+# decided 2026-10-11); a kommune may set its own value.
+physical_post_delivery_days: 5

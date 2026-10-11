@@ -157,7 +157,7 @@ class WebformApiController extends ControllerBase {
     if (!$cpr) {
       return $submission_data;
     }
-    return $this->identityBinder->bind($webform, $cpr, $submission_data, $workflow_id);
+    return $this->identityBinder->bind($webform, $cpr, $submission_data, $workflow_id, (array) ($session['representations'] ?? []));
   }
 
   /**

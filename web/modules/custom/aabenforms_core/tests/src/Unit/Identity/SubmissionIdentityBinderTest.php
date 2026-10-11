@@ -197,4 +197,87 @@ final class SubmissionIdentityBinderTest extends UnitTestCase {
     $this->assertSame('child_unresolved:422', $this->bind($twin('Someone Else')));
   }
 
+  /**
+   * Mikkel's verified representation: Birthe, for appeals.
+   */
+  private const REPRESENTATIONS = [
+    [
+      'cpr' => '2403482210',
+      'name' => 'Birthe Jensen',
+      'basis' => 'fuldmagt',
+      'scopes' => ['klage', 'digital_post_copy'],
+    ],
+  ];
+
+  /**
+   * A klage-shaped webform that records who acted.
+   */
+  private function klageWebform(string $id = 'klage', bool $declaresActor = TRUE): WebformInterface {
+    $elements = [
+      'case_id' => ['#type' => 'textfield'],
+      'applicant_cpr' => ['#type' => 'cpr_field'],
+      'klage_begrundelse' => ['#type' => 'textarea'],
+    ];
+    if ($declaresActor) {
+      $elements += [
+        'on_behalf_of' => ['#type' => 'hidden'],
+        'actor_cpr' => ['#type' => 'hidden'],
+        'representation_basis' => ['#type' => 'hidden'],
+        'representation_copy' => ['#type' => 'hidden'],
+      ];
+    }
+    $webform = $this->createMock(WebformInterface::class);
+    $webform->method('getElementsDecodedAndFlattened')->willReturn($elements);
+    $webform->method('id')->willReturn($id);
+    return $webform;
+  }
+
+  /**
+   * Binds a klage as the session person (Freja here) with representations.
+   */
+  private function bindKlage(array $data, string $id = 'klage', bool $declaresActor = TRUE): array|string {
+    try {
+      return $this->binder()->bind($this->klageWebform($id, $declaresActor), self::FREJA, $data, 'wf_test', self::REPRESENTATIONS);
+    }
+    catch (SubmissionIntegrityException $e) {
+      return $e->reason . ':' . $e->httpStatus;
+    }
+  }
+
+  /**
+   * Acting on behalf works only within a verified, covering representation.
+   */
+  public function testOnBehalfOfNeedsCoveringRepresentation(): void {
+    // For oneself: applicant is the session person, no actor recorded.
+    $own = $this->bindKlage(['applicant_cpr' => '', 'on_behalf_of' => '', 'representation_copy' => '1']);
+    $this->assertSame(self::FREJA, $own['applicant_cpr']);
+    $this->assertSame('', $own['actor_cpr']);
+    $this->assertSame('0', $own['representation_copy'], 'A client cannot grant itself copies');
+
+    // On behalf of Birthe: Birthe is the applicant, the session person the actor.
+    $for = $this->bindKlage(['applicant_cpr' => '240348-XXXX', 'on_behalf_of' => '0']);
+    $this->assertSame('2403482210', $for['applicant_cpr']);
+    $this->assertSame(self::FREJA, $for['actor_cpr']);
+    $this->assertSame('fuldmagt', $for['representation_basis']);
+    $this->assertSame('1', $for['representation_copy'], 'The copy right comes from the scope');
+    $onBehalf = array_values(array_filter($this->audited, static fn (array $row): bool => $row[0] === 'submit_on_behalf'));
+    $this->assertCount(1, $onBehalf);
+    $this->assertArrayNotHasKey('subject', $onBehalf[0][3]);
+
+    // Outside the representation's scope, or an unknown index: refused.
+    $this->assertSame('representation_denied:403', $this->bindKlage(['on_behalf_of' => '0'], 'sygedagpenge'));
+    $this->assertSame('representation_denied:403', $this->bindKlage(['on_behalf_of' => '1']));
+    $this->assertSame('representation_denied:403', $this->bindKlage(['on_behalf_of' => 'birthe']));
+
+    // The applicant must then be the represented person, not anyone else.
+    $mismatch = $this->bindKlage(['applicant_cpr' => self::STRANGER, 'on_behalf_of' => '0']);
+    $this->assertSame('identity_mismatch:403', $mismatch);
+
+    // A form that does not record the actor ignores on_behalf_of entirely.
+    $plain = $this->bindKlage(['applicant_cpr' => '', 'on_behalf_of' => '0', 'actor_cpr' => self::STRANGER], 'klage', FALSE);
+    $this->assertSame(self::FREJA, $plain['applicant_cpr']);
+    $this->assertArrayNotHasKey('actor_cpr', $plain);
+    $this->assertArrayNotHasKey('on_behalf_of', $plain);
+  }
+
 }

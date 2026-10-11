@@ -87,6 +87,39 @@ services:
       - '@datetime.time'
       - '@logger.factory'
 
+  # Digital Post registration (kontaktregister) lookup: is the recipient
+  # tilmeldt or fritaget? DEMO fixture by default; the live implementation is
+  # a stub answering "unknown" until #76. Selected by config
+  # registration_lookup (demo|live).
+  aabenforms_digital_post.registration_lookup.demo:
+    class: Drupal\aabenforms_digital_post\Registration\DemoRegistrationLookup
+    arguments: ['@config.factory']
+
+  aabenforms_digital_post.registration_lookup.live:
+    class: Drupal\aabenforms_digital_post\Registration\LiveRegistrationLookup
+
+  aabenforms_digital_post.registration_lookup_factory:
+    class: Drupal\aabenforms_digital_post\Registration\RegistrationLookupFactory
+    arguments:
+      - '@config.factory'
+      - '@aabenforms_digital_post.registration_lookup.demo'
+      - '@aabenforms_digital_post.registration_lookup.live'
+
+  aabenforms_digital_post.registration_lookup:
+    class: Drupal\aabenforms_digital_post\Registration\DigitalPostRegistrationLookupInterface
+    factory: ['@aabenforms_digital_post.registration_lookup_factory', 'create']
+
+  # Second transport behind Sf1601ClientInterface: physical letters for
+  # citizens fritaget for Digital Post. DEMO only (records a print job, prints
+  # nothing) and refuses in live modes.
+  aabenforms_digital_post.physical_transport:
+    class: Drupal\aabenforms_digital_post\TestMode\PhysicalPostTransport
+    arguments:
+      - '@database'
+      - '@datetime.time'
+      - '@logger.channel.aabenforms_digital_post'
+      - '@config.factory'
+
   # The public entry point.
   aabenforms_digital_post.sender:
     class: Drupal\aabenforms_digital_post\Service\DigitalPostSender
@@ -96,3 +129,5 @@ services:
       - '@aabenforms_digital_post.audit_emitter'
       - '@config.factory'
       - '@logger.channel.aabenforms_digital_post'
+      - '@aabenforms_digital_post.registration_lookup'
+      - '@aabenforms_digital_post.physical_transport'

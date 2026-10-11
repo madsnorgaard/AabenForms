@@ -202,4 +202,50 @@ class FristClockTest extends UnitTestCase {
     $this->assertSame(self::MONDAY_0900 + (7 * 86400), $clock->computeKlagefrist(self::MONDAY_0900, 0));
   }
 
+  /**
+   * Builds a FristClock with a given physical_post_delivery_days value.
+   */
+  protected function clockWithDeliveryDays(mixed $days): FristClock {
+    $config = $this->createMock(ImmutableConfig::class);
+    $config->method('get')->willReturnCallback(static fn (string $key) => $key === 'physical_post_delivery_days' ? $days : NULL);
+    $factory = $this->createMock(ConfigFactoryInterface::class);
+    $factory->method('get')->with('aabenforms_case.settings')->willReturn($config);
+    return new FristClock($factory);
+  }
+
+  /**
+   * Digital or unrecorded channel: receipt is the send moment (unchanged).
+   *
+   * @covers ::assumedReceipt
+   */
+  public function testAssumedReceiptDigitalIsSendMoment(): void {
+    $clock = $this->clockWithDeliveryDays(5);
+    $this->assertSame(self::MONDAY_0900, $clock->assumedReceipt(self::MONDAY_0900, 'digital'));
+    $this->assertSame(self::MONDAY_0900, $clock->assumedReceipt(self::MONDAY_0900, NULL));
+    $this->assertSame(self::MONDAY_0900, $clock->assumedReceipt(self::MONDAY_0900, ''));
+  }
+
+  /**
+   * Physical (or both): send moment plus the configured delivery days.
+   *
+   * @covers ::assumedReceipt
+   */
+  public function testAssumedReceiptPhysicalAddsDeliveryDays(): void {
+    $clock = $this->clockWithDeliveryDays(5);
+    $this->assertSame(self::MONDAY_0900 + 5 * 86400, $clock->assumedReceipt(self::MONDAY_0900, 'physical'));
+    $this->assertSame(self::MONDAY_0900 + 5 * 86400, $clock->assumedReceipt(self::MONDAY_0900, 'digital_and_physical'));
+    $this->assertSame(self::MONDAY_0900 + 7 * 86400, $this->clockWithDeliveryDays(7)->assumedReceipt(self::MONDAY_0900, 'physical'));
+  }
+
+  /**
+   * Missing config falls back to 5 days; out-of-range values are clamped.
+   *
+   * @covers ::physicalPostDeliveryDays
+   */
+  public function testPhysicalPostDeliveryDaysDefaultsAndClamps(): void {
+    $this->assertSame(5, $this->clockWithDeliveryDays(NULL)->physicalPostDeliveryDays());
+    $this->assertSame(0, $this->clockWithDeliveryDays(-3)->physicalPostDeliveryDays());
+    $this->assertSame(30, $this->clockWithDeliveryDays(99)->physicalPostDeliveryDays());
+  }
+
 }

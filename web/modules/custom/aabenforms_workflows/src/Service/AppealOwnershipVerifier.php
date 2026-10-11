@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_workflows\Service;
 
+use Drupal\aabenforms_core\Identity\Representation;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
@@ -23,9 +24,19 @@ use Psr\Log\LoggerInterface;
 class AppealOwnershipVerifier {
 
   /**
+   * The representation scope an appeal needs (the klage webform id).
+   */
+  public const SCOPE = 'klage';
+
+  /**
    * The appellant's MitID CPR matches the case applicant.
    */
   public const RESULT_MATCH = 'match';
+
+  /**
+   * The appellant acts for the case applicant on a verified representation.
+   */
+  public const RESULT_MATCH_ON_BEHALF = 'match_on_behalf';
 
   /**
    * The appellant's MitID CPR does not match the case applicant.
@@ -90,6 +101,19 @@ class AppealOwnershipVerifier {
     }
 
     if (!hash_equals($expected, $asserted)) {
+      // Acting on behalf: re-read from the verified session, never from the
+      // form, whether this person holds a representation covering appeals
+      // for the case applicant.
+      $session = $this->sessionManager->getSession($workflow_id) ?? [];
+      $representation = Representation::covering((array) ($session['representations'] ?? []), $expected, self::SCOPE);
+      if ($representation !== NULL) {
+        $this->auditLogger->logCprLookup($asserted, 'appeal_ownership_verified_on_behalf', 'success', [
+          'case_id' => $case_id,
+          'workflow_id' => $workflow_id,
+          'basis' => $representation['basis'],
+        ]);
+        return self::RESULT_MATCH_ON_BEHALF;
+      }
       $this->logger->warning('Appeal blocked: MitID CPR does not match the case applicant (case @cid).', ['@cid' => $case_id]);
       $this->auditLogger->logCprLookup($asserted, 'appeal_ownership_mismatch', 'failure', [
         'case_id' => $case_id,

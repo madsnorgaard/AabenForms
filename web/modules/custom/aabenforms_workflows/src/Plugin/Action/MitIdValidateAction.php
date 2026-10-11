@@ -84,7 +84,8 @@ class MitIdValidateAction extends AabenFormsActionBase {
    * 1. The configured ECA token (`workflow_id_token`) - a flow or upstream
    *    action may have populated it explicitly.
    * 2. The id the submission carried, stashed on the request by the webform
-   *    controller (or passed as a `workflow_id` query param). This is the
+   *    controller (never a URL query param: a session id is a bearer
+   *    capability and must not travel in a URL, #156). This is the
    *    cross-origin path: the SPA POSTs from a different host than the backend
    *    cookie domain, so a shared session cookie is NOT available - the id
    *    travels in the request payload instead.
@@ -109,8 +110,7 @@ class MitIdValidateAction extends AabenFormsActionBase {
     $request = $this->requestStack->getCurrentRequest();
     if ($request) {
       // Cross-origin SPA: the id rides in the request payload.
-      $fromRequest = $request->attributes->get(self::REQUEST_WORKFLOW_ATTR)
-        ?? $request->query->get('workflow_id');
+      $fromRequest = $request->attributes->get(self::REQUEST_WORKFLOW_ATTR);
       if (is_string($fromRequest) && $fromRequest !== '') {
         $this->log('MitID validation: workflow id taken from submission payload', [], 'info');
         return $fromRequest;

@@ -27,6 +27,9 @@ final class Result {
   public const REASON_TRANSPORT = 'TRANSPORT';
   public const REASON_VALIDATION = 'VALIDATION';
   public const REASON_UNKNOWN = 'UNKNOWN';
+  // The physical print channel is not integrated in this mode (live/live_test):
+  // the letter must be posted manually. Permanent, never retried.
+  public const REASON_PRINT_UNAVAILABLE = 'PRINT_UNAVAILABLE';
 
   private function __construct(
     public readonly string $status,
@@ -34,7 +37,38 @@ final class Result {
     public readonly ?string $reasonCode,
     public readonly string $message,
     public readonly ?string $rawResponse,
+    public readonly string $deliveryChannel = DeliveryChannel::DIGITAL,
+    public readonly string $registrationStatus = '',
+    public readonly bool $manualFollowUp = FALSE,
   ) {
+  }
+
+  /**
+   * Returns a copy carrying the delivery channel actually used.
+   *
+   * @param string $channel
+   *   One of the DeliveryChannel constants.
+   * @param string $registrationStatus
+   *   The registration status the channel was chosen from (registered,
+   *   exempt, unknown), or '' when no lookup applied.
+   * @param bool $manualFollowUp
+   *   TRUE when a caseworker must follow up (unknown status, or a physical
+   *   leg that could not be queued).
+   */
+  public function withDelivery(string $channel, string $registrationStatus, bool $manualFollowUp): self {
+    if (!in_array($channel, DeliveryChannel::ALL, TRUE)) {
+      throw new \InvalidArgumentException(sprintf('Invalid delivery channel "%s".', $channel));
+    }
+    return new self(
+      status: $this->status,
+      transactionId: $this->transactionId,
+      reasonCode: $this->reasonCode,
+      message: $this->message,
+      rawResponse: $this->rawResponse,
+      deliveryChannel: $channel,
+      registrationStatus: $registrationStatus,
+      manualFollowUp: $manualFollowUp,
+    );
   }
 
   /**
@@ -105,6 +139,9 @@ final class Result {
       'transaction_id' => $this->transactionId,
       'reason_code' => $this->reasonCode,
       'message' => $this->message,
+      'delivery_channel' => $this->deliveryChannel,
+      'registration_status' => $this->registrationStatus,
+      'manual_followup' => $this->manualFollowUp,
     ];
   }
 

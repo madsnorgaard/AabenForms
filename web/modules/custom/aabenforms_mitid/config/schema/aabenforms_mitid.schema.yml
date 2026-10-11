@@ -49,9 +49,6 @@ aabenforms_mitid.settings:
       type: mapping
       label: 'Security configuration'
       mapping:
-        validate_tokens:
-          type: boolean
-          label: 'Validate tokens'
         required_assurance_level:
           type: string
           label: 'Required assurance level'

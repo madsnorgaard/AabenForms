@@ -29,6 +29,11 @@ final class SubmissionIntegrityException extends \RuntimeException {
   public const CHILD_UNRESOLVED = 'child_unresolved';
 
   /**
+   * On behalf of someone without a covering representation in the session.
+   */
+  public const REPRESENTATION_DENIED = 'representation_denied';
+
+  /**
    * The register could not be reached, so the claim cannot be verified.
    */
   public const REGISTER_UNAVAILABLE = 'register_unavailable';

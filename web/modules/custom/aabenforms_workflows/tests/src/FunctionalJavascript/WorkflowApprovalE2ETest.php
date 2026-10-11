@@ -287,8 +287,9 @@ YAML
     // Parent 1 views approval page.
     $this->drupalGet("/parent-approval/1/{$submission_id}/{$token1}");
 
-    // Verify CPR is masked (only shows DDMMYY-XXXX).
-    $this->assertSession()->pageTextContains('010112-XXX4');
+    // Verify CPR is masked (only shows DDMMYY-XXXX, never the last digit).
+    $this->assertSession()->pageTextContains('010112-XXXX');
+    $this->assertSession()->pageTextNotContains('010112-XXX4');
     $this->assertSession()->pageTextNotContains('0101121234');
     $this->assertSession()->pageTextContains('masked for privacy');
   }

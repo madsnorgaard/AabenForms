@@ -12,3 +12,6 @@ cert_passphrase_state: ''
 wiremock_url: 'http://wiremock:8080'
 live_test_endpoint: 'https://exttest.serviceplatformen.dk/service/KombiPostAfsend_1/kombi'
 live_endpoint: 'https://prod.serviceplatformen.dk/service/KombiPostAfsend_1/kombi'
+# Digital Post registration (kontaktregister) lookup: demo (fixture of the
+# demo personas, DEMO only) or live (stub answering "unknown" until #76).
+registration_lookup: demo

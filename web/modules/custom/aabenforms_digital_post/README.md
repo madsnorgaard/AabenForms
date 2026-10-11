@@ -74,6 +74,25 @@ drush af:dp:log:tail
 
 `live_test` and `live` ship in session 2 alongside a real `MemoBuilder` that constructs SF1601-compliant MeMo XML.
 
+## Digital Post fritagelse (exempt citizens) - DEMO
+
+Status: **DEMO**. Nothing here talks to a real government service yet. Issue #242.
+
+About 6 to 7 percent of adults are fritaget (exempt) from Digital Post. A decision (afgørelse) sent only digitally to them would never arrive, so `DigitalPostSender::send()` picks a delivery channel for every CPR recipient before it sends. Flows and the `aabenforms_digital_post_send` action configuration do not change.
+
+1. **Registration lookup** (`DigitalPostRegistrationLookupInterface`, service `aabenforms_digital_post.registration_lookup`) answers `registered`, `exempt` or `unknown`, plus mode `demo` or `live`. Selected by `registration_lookup` in `aabenforms_digital_post.settings` (default `demo`).
+   - `DemoRegistrationLookup` (DEMO): a fixed fixture of the fictitious demo personas. Birthe Jensen (2403482210) is exempt; Freja, Mikkel, Sofie and Lars are registered; every other CPR is `unknown`. It answers `unknown` for everyone when `test_mode` is `live_test`/`live`, so a demo fixture never decides a real citizen's letter.
+   - `LiveRegistrationLookup`: a stub that answers `unknown` for every CPR. TODO #76: the NgDP / SF1601 kontaktregister lookup.
+   - CVR recipients are always `registered` (businesses cannot be exempted). A lookup error counts as `unknown`.
+2. **Channel** (`DeliveryChannel::select()`): registered -> `digital` (MeMo/SF1601 as before); exempt -> `physical`; unknown -> `digital_and_physical`. An explicit `Fysisk Post` type is physical; NemSMS and CVR stay digital.
+3. **Physical transport** (`PhysicalPostTransport`, DEMO): a second `Sf1601ClientInterface` transport. It records a print job in `{aabenforms_digital_post_log}` with `channel = physical`, `mode = physical_demo`, `status = queued_print`. Nothing is printed or posted. In `live_test`/`live` it refuses with reason `PRINT_UNAVAILABLE` (fail closed: no fake "sent" for a real case).
+4. **Unknown status, the fail-safe**: the letter goes out digitally AND as a physical letter (the physical leg has its own transaction id `<tx>-print`), the Result carries `manual_followup = true`, and a `digital_post_manual_followup` audit event is written. The physical leg is decisive: the send is a success only if the print job was queued, because that is the only channel that reaches the citizen whatever their status. If it fails, the send fails, the flow keeps the case open and the klagefrist does not start.
+5. **Result and tokens**: `Result::$deliveryChannel`, `$registrationStatus`, `$manualFollowUp`. The ECA action adds `delivery_channel`, `registration_status` and `manual_followup` to its result token and sets a `[<result_token>_delivery_channel]` companion. `[<result_token>_status]` is still `success` for a queued (DEMO) print job, so existing `gate_letter_ok` gates keep working.
+6. **Case and klagefrist**: the action records the channel on the case opened from the same submission (`aabenforms_case.delivery_channel`, an audited revision). `aabenforms_case_set_klagefrist` starts the clock from the assumed receipt date: digital = send date (unchanged); physical or both = send date + `physical_post_delivery_days` (`aabenforms_case.settings`, default 5 calendar days). The 5 days is a conservative default, not law: AabenForms' default (decided 2026-10-11), and a kommune may set its own value.
+7. **Session inbox**: each row of `/api/digital-post/recent` carries `channel` (`digital`|`physical`) so the demo frontend can show "sendt som fysisk brev".
+
+To go live: implement the kontaktregister lookup (#76) and a real print transport (NgDP print channel, or send `Automatisk Valg` and let NgDP route), then remove the live-mode refusal in `PhysicalPostTransport`.
+
 ## What ships in session 1
 
 - `DigitalPost`, `Attachment`, `Recipient`, `Sender`, `Result` value objects with format validation in constructors.
@@ -92,7 +111,7 @@ drush af:dp:log:tail
 
 - Real MeMo XML via `itk-dev/serviceplatformen`. Both transports currently carry either a JSON body (wiremock) or a serialized DTO in the log table (fake_db). Session 2 adds the real `MemoBuilder` and wires the live and live_test transports.
 - Delivery status (Beskedfordeler callback). Separate submodule `aabenforms_digital_post_beskedfordeler`, session 3.
-- Fjernprint physical mail fallback. If a recipient is not reachable digitally, we return `RECIPIENT_NOT_REACHABLE` and let the caller decide. A dedicated physical-mail module can ship separately.
+- A real fjernprint / NgDP print integration. The physical-post channel for citizens fritaget for Digital Post exists, but only as a DEMO transport - see "Digital Post fritagelse" below.
 - `os2web_key`, `os2web_audit`, `os2web_datalookup`, `advancedqueue` bridges. All optional, session 3.
 - Webform handler. Lives in `aabenforms_digital_post_webform` submodule, session 3.
 

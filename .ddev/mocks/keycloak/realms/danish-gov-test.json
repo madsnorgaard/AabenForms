@@ -239,6 +239,20 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "name": "fuldmagt",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fuldmagt",
+            "claim.name": "fuldmagt",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     },
@@ -310,6 +324,7 @@
       ],
       "attributes": {
         "cpr": ["1502856234"],
+        "fuldmagt": ["[{\"cpr\":\"2403482210\",\"name\":\"Birthe Jensen\",\"scopes\":[\"klage\",\"digital_post_copy\"]}]"],
         "birthdate": ["1985-02-15"],
         "given_name": ["Mikkel"],
         "family_name": ["Jensen"],

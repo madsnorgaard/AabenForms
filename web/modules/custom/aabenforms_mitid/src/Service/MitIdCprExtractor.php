@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_mitid\Service;
 
+use Drupal\aabenforms_core\Identity\Representation;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Psr\Log\LoggerInterface;
@@ -142,6 +143,11 @@ class MitIdCprExtractor {
       // claim; in production the authority consults the Digital Post
       // kontaktregister. Carried so demo flows can route letters to paper.
       'digital_post_exempt' => filter_var($claims['digital_post_exempt'] ?? FALSE, FILTER_VALIDATE_BOOLEAN),
+
+      // Acting on behalf of others (mock IdP `fuldmagt` claim, standing in
+      // for NemLog-in Digital Fuldmagt). Strictly validated; see
+      // Representation. Never taken from the client.
+      'representations' => Representation::fromClaim($claims['fuldmagt'] ?? NULL),
 
       // Authentication metadata.
     // NSIS level (substantial/high)

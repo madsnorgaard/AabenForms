@@ -9,3 +9,4 @@ cert_passphrase_state: ''
 wiremock_url: 'http://wiremock:8080'
 live_test_endpoint: 'https://exttest.serviceplatformen.dk/service/KombiPostAfsend_1/kombi'
 live_endpoint: 'https://prod.serviceplatformen.dk/service/KombiPostAfsend_1/kombi'
+registration_lookup: demo
