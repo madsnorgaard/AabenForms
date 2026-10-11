@@ -54,4 +54,19 @@ interface OrgChartServiceInterface {
    */
   public function employeeIdForAccountName(string $account_name): string;
 
+  /**
+   * The institutions (institutionsnumre) an employee leads or acts for.
+   *
+   * Scopes institution-bound case work: a school leader decides only the
+   * cases of their own school. Comes from the administered directory, never
+   * from anything the employee can edit (such as their own e-mail).
+   *
+   * @param string $employee_id
+   *   The employee identifier.
+   *
+   * @return string[]
+   *   Institution numbers, or [] when the employee is bound to none.
+   */
+  public function institutionNumbers(string $employee_id): array;
+
 }

@@ -142,3 +142,4 @@ services:
       - '@database'
       - '@aabenforms_core.cpr_access'
       - '@aabenforms_core.family_lookup'
+      - '@aabenforms_workflows.org_chart'

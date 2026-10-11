@@ -30,7 +30,7 @@ final class SchoolTransferInboxController extends ControllerBase {
    */
   public function inbox(): array {
     $rows = [];
-    foreach ($this->caseView->awaitingDecision() as $submission) {
+    foreach ($this->caseView->awaitingDecision($this->currentUser()) as $submission) {
       $summary = $this->caseView->staffSummary($submission);
       $signatures = [];
       foreach ($summary['signatures'] as $signature) {
@@ -49,7 +49,7 @@ final class SchoolTransferInboxController extends ControllerBase {
 
     return [
       'intro' => [
-        '#markup' => '<p>' . $this->t('Applications that both custody holders have signed. Open a case to approve or reject the school transfer; the decision letter goes to both parents through Digital Post.') . '</p>',
+        '#markup' => '<p>' . $this->t('Applications to your school that both custody holders have signed. Open a case to approve or reject the school transfer; the decision letter goes to both parents through Digital Post.') . '</p>',
       ],
       'table' => [
         '#type' => 'table',

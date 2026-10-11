@@ -7,6 +7,7 @@ namespace Drupal\aabenforms_core\Controller;
 use Drupal\aabenforms_core\Employment\EmploymentLookupInterface;
 use Drupal\aabenforms_core\Enrolment\PupilEnrolmentLookupInterface;
 use Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface;
+use Drupal\aabenforms_core\Http\SessionBearer;
 use Drupal\aabenforms_core\Prefill\LegalBasis;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_core\Service\CprAccess;
@@ -20,7 +21,10 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Prefill with provenance: GET /api/prefill/{webform_id}?session={workflow}.
+ * Prefill with provenance: GET /api/prefill/{webform_id}.
+ *
+ * The MitID session travels as "Authorization: Bearer <workflow_id>",
+ * never in the URL.
  *
  * Runs, for a verified MitID session, the register lookups the bound flow
  * would run for the form and returns each value together with where it came
@@ -234,7 +238,7 @@ class PrefillController extends ControllerBase {
   /**
    * Prefills a webform from the registers for a MitID session.
    *
-   * Route: /api/prefill/{webform_id}?session={workflow_id}.
+   * Route: /api/prefill/{webform_id}, "Authorization: Bearer <workflow_id>".
    *
    * @param string $webform_id
    *   The webform machine name.
@@ -264,7 +268,7 @@ class PrefillController extends ControllerBase {
     if ($this->sessionManager === NULL) {
       return $this->error('MitID is not available on this site', 501);
     }
-    $workflow_id = (string) $request->query->get('session', '');
+    $workflow_id = SessionBearer::fromRequest($request);
     if ($workflow_id === '') {
       return $this->error('MitID session required', 401);
     }

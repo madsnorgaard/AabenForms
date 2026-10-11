@@ -34,4 +34,11 @@ final class StubOrgChartService implements OrgChartServiceInterface {
     return '';
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function institutionNumbers(string $employee_id): array {
+    return [];
+  }
+
 }

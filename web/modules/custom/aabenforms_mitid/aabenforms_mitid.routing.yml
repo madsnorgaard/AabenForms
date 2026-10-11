@@ -37,7 +37,7 @@ aabenforms_mitid.logout:
     _title: 'Logout'
   requirements:
     _access: 'TRUE'
-  methods: [GET]
+  methods: [GET, POST]
   options:
     no_cache: TRUE
 

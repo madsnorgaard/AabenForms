@@ -13,6 +13,7 @@ use Drupal\Core\Routing\TrustedRedirectResponse;
 use Drupal\Core\Url;
 use Drupal\webform\WebformSubmissionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -53,6 +54,10 @@ class SchoolTransferDecidedForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state, ?WebformSubmissionInterface $webform_submission = NULL): array {
     if ($webform_submission === NULL || $webform_submission->getWebform()?->id() !== SchoolTransferCaseView::WEBFORM_ID) {
       throw new NotFoundHttpException();
+    }
+    // Another school's case: the leader may not even read it.
+    if (!$this->caseView->isInScope($webform_submission, $this->currentUser())) {
+      throw new AccessDeniedHttpException();
     }
     $receipt = $this->caseView->receipt($webform_submission);
     $decided = $receipt['stage'] === 'decided';
