@@ -3,6 +3,7 @@ services:
     class: Drupal\aabenforms_workflows\Drush\ApprovalTokenCommands
     arguments:
       - '@aabenforms_workflows.approval_token'
+      - '@aabenforms_core.demo_environment'
     tags:
       - { name: drush.command }
   aabenforms_workflows.drush_modeler:
@@ -16,5 +17,6 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@aabenforms_workflows.org_chart'
+      - '@aabenforms_core.demo_environment'
     tags:
       - { name: drush.command }

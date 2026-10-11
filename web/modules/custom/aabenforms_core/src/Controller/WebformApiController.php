@@ -2,6 +2,8 @@
 
 namespace Drupal\aabenforms_core\Controller;
 
+use Drupal\aabenforms_core\Exception\SubmissionIntegrityException;
+use Drupal\aabenforms_core\Identity\SubmissionIdentityBinder;
 use Drupal\aabenforms_core\Service\TraceStore;
 use Drupal\aabenforms_core\Service\WorkflowExecutionCollector;
 use Drupal\Component\Utility\Crypt;
@@ -27,12 +29,18 @@ class WebformApiController extends ControllerBase {
   protected TraceStore $traceStore;
 
   /**
+   * Binds submissions to the verified identity and the register.
+   */
+  protected SubmissionIdentityBinder $identityBinder;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     $instance = parent::create($container);
     $instance->executionCollector = $container->get('aabenforms_core.workflow_execution_collector');
     $instance->traceStore = $container->get('aabenforms_core.trace_store');
+    $instance->identityBinder = $container->get('aabenforms_core.submission_identity_binder');
     return $instance;
   }
 
@@ -111,14 +119,13 @@ class WebformApiController extends ControllerBase {
   }
 
   /**
-   * Replaces masked or empty CPR values with the CPR from the MitID session.
+   * Binds the submission to the verified MitID identity and the register.
    *
-   * The session endpoint only ever hands the SPA a masked CPR (250692-XXXX),
-   * so a prefit CPR field submits the mask back. The authoritative CPR lives
-   * server-side in the MitID session; swap it in at intake so downstream
-   * actions (Digital Post, CPR lookup) get a real 10-digit CPR. Only elements
-   * of a CPR type whose submitted value is empty or masked are touched - a
-   * CPR the citizen typed themselves (e.g. their child's) is left alone.
+   * The session endpoint only ever hands the SPA masked CPRs (250692-XXXX).
+   * The authoritative CPR lives server-side in the MitID session; the binder
+   * fills the applicant from it, rejects a different applicant CPR, and takes
+   * child, other parent and custody from the register (see
+   * SubmissionIdentityBinder).
    *
    * @param \Drupal\webform\Entity\Webform $webform
    *   The webform.
@@ -128,7 +135,10 @@ class WebformApiController extends ControllerBase {
    *   The submitted values.
    *
    * @return array
-   *   The submission data, possibly with the session CPR filled in.
+   *   The bound submission data.
+   *
+   * @throws \Drupal\aabenforms_core\Exception\SubmissionIntegrityException
+   *   When a claim contradicts the session or the register.
    */
   protected function fillCprFromMitIdSession(Webform $webform, string $workflow_id, array $submission_data): array {
     if (!\Drupal::hasService('aabenforms_mitid.session_manager')) {
@@ -147,89 +157,7 @@ class WebformApiController extends ControllerBase {
     if (!$cpr) {
       return $submission_data;
     }
-    // Only the first CPR element belongs to the authenticated applicant; any
-    // further CPR fields (a child's, a partner's) must never inherit it.
-    // Same authority as the presave encryption hook (#172), so a field this
-    // prefill writes can never be one the encryption misses.
-    /** @var \Drupal\aabenforms_core\Service\CprAccess $cprAccess */
-    $cprAccess = \Drupal::service('aabenforms_core.cpr_access');
-    foreach ($webform->getElementsDecodedAndFlattened() as $key => $element) {
-      if (!$cprAccess->isCprElement($key, $element)) {
-        continue;
-      }
-      $value = (string) ($submission_data[$key] ?? '');
-      if ($value === '' || str_contains(strtoupper($value), 'X')) {
-        $submission_data[$key] = $cpr;
-      }
-      break;
-    }
-    return $this->resolveFamilyCprs($webform, $cpr, $submission_data);
-  }
-
-  /**
-   * Resolves the child's and the other parent's CPR from the family registry.
-   *
-   * The SPA only ever holds masked CPRs (DDMMYY-XXXX). The child is resolved
-   * strictly among the AUTHENTICATED applicant's own custody children (masked
-   * prefix plus name must identify exactly one), so a client cannot name an
-   * arbitrary child. The other custody holder (parent2_cpr) is always taken
-   * from the registry for that child and never from the client, so an
-   * invitation can never be steered to a CPR of the client's choosing.
-   * Unresolvable input is left untouched and the flow's custody gate denies.
-   *
-   * @param \Drupal\webform\Entity\Webform $webform
-   *   The webform.
-   * @param string $applicantCpr
-   *   The CPR from the verified MitID session.
-   * @param array $data
-   *   Submission values.
-   *
-   * @return array
-   *   Submission values with child_cpr / parent2_cpr resolved where possible.
-   */
-  protected function resolveFamilyCprs(Webform $webform, string $applicantCpr, array $data): array {
-    $elements = $webform->getElementsDecodedAndFlattened();
-    if (!isset($elements['child_cpr']) || !\Drupal::hasService('aabenforms_core.family_lookup')) {
-      return $data;
-    }
-    /** @var \Drupal\aabenforms_core\Family\FamilyRelationsLookupInterface $family */
-    $family = \Drupal::service('aabenforms_core.family_lookup');
-    try {
-      $children = $family->childrenOf($applicantCpr);
-    }
-    catch (\Exception $e) {
-      \Drupal::logger('aabenforms_core')->error('Family lookup failed at submit: @m', ['@m' => $e->getMessage()]);
-      return $data;
-    }
-
-    $submitted = strtoupper(preg_replace('/[\s-]/', '', (string) ($data['child_cpr'] ?? '')));
-    $name = mb_strtolower(trim((string) ($data['child_name'] ?? '')));
-    $match = NULL;
-    if (preg_match('/^\d{10}$/', $submitted)) {
-      // Unmasked value: accept only if it is one of the applicant's children.
-      foreach ($children as $child) {
-        if (($child['cpr'] ?? '') === $submitted) {
-          $match = $child;
-        }
-      }
-    }
-    elseif (preg_match('/^(\d{6})X{4}$/', $submitted, $m)) {
-      $candidates = array_values(array_filter($children, static fn (array $c): bool =>
-        str_starts_with((string) ($c['cpr'] ?? ''), $m[1])
-        && ($name === '' || mb_strtolower((string) ($c['full_name'] ?? '')) === $name)));
-      $match = count($candidates) === 1 ? $candidates[0] : NULL;
-    }
-    if ($match === NULL) {
-      return $data;
-    }
-    $data['child_cpr'] = $match['cpr'];
-
-    if (isset($elements['parent2_cpr'])) {
-      $other = array_values(array_filter($match['guardians'] ?? [], static fn (array $g): bool =>
-        ($g['cpr'] ?? '') !== '' && $g['cpr'] !== $applicantCpr));
-      $data['parent2_cpr'] = $other[0]['cpr'] ?? '';
-    }
-    return $data;
+    return $this->identityBinder->bind($webform, $cpr, $submission_data, $workflow_id);
   }
 
   /**
@@ -345,7 +273,13 @@ class WebformApiController extends ControllerBase {
       ?? NULL;
     if (is_string($workflow_id) && $workflow_id !== '') {
       $request->attributes->set('aabenforms_workflow_id', $workflow_id);
-      $submission_data = $this->fillCprFromMitIdSession($webform, $workflow_id, $submission_data);
+      try {
+        $submission_data = $this->fillCprFromMitIdSession($webform, $workflow_id, $submission_data);
+      }
+      catch (SubmissionIntegrityException $e) {
+        // Audited by the binder; the reason code carries no personal data.
+        return new JsonResponse(['error' => 'Submission rejected', 'reason' => $e->reason], $e->httpStatus);
+      }
     }
 
     // Server-side identity gate. If a flow behind this form validates MitID, a

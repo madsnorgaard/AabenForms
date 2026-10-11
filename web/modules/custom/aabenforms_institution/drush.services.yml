@@ -4,5 +4,6 @@ services:
     arguments:
       - '@entity_type.manager'
       - '@aabenforms_institution.registry'
+      - '@aabenforms_core.demo_environment'
     tags:
       - { name: drush.command }

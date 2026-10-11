@@ -100,3 +100,27 @@ aabenforms_core.tenant.*:
             key_path:
               type: string
               label: 'Private key file path'
+
+aabenforms_core.rate_limits:
+  type: config_object
+  label: 'ÅbenForms per-route rate limits'
+  mapping:
+    enabled:
+      type: boolean
+      label: 'Enforce per-route rate limits'
+    routes:
+      type: sequence
+      label: 'Rate-limited routes'
+      sequence:
+        type: mapping
+        label: 'Route limit'
+        mapping:
+          route:
+            type: string
+            label: 'Route name, or a prefix ending in *'
+          limit:
+            type: integer
+            label: 'Requests allowed per window and client IP'
+          window:
+            type: integer
+            label: 'Window in seconds'

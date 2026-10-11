@@ -72,23 +72,29 @@ class SchoolTransferCaseView {
   }
 
   /**
-   * Finds the latest school transfer this person co-signed as parent 2.
+   * The person's current school transfer as parent 2, if co-signed.
+   *
+   * Looks at the newest application that names this person as the other
+   * custody holder. When that one is still waiting for the signature there is
+   * no receipt yet, even if an older application was co-signed: the receipt
+   * must always be for the invitation the person is acting on now.
    *
    * @param string $cpr
    *   The CPR from the person's own verified MitID session.
    *
    * @return \Drupal\webform\WebformSubmissionInterface|null
-   *   The submission, or NULL when the person co-signed none.
+   *   The co-signed submission, or NULL when the newest one is not co-signed
+   *   or none names the person.
    */
   public function findCoSignedBy(string $cpr): ?WebformSubmissionInterface {
     $cpr = self::digits($cpr);
     if (strlen($cpr) !== 10) {
       return NULL;
     }
-    foreach ($this->recentSids(['parent2_status' => 'complete']) as $sid) {
+    foreach ($this->recentSids([]) as $sid) {
       $submission = $this->loadSubmission($sid);
       if ($submission && self::digits($this->reveal($submission, 'parent2_cpr')) === $cpr) {
-        return $submission;
+        return ($submission->getElementData('parent2_status') ?? '') === 'complete' ? $submission : NULL;
       }
     }
     return NULL;

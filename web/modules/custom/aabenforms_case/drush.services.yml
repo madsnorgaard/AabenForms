@@ -3,5 +3,6 @@ services:
     class: Drupal\aabenforms_case\Drush\AabenformsCaseCommands
     arguments:
       - '@aabenforms_case.klage_demo_seeder'
+      - '@aabenforms_core.demo_environment'
     tags:
       - { name: drush.command }

@@ -2,6 +2,8 @@
 
 namespace Drupal\aabenforms_core\Service;
 
+use Drupal\aabenforms_core\Privacy\PiiRedactor;
+
 /**
  * Collects workflow execution steps during a single request.
  *
@@ -9,6 +11,10 @@ namespace Drupal\aabenforms_core\Service;
  * reads the collected steps after $submission->save() and includes
  * them in the JSON response. This works because ECA workflows execute
  * synchronously during entity save.
+ *
+ * Step text is redacted on the way in: descriptions can carry token-replaced
+ * text (aabenforms_log) or upstream error messages, and the steps end up in
+ * the submit response and the persisted trace. Neither may hold a raw CPR.
  */
 class WorkflowExecutionCollector {
 
@@ -18,6 +24,22 @@ class WorkflowExecutionCollector {
    * @var array
    */
   protected array $steps = [];
+
+  /**
+   * The PII redactor.
+   */
+  protected PiiRedactor $redactor;
+
+  /**
+   * Constructs the collector.
+   *
+   * @param \Drupal\aabenforms_core\Privacy\PiiRedactor|null $redactor
+   *   The redactor. Optional so plain `new` in unit tests keeps working; the
+   *   default instance applies the same rules.
+   */
+  public function __construct(?PiiRedactor $redactor = NULL) {
+    $this->redactor = $redactor ?? new PiiRedactor();
+  }
 
   /**
    * Records a completed workflow step.
@@ -36,11 +58,11 @@ class WorkflowExecutionCollector {
   public function addStep(string $actionId, string $label, string $description, string $status = 'completed', ?string $error = NULL): void {
     $this->steps[] = [
       'id' => $actionId,
-      'name' => $label,
-      'description' => $description,
+      'name' => $this->redactor->redactString($label),
+      'description' => $this->redactor->redactString($description),
       'status' => $status,
       'completed_at' => date('c'),
-      'error' => $error,
+      'error' => $error === NULL ? NULL : $this->redactor->redactString($error),
     ];
   }
 

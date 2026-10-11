@@ -49,6 +49,8 @@ services:
 
   aabenforms_core.workflow_execution_collector:
     class: Drupal\aabenforms_core\Service\WorkflowExecutionCollector
+    arguments:
+      - '@aabenforms_core.pii_redactor'
 
   aabenforms_core.trace_store:
     class: Drupal\aabenforms_core\Service\TraceStore
@@ -56,6 +58,7 @@ services:
       - '@database'
       - '@datetime.time'
       - '@aabenforms_core.tenant_resolver'
+      - '@aabenforms_core.pii_redactor'
 
   aabenforms_core.tenant_resolver:
     class: Drupal\aabenforms_core\Service\TenantResolver
@@ -111,3 +114,45 @@ services:
   # CORS_ALLOW_ORIGIN only (never request input).
   aabenforms_core.frontend_url:
     class: Drupal\aabenforms_core\Service\FrontendUrl
+
+  # Binds a webform submission to the verified MitID identity and the
+  # register at intake (applicant CPR, child, other parent, custody).
+  aabenforms_core.submission_identity_binder:
+    class: Drupal\aabenforms_core\Identity\SubmissionIdentityBinder
+    arguments:
+      - '@aabenforms_core.cpr_access'
+      - '@aabenforms_core.family_lookup'
+      - '@aabenforms_core.audit_logger'
+      - '@logger.factory'
+
+  # One-time code handoff from an IdP callback to the cross-origin SPA
+  # (PKCE-style), so the session id never travels in a URL (#156).
+  aabenforms_core.login_handoff:
+    class: Drupal\aabenforms_core\Identity\LoginHandoff
+    arguments:
+      - '@keyvalue.expirable'
+
+  # Masks CPR numbers and capability secrets before anything is persisted
+  # (trace table, execution steps, ECA replay store). Issue #74.
+  aabenforms_core.pii_redactor:
+    class: Drupal\aabenforms_core\Privacy\PiiRedactor
+
+  # Redacting tempstore factories, wired into eca.token_browser only by
+  # AabenformsCoreServiceProvider.
+  aabenforms_core.redacting_tempstore.private:
+    class: Drupal\aabenforms_core\Privacy\RedactingPrivateTempStoreFactory
+    arguments: ['@keyvalue.expirable', '@lock', '@current_user', '@request_stack', '@aabenforms_core.pii_redactor', '%tempstore.expire%']
+  aabenforms_core.redacting_tempstore.shared:
+    class: Drupal\aabenforms_core\Privacy\RedactingSharedTempStoreFactory
+    arguments: ['@keyvalue.expirable', '@lock', '@request_stack', '@current_user', '@aabenforms_core.pii_redactor', '%tempstore.expire%']
+
+  # Generic per-route, per-IP rate limiting from aabenforms_core.rate_limits.
+  aabenforms_core.route_rate_limit_subscriber:
+    class: Drupal\aabenforms_core\EventSubscriber\RouteRateLimitSubscriber
+    arguments: ['@config.factory', '@flood']
+    tags:
+      - { name: event_subscriber }
+
+  # Where demo commands may run: DDEV, or AABENFORMS_DEMO_SITE=1.
+  aabenforms_core.demo_environment:
+    class: Drupal\aabenforms_core\Demo\DemoEnvironment

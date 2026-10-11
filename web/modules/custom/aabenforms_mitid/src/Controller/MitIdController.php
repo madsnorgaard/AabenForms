@@ -2,6 +2,8 @@
 
 namespace Drupal\aabenforms_mitid\Controller;
 
+use Drupal\aabenforms_core\Http\SessionBearer;
+use Drupal\aabenforms_core\Identity\LoginHandoff;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_mitid\Service\MitIdOidcClient;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
@@ -49,6 +51,11 @@ class MitIdController extends ControllerBase {
   protected FloodInterface $flood;
 
   /**
+   * One-time code handoff to the SPA (#156).
+   */
+  protected LoginHandoff $loginHandoff;
+
+  /**
    * Shape of a server-minted workflow id (see login()).
    */
   public const WORKFLOW_ID_PATTERN = '/^wf_[a-f0-9]{32}$/';
@@ -86,6 +93,7 @@ class MitIdController extends ControllerBase {
       $container->get('aabenforms_core.audit_logger')
     );
     $instance->flood = $container->get('flood');
+    $instance->loginHandoff = $container->get('aabenforms_core.login_handoff');
     return $instance;
   }
 
@@ -97,10 +105,11 @@ class MitIdController extends ControllerBase {
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
    *
-   * @return \Drupal\Core\Routing\TrustedRedirectResponse
-   *   Redirect to MitID authorization.
+   * @return \Symfony\Component\HttpFoundation\Response
+   *   Redirect to MitID authorization, or 400 when an SPA login lacks a
+   *   valid client_challenge.
    */
-  public function login(Request $request): TrustedRedirectResponse {
+  public function login(Request $request): Response {
     // Always server-mint the workflow ID. It is the bearer capability for the
     // session payload (the session is stored under it), so a client must never
     // be allowed to choose it - honoring a ?workflow_id= would let a caller fix
@@ -111,6 +120,18 @@ class MitIdController extends ControllerBase {
     // Get redirect URL (where to return after auth).
     // Validate that it's an internal path to prevent open redirect attacks.
     $returnUrl = $this->sanitizeReturnUrl($request, (string) ($request->query->get('return_url') ?? '/'));
+
+    // A return to another origin (the SPA) gets the session through a
+    // one-time code, redeemable only with the secret behind this challenge
+    // (PKCE pattern, see LoginHandoff). Backend pages on this origin use the
+    // Drupal session instead and get no code at all.
+    $challenge = '';
+    if (!$this->isOwnOrigin($request, $returnUrl)) {
+      $challenge = $request->query->get('client_challenge');
+      if (!LoginHandoff::isValidChallenge($challenge)) {
+        return new JsonResponse(['error' => 'client_challenge required'], 400);
+      }
+    }
 
     // ?login_hint= is only a username suggestion forwarded to the IdP as the
     // standard OIDC login_hint; the person still has to authenticate there.
@@ -139,6 +160,7 @@ class MitIdController extends ControllerBase {
       'created' => time(),
       'code_verifier' => $result['code_verifier'] ?? '',
       'nonce' => $result['nonce'] ?? '',
+      'client_challenge' => $challenge,
     ]);
 
     // Redirect to MitID (external URL - use TrustedRedirectResponse).
@@ -269,9 +291,13 @@ class MitIdController extends ControllerBase {
 
       $this->messenger()->addStatus($this->t('Successfully authenticated with MitID'));
 
-      // Append session ID to return URL so frontend can retrieve session data.
-      $separator = str_contains($returnUrl, '?') ? '&' : '?';
-      $redirectUrl = $returnUrl . $separator . 'session=' . urlencode($workflowId);
+      // Never put the session id in the URL (#156). The SPA gets a one-time
+      // code it can only redeem with its own verifier; same-origin backend
+      // pages already hold the session in the Drupal session above.
+      $challenge = (string) ($stateData['client_challenge'] ?? '');
+      $redirectUrl = $challenge !== ''
+        ? LoginHandoff::appendCode($returnUrl, $this->loginHandoff->issue($workflowId, $challenge))
+        : $returnUrl;
 
       // Use TrustedRedirectResponse when the return URL is external - the
       // open-redirect guard in login() already validated the origin against
@@ -398,45 +424,87 @@ class MitIdController extends ControllerBase {
   }
 
   /**
-   * Returns session data as JSON for frontend consumption.
+   * Redeems the one-time login code for the session (#156).
    *
-   * Route: /mitid/session/{session_id}.
+   * Route: POST /api/mitid/session/exchange, body
+   * {"code": "...", "code_verifier": "..."}. The code comes from the return
+   * URL; the verifier never left the browser that started the login. Any
+   * failure is a generic 400, so this is no oracle for codes or sessions.
    *
-   * @param string $session_id
-   *   The workflow/session ID.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
    *
    * @return \Symfony\Component\HttpFoundation\JsonResponse
-   *   Session data or error.
+   *   The session id and its public attributes, or 400.
    */
-  public function getSession(string $session_id): JsonResponse {
-    $session = $this->sessionManager->getSession($session_id);
-
-    if (!$session) {
-      // Audit the miss too - probing for valid session ids is exactly what an
-      // attacker would do against a bearer-capability endpoint.
-      $this->auditLogger->logWorkflowAccess($session_id, 'session_data_read', 'not_found', []);
-      return new JsonResponse(['error' => 'Session not found or expired'], 404);
+  public function exchange(Request $request): JsonResponse {
+    $headers = ['Cache-Control' => 'no-store, private'];
+    $body = json_decode((string) $request->getContent(), TRUE);
+    $workflowId = is_array($body)
+      ? $this->loginHandoff->redeem($body['code'] ?? NULL, $body['code_verifier'] ?? NULL)
+      : NULL;
+    $attributes = $workflowId !== NULL ? $this->sessionManager->getPublicAttributes($workflowId) : NULL;
+    if ($workflowId === NULL || $attributes === NULL) {
+      $this->auditLogger->logWorkflowAccess('-', 'session_exchange', 'failure', []);
+      return new JsonResponse(['error' => 'Invalid or expired login code'], 400, $headers);
     }
-
-    // This endpoint is reachable by anyone presenting the (unguessable, 15-min)
-    // workflow_id - the capability the citizen received at login. Record every
-    // PII read so disclosure is auditable, and never put the full CPR on the
-    // wire: the SPA only needs it for display (masked), and citizen flows read
-    // the real CPR server-side from this same MitID session, not from the
-    // response. mitid_uuid/auth_time/issuer/tokens stay server-side only.
-    $this->auditLogger->logWorkflowAccess($session_id, 'session_data_read', 'success', [
-      'assurance_level' => $session['assurance_level'] ?? 'unknown',
-    ]);
-
-    // One builder for every citizen-facing view of a session (this endpoint
-    // and the prefill endpoint share it), so the masking rule lives once.
+    $this->auditLogger->logWorkflowAccess($workflowId, 'session_exchange', 'success', []);
     return new JsonResponse([
       'data' => [
         'type' => 'mitid-session',
-        'id' => $session_id,
-        'attributes' => $this->sessionManager->getPublicAttributes($session_id) ?? [],
+        'id' => $workflowId,
+        'attributes' => $attributes,
       ],
+    ], 200, $headers);
+  }
+
+  /**
+   * Returns the caller's own session (public attributes only).
+   *
+   * Route: GET /api/mitid/session with "Authorization: Bearer <session>".
+   * Replaces /mitid/session/{id}, which carried the capability in the URL.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   *   Session data, or 401.
+   */
+  public function currentSession(Request $request): JsonResponse {
+    $headers = ['Cache-Control' => 'no-store, private'];
+    $sessionId = SessionBearer::fromRequest($request);
+    $attributes = $sessionId !== '' ? $this->sessionManager->getPublicAttributes($sessionId) : NULL;
+    if ($attributes === NULL) {
+      // Audit the miss too: probing a bearer-capability endpoint is what an
+      // attacker would do.
+      $this->auditLogger->logWorkflowAccess($sessionId !== '' ? $sessionId : '-', 'session_data_read', 'not_found', []);
+      return new JsonResponse(['error' => 'Session not found or expired'], 401, $headers);
+    }
+    // Every PII read is auditable. The full CPR never goes on the wire: the
+    // public attributes carry it masked, and flows read the real CPR
+    // server-side from the session.
+    $this->auditLogger->logWorkflowAccess($sessionId, 'session_data_read', 'success', [
+      'assurance_level' => $attributes['assurance_level'] ?? 'unknown',
     ]);
+    return new JsonResponse([
+      'data' => [
+        'type' => 'mitid-session',
+        'id' => $sessionId,
+        'attributes' => $attributes,
+      ],
+    ], 200, $headers);
+  }
+
+  /**
+   * Whether a (sanitized) return URL points back to this backend.
+   */
+  protected function isOwnOrigin(Request $request, string $returnUrl): bool {
+    if (!preg_match('#^https?://#i', $returnUrl)) {
+      return TRUE;
+    }
+    $parts = parse_url($returnUrl);
+    $origin = strtolower(($parts['scheme'] ?? '') . '://' . ($parts['host'] ?? '') . (isset($parts['port']) ? ':' . $parts['port'] : ''));
+    return $origin === strtolower($request->getSchemeAndHttpHost());
   }
 
 }

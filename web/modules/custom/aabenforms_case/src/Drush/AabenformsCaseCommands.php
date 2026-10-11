@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\aabenforms_case\Drush;
 
 use Drupal\aabenforms_case\Service\KlageDemoSeeder;
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drush\Commands\DrushCommands;
 
 /**
@@ -14,6 +15,7 @@ final class AabenformsCaseCommands extends DrushCommands {
 
   public function __construct(
     private readonly KlageDemoSeeder $seeder,
+    private readonly DemoEnvironment $demoEnvironment,
   ) {
     parent::__construct();
   }
@@ -44,6 +46,10 @@ final class AabenformsCaseCommands extends DrushCommands {
    *   After running the klage scenario, seed a fresh case to run it again.
    */
   public function seedKlageCase(array $options = ['days-ago' => 10, 'reset' => FALSE]): int {
+    if (!$this->demoEnvironment->isDemoAllowed()) {
+      $this->io()->error($this->demoEnvironment->refusalMessage('aabenforms:demo:seed-klage-case'));
+      return self::EXIT_FAILURE;
+    }
     try {
       $result = $this->seeder->seed((int) $options['days-ago'], (bool) $options['reset']);
     }

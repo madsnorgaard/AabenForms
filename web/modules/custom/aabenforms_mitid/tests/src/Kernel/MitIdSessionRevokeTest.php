@@ -129,7 +129,9 @@ class MitIdSessionRevokeTest extends KernelTestBase {
     $this->assertStringNotContainsString('ACCESS.TOKEN.SECRET', $encoded);
 
     // The session endpoint response, too.
-    $body = MitIdController::create($this->container)->getSession($id)->getContent();
+    $request = Request::create('/api/mitid/session');
+    $request->headers->set('Authorization', 'Bearer ' . $id);
+    $body = MitIdController::create($this->container)->currentSession($request)->getContent();
     $this->assertStringNotContainsString('ID.TOKEN.SECRET', $body);
     $this->assertStringNotContainsString('id_token', $body);
   }
@@ -220,6 +222,70 @@ class MitIdSessionRevokeTest extends KernelTestBase {
     $request = Request::create('/mitid/logout', 'POST', ['session_id' => 'not-a-session']);
     parse_str(parse_url($controller->logout($request)->headers->get('Location'), PHP_URL_QUERY), $query);
     $this->assertArrayNotHasKey('id_token_hint', $query);
+  }
+
+  /**
+   * The SPA gets its session through a one-time code, never a URL id.
+   */
+  public function testCodeExchangeAndCurrentSession(): void {
+    $id = $this->seed();
+    $handoff = $this->container->get('aabenforms_core.login_handoff');
+    $verifier = str_repeat('v', 43) . 'erifier';
+    $challenge = rtrim(strtr(base64_encode(hash('sha256', $verifier, TRUE)), '+/', '-_'), '=');
+    $controller = MitIdController::create($this->container);
+    $exchange = fn (array $body) => $controller->exchange(Request::create('/api/mitid/session/exchange', 'POST', [], [], [], ['CONTENT_TYPE' => 'application/json'], json_encode($body)));
+
+    // Right code, wrong verifier: refused, and the code is gone.
+    $code = $handoff->issue($id, $challenge);
+    $this->assertSame(400, $exchange(['code' => $code, 'code_verifier' => str_repeat('x', 50)])->getStatusCode());
+    $this->assertSame(400, $exchange(['code' => $code, 'code_verifier' => $verifier])->getStatusCode(), 'A code is single use, even after a failed attempt');
+
+    // Right code and verifier: the session, with the CPR masked.
+    $code = $handoff->issue($id, $challenge);
+    $response = $exchange(['code' => $code, 'code_verifier' => $verifier]);
+    $this->assertSame(200, $response->getStatusCode());
+    $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    $data = json_decode((string) $response->getContent(), TRUE)['data'];
+    $this->assertSame($id, $data['id']);
+    $this->assertStringNotContainsString('0101001234', (string) $response->getContent());
+    $this->assertStringNotContainsString('ID.TOKEN.SECRET', (string) $response->getContent());
+    // Replay of a used code fails.
+    $this->assertSame(400, $exchange(['code' => $code, 'code_verifier' => $verifier])->getStatusCode());
+    // Garbage is a plain 400.
+    $this->assertSame(400, $exchange(['code' => 'nope'])->getStatusCode());
+
+    // The current session is read only through the Authorization header.
+    $bearer = Request::create('/api/mitid/session');
+    $bearer->headers->set('Authorization', 'Bearer ' . $id);
+    $this->assertSame(200, $controller->currentSession($bearer)->getStatusCode());
+    $this->assertSame(401, $controller->currentSession(Request::create('/api/mitid/session', 'GET', ['session' => $id]))->getStatusCode());
+  }
+
+  /**
+   * A login returning to the SPA needs a challenge; backend pages do not.
+   */
+  public function testLoginRequiresChallengeForTheSpa(): void {
+    putenv('CORS_ALLOW_ORIGIN=https://frontend.example');
+    $controller = MitIdController::create($this->container);
+    $login = function (array $query) use ($controller) {
+      $request = Request::create('/mitid/login', 'GET', $query);
+      $request->setSession(new Session(new MockArraySessionStorage()));
+      $this->container->get('request_stack')->push($request);
+      try {
+        return $controller->login($request);
+      }
+      finally {
+        $this->container->get('request_stack')->pop();
+      }
+    };
+    $spa = $login(['return_url' => 'https://frontend.example/demo']);
+    $this->assertSame(400, $spa->getStatusCode());
+    $this->assertSame(400, $login(['return_url' => 'https://frontend.example/demo', 'client_challenge' => 'short'])->getStatusCode());
+    $ok = $login(['return_url' => 'https://frontend.example/demo', 'client_challenge' => str_repeat('A', 43)]);
+    $this->assertSame(302, $ok->getStatusCode());
+    // A backend page on this origin uses the Drupal session: no challenge.
+    $this->assertSame(302, $login(['return_url' => '/parent-approval/1/2/x'])->getStatusCode());
+    putenv('CORS_ALLOW_ORIGIN');
   }
 
 }
