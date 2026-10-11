@@ -33,6 +33,13 @@ function aabenforms_digital_post_schema(): array {
         'length' => 16,
         'not null' => TRUE,
       ],
+      'channel' => [
+        'description' => 'Delivery channel of this row: digital (MeMo/SF1601) or physical (print).',
+        'type' => 'varchar',
+        'length' => 16,
+        'not null' => TRUE,
+        'default' => 'digital',
+      ],
       'recipient_type' => [
         'description' => 'cpr or cvr.',
         'type' => 'varchar',
@@ -57,7 +64,7 @@ function aabenforms_digital_post_schema(): array {
         'not null' => TRUE,
       ],
       'status' => [
-        'description' => 'success, failure, pending.',
+        'description' => 'success, failure, pending; queued_print for a (DEMO) physical print job.',
         'type' => 'varchar',
         'length' => 16,
         'not null' => TRUE,
@@ -93,9 +100,44 @@ function aabenforms_digital_post_schema(): array {
     'indexes' => [
       'status' => ['status'],
       'mode' => ['mode'],
+      'channel' => ['channel'],
       'created' => ['created'],
       'recipient' => ['recipient_type', 'recipient_identifier_hash'],
     ],
   ];
   return $schema;
+}
+
+/**
+ * Add the delivery channel column and the registration lookup setting.
+ *
+ * Digital Post fritagelse (#242): every log row records whether it was a
+ * digital send or a (DEMO) physical print job. Existing rows were all
+ * digital, which the column default records.
+ */
+function aabenforms_digital_post_update_11001(): string {
+  $schema = \Drupal::database()->schema();
+  $table = 'aabenforms_digital_post_log';
+  $messages = [];
+  if ($schema->tableExists($table) && !$schema->fieldExists($table, 'channel')) {
+    $schema->addField($table, 'channel', [
+      'description' => 'Delivery channel of this row: digital (MeMo/SF1601) or physical (print).',
+      'type' => 'varchar',
+      'length' => 16,
+      'not null' => TRUE,
+      'default' => 'digital',
+    ]);
+    $schema->addIndex($table, 'channel', ['channel'], [
+      'fields' => [
+        'channel' => ['type' => 'varchar', 'length' => 16, 'not null' => TRUE, 'default' => 'digital'],
+      ],
+    ]);
+    $messages[] = 'Added the channel column to aabenforms_digital_post_log.';
+  }
+  $config = \Drupal::configFactory()->getEditable('aabenforms_digital_post.settings');
+  if ($config->get('registration_lookup') === NULL) {
+    $config->set('registration_lookup', 'demo')->save();
+    $messages[] = 'Set registration_lookup to demo.';
+  }
+  return $messages === [] ? 'Nothing to do.' : implode(' ', $messages);
 }

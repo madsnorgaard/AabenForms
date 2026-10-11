@@ -86,6 +86,49 @@ class FristClock {
   }
 
   /**
+   * Default assumed postal delivery time for a physical letter, in days.
+   */
+  public const DEFAULT_PHYSICAL_POST_DELIVERY_DAYS = 5;
+
+  /**
+   * Returns the assumed moment the citizen received a decision letter.
+   *
+   * Digital Post (or an unrecorded channel): the send moment, exactly as
+   * before. A physical letter (the citizen is fritaget for Digital Post) or
+   * digital_and_physical (registration unknown, both sent): the send moment
+   * plus aabenforms_case.settings:physical_post_delivery_days calendar days
+   * (default 5). Using the later date for "both" is the citizen-favourable
+   * reading: the authority cannot assume an exempt citizen saw the digital
+   * copy. The delivery days are a conservative assumption, not law - the
+   * kommune's jurist must confirm the value.
+   *
+   * @param int $sentTs
+   *   The Unix timestamp the letter was dispatched.
+   * @param string|null $channel
+   *   digital, physical, digital_and_physical, or NULL/'' when unknown.
+   *
+   * @return int
+   *   The assumed receipt Unix timestamp.
+   */
+  public function assumedReceipt(int $sentTs, ?string $channel): int {
+    if ($channel !== 'physical' && $channel !== 'digital_and_physical') {
+      return $sentTs;
+    }
+    return $sentTs + ($this->physicalPostDeliveryDays() * 86400);
+  }
+
+  /**
+   * The configured physical post delivery days (non-negative, capped at 30).
+   */
+  public function physicalPostDeliveryDays(): int {
+    $days = $this->configFactory->get('aabenforms_case.settings')->get('physical_post_delivery_days');
+    if (!is_numeric($days)) {
+      return self::DEFAULT_PHYSICAL_POST_DELIVERY_DAYS;
+    }
+    return max(0, min(30, (int) $days));
+  }
+
+  /**
    * Adds whole calendar weeks to a timestamp (no working-day math).
    *
    * Calendar arithmetic in Europe/Copenhagen, so a local midnight stays a

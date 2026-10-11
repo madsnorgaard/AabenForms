@@ -125,3 +125,27 @@ function aabenforms_case_update_11002(array &$sandbox): string {
   }
   return sprintf('Backfilling cases: %d remaining.', count($sandbox['ids']));
 }
+
+/**
+ * Add the delivery_channel field and the physical post delivery setting.
+ *
+ * Digital Post fritagelse (#242): the case records whether the decision
+ * letter went out digitally or as a physical letter, and the klagefrist for a
+ * physical letter starts from an assumed later receipt date
+ * (physical_post_delivery_days, default 5 calendar days). Existing cases keep
+ * an empty channel, which the klagefrist treats as digital - unchanged.
+ */
+function aabenforms_case_update_11003(): string {
+  $messages = [];
+  $manager = \Drupal::entityDefinitionUpdateManager();
+  if ($manager->getFieldStorageDefinition('delivery_channel', 'aabenforms_case') === NULL) {
+    $manager->installFieldStorageDefinition('delivery_channel', 'aabenforms_case', 'aabenforms_case', AabenformsCase::deliveryChannelFieldDefinition());
+    $messages[] = 'Installed case field delivery_channel.';
+  }
+  $config = \Drupal::configFactory()->getEditable('aabenforms_case.settings');
+  if ($config->get('physical_post_delivery_days') === NULL) {
+    $config->set('physical_post_delivery_days', 5)->save();
+    $messages[] = 'Set physical_post_delivery_days to 5.';
+  }
+  return $messages === [] ? 'Nothing to do.' : implode(' ', $messages);
+}

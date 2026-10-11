@@ -19,3 +19,4 @@ frister:
   default:
     unit: hverdage
     amount: 28
+physical_post_delivery_days: 5

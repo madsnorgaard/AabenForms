@@ -24,6 +24,9 @@ use Symfony\Component\HttpFoundation\Request;
  * When the session is absent or expired the response is `[]` with HTTP 200 -
  * the demo frontend renders an empty inbox cleanly without a 404 spike in
  * the browser console.
+ *
+ * Each row carries `channel` (digital|physical) so a letter sent to a citizen
+ * fritaget for Digital Post can be shown as "sendt som fysisk brev".
  */
 final class SessionInboxController extends ControllerBase {
 
@@ -83,14 +86,15 @@ final class SessionInboxController extends ControllerBase {
     // log writer or the join misses every row.
     $hash = hash('sha256', 'cpr:' . preg_replace('/\D+/', '', $cpr));
 
+    $fields = ['transaction_id', 'subject', 'status', 'payload', 'created'];
+    // The channel column arrives with aabenforms_digital_post_update_11001;
+    // keep serving the inbox on a site where updb has not run yet.
+    $hasChannel = $this->database->schema()->fieldExists('aabenforms_digital_post_log', 'channel');
+    if ($hasChannel) {
+      $fields[] = 'channel';
+    }
     $rows = $this->database->select('aabenforms_digital_post_log', 'l')
-      ->fields('l', [
-        'transaction_id',
-        'subject',
-        'status',
-        'payload',
-        'created',
-      ])
+      ->fields('l', $fields)
       ->condition('l.recipient_type', 'cpr')
       ->condition('l.recipient_identifier_hash', $hash)
       ->orderBy('l.created', 'DESC')
@@ -107,6 +111,9 @@ final class SessionInboxController extends ControllerBase {
         'subject' => $row['subject'] ?? '',
         'body_html' => Xss::filterAdmin($bodyRaw),
         'status' => $row['status'] ?? '',
+        // Channel is digital or physical. A physical row is a (DEMO) print job:
+        // the frontend shows it as "sendt som fysisk brev".
+        'channel' => ($row['channel'] ?? '') === 'physical' ? 'physical' : 'digital',
         'created' => (int) ($row['created'] ?? 0),
         'created_iso' => gmdate('c', (int) ($row['created'] ?? 0)),
       ];

@@ -64,23 +64,54 @@ class ResultTest extends UnitTestCase {
   }
 
   /**
-   * AuditContext() exposes the four log-safe fields and nothing else.
+   * AuditContext() exposes the log-safe fields and nothing else.
    */
   public function testAuditContextShape(): void {
     $r = Result::failure('tx-4', Result::REASON_TRANSPORT, 'network fail', 'PII goes here');
     $ctx = $r->auditContext();
     // Assert the key set, not the order. Insertion order is a PHP
     // implementation detail and not part of the public contract.
-    $expected_keys = ['status', 'transaction_id', 'reason_code', 'message'];
+    $expected_keys = [
+      'status',
+      'transaction_id',
+      'reason_code',
+      'message',
+      'delivery_channel',
+      'registration_status',
+      'manual_followup',
+    ];
     $actual_keys = array_keys($ctx);
     sort($expected_keys);
     sort($actual_keys);
-    $this->assertCount(4, $ctx);
+    $this->assertCount(7, $ctx);
     $this->assertSame($expected_keys, $actual_keys);
     $this->assertSame(Result::FAILURE, $ctx['status']);
     $this->assertSame('tx-4', $ctx['transaction_id']);
     $this->assertSame(Result::REASON_TRANSPORT, $ctx['reason_code']);
     $this->assertSame('network fail', $ctx['message']);
+    $this->assertSame('digital', $ctx['delivery_channel'], 'Digital is the default channel');
+    $this->assertFalse($ctx['manual_followup']);
+  }
+
+  /**
+   * WithDelivery() returns a copy carrying the channel; the original is kept.
+   */
+  public function testWithDelivery(): void {
+    $r = Result::success('tx-6', 'ok');
+    $physical = $r->withDelivery('physical', 'exempt', FALSE);
+    $this->assertSame('digital', $r->deliveryChannel);
+    $this->assertSame('physical', $physical->deliveryChannel);
+    $this->assertSame('exempt', $physical->registrationStatus);
+    $this->assertSame('tx-6', $physical->transactionId);
+    $this->assertTrue($physical->isSuccess());
+  }
+
+  /**
+   * WithDelivery() rejects an unknown channel.
+   */
+  public function testWithDeliveryRejectsInvalidChannel(): void {
+    $this->expectException(\InvalidArgumentException::class);
+    Result::success('tx-7')->withDelivery('pigeon', 'unknown', TRUE);
   }
 
   /**

@@ -20,6 +20,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * branch where the decision letter was confirmed dispatched. Kept separate
  * from MakeDecisionAction, which records the decision but no longer stamps the
  * deadline. Only valid while the case is in "afgoerelse".
+ *
+ * Digital Post fritagelse (#242): the clock starts from the ASSUMED RECEIPT
+ * date, which depends on the delivery channel the send action recorded on the
+ * case. Digital: the send moment (unchanged). Physical letter, or both when
+ * the registration was unknown: send moment + physical_post_delivery_days
+ * (FristClock::assumedReceipt()).
  */
 #[Action(
   id: 'aabenforms_case_set_klagefrist',
@@ -115,9 +121,19 @@ class SetKlagefristAction extends CaseActionBase {
       }
 
       $now = $this->time->getRequestTime();
-      $case->set('klagefrist', $this->fristClock->computeKlagefrist($now, $uger));
+      $channel = $case->hasField('delivery_channel') ? $case->get('delivery_channel')->value : NULL;
+      $channel = is_string($channel) && $channel !== '' ? $channel : NULL;
+      $receipt = $this->fristClock->assumedReceipt($now, $channel);
+      $case->set('klagefrist', $this->fristClock->computeKlagefrist($receipt, $uger));
       $case->setNewRevision(TRUE);
-      $case->setRevisionLogMessage(sprintf('Klagefrist startet (afgørelsesbrev afsendt): %d uger.', $uger));
+      $case->setRevisionLogMessage($receipt === $now
+        ? sprintf('Klagefrist startet (afgørelsesbrev afsendt): %d uger.', $uger)
+        : sprintf(
+          'Klagefrist startet (afgørelsesbrev afsendt som fysisk brev): %d uger fra antaget modtagelse %s (afsendt + %d dage).',
+          $uger,
+          gmdate('Y-m-d', $receipt),
+          $this->fristClock->physicalPostDeliveryDays(),
+        ));
       $case->setRevisionCreationTime($now);
       $case->setRevisionUserId((int) $this->currentUser->id());
       $case->save();
@@ -125,6 +141,8 @@ class SetKlagefristAction extends CaseActionBase {
       $this->recordStep('Klagefrist', sprintf('Sag #%s: klagefrist på %d uger startet.', $caseId, $uger));
       $this->auditLogger->log('case_klagefrist', (string) $caseId, sprintf('%d uger', $uger), 'success', [
         'action_id' => $this->getPluginId(),
+        'delivery_channel' => $channel ?? 'digital',
+        'assumed_receipt' => $receipt,
       ]);
     }
     catch (\Throwable $e) {
