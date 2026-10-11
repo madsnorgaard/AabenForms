@@ -384,6 +384,11 @@ class SendDigitalPostAction extends AabenFormsActionBase {
    * transfer object, so those are unwrapped via getString(). Values are
    * HTML-escaped: templates are HTML, token values are data (register
    * answers, citizen input) and must never become markup.
+   *
+   * A `[webform_submission:values:FIELD]` token is read from the submission
+   * that triggered the flow (as for the recipient). CPR fields are never
+   * rendered into a letter: the token stays as it is, so a template cannot
+   * print a CPR number.
    */
   private function renderTemplate(string $template): string {
     if ($template === '' || !str_contains($template, '[')) {
@@ -392,6 +397,14 @@ class SendDigitalPostAction extends AabenFormsActionBase {
     return preg_replace_callback(
       '/\[([^\]]+)\]/',
       function ($m) {
+        if (preg_match('/^webform_submission:values:([a-zA-Z0-9_]+)(?::raw)?$/', $m[1], $field)) {
+          $entity = $this->eventEntity();
+          $isCpr = $field[1] === 'cpr' || str_ends_with($field[1], '_cpr');
+          $value = !$isCpr && $entity !== NULL ? $entity->getElementData($field[1]) : NULL;
+          return is_string($value) || is_numeric($value)
+            ? htmlspecialchars((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8')
+            : $m[0];
+        }
         $value = $this->tokenService->getTokenData($m[1]);
         if (is_object($value) && method_exists($value, 'getString')) {
           $value = $value->getString();

@@ -147,6 +147,40 @@ class SendDigitalPostActionTest extends UnitTestCase {
    * method_exists($entity, 'getElementData') returns TRUE and the
    * production code's strategy-1 branch is actually exercised.
    */
+  public function testTemplateReadsSubmissionValuesButNeverCpr(): void {
+    $writtenTokens = [];
+    $action = $this->buildAction($this->defaultConfig([
+      'recipient_token' => '[webform_submission:values:applicant_cpr:raw]',
+      'subject_template' => 'Sag [webform_submission:values:case_id]',
+      'body_template' => '<p>Sag nr. [webform_submission:values:case_id] om [webform_submission:values:note]. CPR: [webform_submission:values:applicant_cpr:raw]</p>',
+    ]), $writtenTokens);
+    $this->stubSenderConfig();
+
+    $submission = $this->createMock(WebformSubmissionInterface::class);
+    $submission->method('getElementData')->willReturnMap([
+      ['applicant_cpr', '0101900001'],
+      ['case_id', '217'],
+      ['note', '<b>tekst</b>'],
+    ]);
+    $action->setEvent($this->createMockEventWithEntity($submission));
+
+    $this->sender->method('testMode')->willReturn('fake_db');
+    $this->sender->expects($this->once())
+      ->method('send')
+      ->with($this->callback(static function (DigitalPost $post): bool {
+        return $post->subject === 'Sag 217'
+          // Escaped, never markup; the CPR token is left unrendered.
+          && $post->body === '<p>Sag nr. 217 om &lt;b&gt;tekst&lt;/b&gt;. CPR: [webform_submission:values:applicant_cpr:raw]</p>';
+      }))
+      ->willReturn(Result::success('tx-t', 'sent'));
+
+    $action->execute();
+    $this->assertSame('success', $writtenTokens['digital_post_result_status']);
+  }
+
+  /**
+   * Strategy 1 for the recipient (see above).
+   */
   public function testRecipientStrategy1ReadsFromWebformSubmission(): void {
     $writtenTokens = [];
     $action = $this->buildAction(
