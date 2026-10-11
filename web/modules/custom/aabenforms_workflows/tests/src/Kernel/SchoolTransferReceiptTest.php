@@ -186,6 +186,7 @@ class SchoolTransferReceiptTest extends KernelTestBase {
     $this->assertSame(200, $result['status']);
     $data = $result['body']['data'];
     $this->assertSame((int) $this->submission->id(), $data['submission_id']);
+    $this->assertSame((int) $this->submission->getCreatedTime(), $data['submitted']);
     $this->assertSame('awaiting_decision', $data['stage']);
     $this->assertSame('Emil Nielsen Andersen', $data['child_name']);
     $this->assertSame('Risskov Skole', $data['target_school']);

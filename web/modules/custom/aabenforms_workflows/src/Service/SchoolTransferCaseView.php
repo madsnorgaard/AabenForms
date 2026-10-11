@@ -119,7 +119,8 @@ class SchoolTransferCaseView {
    * The co-signing parent's receipt. Contains no CPR numbers.
    *
    * @return array
-   *   Keys: case_id, submission_id, child_name, current_school,
+   *   Keys: case_id, submission_id, submitted (unix time, so the co-signer's
+   *   inbox can show only this case's letters), child_name, current_school,
    *   target_school, stage (awaiting_decision|decided|in_progress),
    *   case_status, afgoerelse_type, klagefrist (ISO date|null),
    *   signed_by (names), decision_letters_sent_to (names).
@@ -155,6 +156,7 @@ class SchoolTransferCaseView {
     return [
       'case_id' => $case ? (int) $case->id() : NULL,
       'submission_id' => (int) $submission->id(),
+      'submitted' => (int) $submission->getCreatedTime(),
       'child_name' => (string) ($data['child_name'] ?? ''),
       'current_school' => $this->optionLabel($submission, 'current_school'),
       'target_school' => $this->optionLabel($submission, 'target_school'),
