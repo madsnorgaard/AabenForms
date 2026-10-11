@@ -27,7 +27,7 @@ services:
     volumes:
       # Import Danish test realm on startup
       - ./mocks/keycloak/realms/danish-gov-test.json:/opt/keycloak/data/import/danish-gov-test.json
-      - ./mocks/keycloak/themes:/opt/keycloak/themes
+      - ../docker/keycloak/themes:/opt/keycloak/themes
     command:
       - start-dev
       - --import-realm
