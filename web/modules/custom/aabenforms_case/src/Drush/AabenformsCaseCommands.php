@@ -90,8 +90,15 @@ final class AabenformsCaseCommands extends DrushCommands {
           '@frist' => $frist,
         ]));
     }
-    $this->io()->writeln(dt('Seed a MitID session for Birthe with: drush aabenforms:seed-mitid-session birthe'));
-    $this->io()->writeln(dt('Then: curl -H "Authorization: Bearer <workflow id>" "$BASE/api/prefill/klage"'));
+    // Seeded MitID sessions exist only in local development; on the public
+    // demo site the persona logs in through the mock IdP instead.
+    if ($this->demoEnvironment->isLocalDevelopment()) {
+      $this->io()->writeln(dt('Seed a MitID session for Birthe with: drush aabenforms:seed-mitid-session birthe'));
+      $this->io()->writeln(dt('Then: curl -H "Authorization: Bearer <workflow id>" "$BASE/api/prefill/klage"'));
+    }
+    else {
+      $this->io()->writeln(dt('Try it: open /demo/klage and log in as Birthe Jensen, or /demo/klage-fuldmagt as Mikkel Jensen.'));
+    }
     return self::EXIT_SUCCESS;
   }
 
