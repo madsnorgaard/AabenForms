@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\aabenforms_workflows\Controller;
 
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
+use Drupal\aabenforms_core\Http\SessionBearer;
 use Drupal\aabenforms_workflows\Service\SchoolTransferCaseView;
 use Drupal\Core\Controller\ControllerBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -42,7 +43,7 @@ final class SchoolTransferReceiptController extends ControllerBase {
    */
   public function receipt(Request $request): JsonResponse {
     $headers = ['Cache-Control' => 'no-store, private'];
-    $sessionId = self::bearer($request);
+    $sessionId = SessionBearer::fromRequest($request);
     $cpr = $sessionId !== '' ? (string) ($this->sessionManager->getCprFromSession($sessionId) ?? '') : '';
     if ($cpr === '') {
       return new JsonResponse(['error' => 'unauthenticated'], 401, $headers);
@@ -52,17 +53,6 @@ final class SchoolTransferReceiptController extends ControllerBase {
       return new JsonResponse(['error' => 'not_found'], 404, $headers);
     }
     return new JsonResponse(['data' => $this->caseView->receipt($submission)], 200, $headers);
-  }
-
-  /**
-   * The bearer token from the Authorization header, or ''.
-   */
-  public static function bearer(Request $request): string {
-    $header = (string) $request->headers->get('Authorization', '');
-    if (!preg_match('/^Bearer\s+([A-Za-z0-9_.\-]{8,200})$/', trim($header), $m)) {
-      return '';
-    }
-    return $m[1];
   }
 
 }

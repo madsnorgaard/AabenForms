@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_digital_post_session_inbox\Controller;
 
+use Drupal\aabenforms_core\Http\SessionBearer;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
 use Drupal\Component\Utility\Xss;
 use Drupal\Core\Controller\ControllerBase;
@@ -16,11 +17,13 @@ use Symfony\Component\HttpFoundation\Request;
  * Returns recent Digital Post log rows for a MitID session's recipient.
  *
  * Capability model: the workflow session id (15-min tempstore) is the only
- * thing accepted. The controller resolves the session's CPR server-side,
- * hashes it, and queries the log by hash. The CPR never appears in request
- * or response. When the session is absent or expired the response is `[]`
- * with HTTP 200 - the demo frontend renders an empty inbox cleanly without
- * a 404 spike in the browser console.
+ * thing accepted, and only as "Authorization: Bearer <session>" - never in
+ * the URL, where it would land in access logs, history and Referer headers.
+ * The controller resolves the session's CPR server-side, hashes it, and
+ * queries the log by hash. The CPR never appears in request or response.
+ * When the session is absent or expired the response is `[]` with HTTP 200 -
+ * the demo frontend renders an empty inbox cleanly without a 404 spike in
+ * the browser console.
  */
 final class SessionInboxController extends ControllerBase {
 
@@ -52,10 +55,10 @@ final class SessionInboxController extends ControllerBase {
   }
 
   /**
-   * GET /api/digital-post/recent?session={workflow_id}&limit=N.
+   * GET /api/digital-post/recent?limit=N with a Bearer MitID session.
    */
   public function getRecent(Request $request): JsonResponse {
-    $sessionId = (string) $request->query->get('session', '');
+    $sessionId = SessionBearer::fromRequest($request);
     $limit = (int) $request->query->get('limit', self::DEFAULT_LIMIT);
     if ($limit < 1) {
       $limit = self::DEFAULT_LIMIT;
@@ -64,13 +67,15 @@ final class SessionInboxController extends ControllerBase {
       $limit = self::MAX_LIMIT;
     }
 
+    // Letters are personal: never let a proxy or the browser cache them.
+    $headers = ['Cache-Control' => 'no-store, private'];
     if ($sessionId === '') {
-      return new JsonResponse(['data' => []]);
+      return new JsonResponse(['data' => []], 200, $headers);
     }
 
     $cpr = $this->sessionManager->getCprFromSession($sessionId);
     if (!$cpr) {
-      return new JsonResponse(['data' => []]);
+      return new JsonResponse(['data' => []], 200, $headers);
     }
 
     // Match Recipient::identifierHash() in aabenforms_digital_post: it
@@ -107,7 +112,7 @@ final class SessionInboxController extends ControllerBase {
       ];
     }
 
-    return new JsonResponse(['data' => $data]);
+    return new JsonResponse(['data' => $data], 200, $headers);
   }
 
 }
