@@ -12,6 +12,7 @@ use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\webform\WebformSubmissionInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -56,6 +57,10 @@ class SchoolTransferDecisionForm extends FormBase {
   public function buildForm(array $form, FormStateInterface $form_state, ?WebformSubmissionInterface $webform_submission = NULL): array {
     if ($webform_submission === NULL || $webform_submission->getWebform()?->id() !== SchoolTransferCaseView::WEBFORM_ID) {
       throw new NotFoundHttpException();
+    }
+    // Another school's case: the leader may not even read it.
+    if (!$this->caseView->isInScope($webform_submission, $this->currentUser())) {
+      throw new AccessDeniedHttpException();
     }
     $form_state->set('sid', (int) $webform_submission->id());
     $summary = $this->caseView->staffSummary($webform_submission);
@@ -132,6 +137,10 @@ class SchoolTransferDecisionForm extends FormBase {
     }
     if ($this->orgChart->employeeIdForAccountName($this->currentUser()->getAccountName()) === '') {
       $form_state->setErrorByName('decision', $this->t('Your account is not registered as an employee in the organisation, so you cannot make the decision.'));
+      return;
+    }
+    if (!$this->caseView->isInScope($submission, $this->currentUser())) {
+      $form_state->setErrorByName('decision', $this->t('This application is for another school, so you cannot make the decision.'));
       return;
     }
     $decision = (string) $form_state->getValue('decision');

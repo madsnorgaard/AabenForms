@@ -489,8 +489,8 @@ msgstr "Afgør skoleskift"
 msgid "Decision sent"
 msgstr "Afgørelsen er sendt"
 
-msgid "Applications that both custody holders have signed. Open a case to approve or reject the school transfer; the decision letter goes to both parents through Digital Post."
-msgstr "Ansøgninger, som begge forældremyndighedsindehavere har underskrevet. Åbn en sag for at godkende eller afvise skoleskiftet. Afgørelsesbrevet sendes til begge forældre med Digital Post."
+msgid "Applications to your school that both custody holders have signed. Open a case to approve or reject the school transfer; the decision letter goes to both parents through Digital Post."
+msgstr "Ansøgninger til din skole, som begge forældremyndighedsindehavere har underskrevet. Åbn en sag for at godkende eller afvise skoleskiftet. Afgørelsesbrevet sendes til begge forældre med Digital Post."
 
 msgid "Open case"
 msgstr "Åbn sag"
@@ -563,6 +563,9 @@ msgstr "Send afgørelse"
 
 msgid "Your account is not registered as an employee in the organisation, so you cannot make the decision."
 msgstr "Din bruger er ikke registreret som medarbejder i organisationen, så du kan ikke træffe afgørelsen."
+
+msgid "This application is for another school, so you cannot make the decision."
+msgstr "Ansøgningen gælder en anden skole, så du kan ikke træffe afgørelsen."
 
 msgid "Choose a decision."
 msgstr "Vælg en afgørelse."

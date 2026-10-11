@@ -159,3 +159,9 @@ aabenforms_workflows.org_chart:
           tier_limit_cents:
             type: integer
             label: 'Per-claim limit in cents'
+          institution_numbers:
+            type: sequence
+            label: 'Institutions (institutionsnumre) this employee decides for'
+            sequence:
+              type: string
+              label: 'Institution number'

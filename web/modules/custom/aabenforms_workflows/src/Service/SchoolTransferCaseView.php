@@ -9,6 +9,7 @@ use Drupal\aabenforms_core\Service\CprAccess;
 use Drupal\Core\Database\Connection;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\webform\WebformSubmissionInterface;
 
 /**
@@ -19,7 +20,8 @@ use Drupal\webform\WebformSubmissionInterface;
  *    parent's own MitID session, compared server-side with the decrypted
  *    parent2_cpr of the submission. No CPR is returned, only names of the
  *    two custody holders (whom the parent already knows from the request).
- *  - the school leader (staff decision): masked CPRs only.
+ *  - the school leader (staff decision): masked CPRs only, and only the
+ *    cases for the school(s) the org chart binds that leader to.
  */
 class SchoolTransferCaseView {
 
@@ -40,7 +42,33 @@ class SchoolTransferCaseView {
     protected Connection $database,
     protected CprAccess $cprAccess,
     protected FamilyRelationsLookupInterface $familyLookup,
+    protected OrgChartServiceInterface $orgChart,
   ) {
+  }
+
+  /**
+   * The institution numbers whose school transfers this account decides.
+   *
+   * From the administered org chart (employee -> institution_numbers),
+   * never from anything the account can edit itself.
+   *
+   * @return string[]
+   *   Institution numbers; [] for an account bound to no school.
+   */
+  public function schoolsFor(AccountInterface $account): array {
+    $employeeId = $this->orgChart->employeeIdForAccountName((string) $account->getAccountName());
+    return $employeeId === '' ? [] : $this->orgChart->institutionNumbers($employeeId);
+  }
+
+  /**
+   * Whether this account may see and decide the school transfer.
+   *
+   * The receiving school's leader decides whether there is room, so the
+   * scope is the requested (target) school.
+   */
+  public function isInScope(WebformSubmissionInterface $submission, AccountInterface $account): bool {
+    $target = (string) ($submission->getElementData('target_school') ?? '');
+    return $target !== '' && in_array($target, $this->schoolsFor($account), TRUE);
   }
 
   /**
@@ -67,16 +95,19 @@ class SchoolTransferCaseView {
   }
 
   /**
-   * Submissions that both parents signed and that await the decision.
+   * Co-signed submissions awaiting this account's decision.
    *
    * @return \Drupal\webform\WebformSubmissionInterface[]
-   *   Newest first.
+   *   Newest first; only the account's own school(s).
    */
-  public function awaitingDecision(): array {
+  public function awaitingDecision(AccountInterface $account): array {
+    if ($this->schoolsFor($account) === []) {
+      return [];
+    }
     $result = [];
     foreach ($this->recentSids(['parent1_status' => 'complete', 'parent2_status' => 'complete']) as $sid) {
       $submission = $this->loadSubmission($sid);
-      if ($submission && $this->isAwaitingDecision($submission)) {
+      if ($submission && $this->isAwaitingDecision($submission) && $this->isInScope($submission, $account)) {
         $result[] = $submission;
       }
     }
