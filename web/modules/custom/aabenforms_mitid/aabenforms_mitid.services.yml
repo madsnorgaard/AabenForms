@@ -5,6 +5,13 @@ services:
       - '@aabenforms_core.audit_logger'
       - '@logger.factory'
 
+  # Refuses mock IdP settings outside development and the demo site (#79).
+  aabenforms_mitid.config_guard:
+    class: Drupal\aabenforms_mitid\Service\MitIdConfigGuard
+    arguments:
+      - '@config.factory'
+      - '@aabenforms_core.demo_environment'
+
   aabenforms_mitid.session_manager:
     class: Drupal\aabenforms_mitid\Service\MitIdSessionManager
     arguments:

@@ -5,6 +5,7 @@ namespace Drupal\aabenforms_mitid\Controller;
 use Drupal\aabenforms_core\Http\SessionBearer;
 use Drupal\aabenforms_core\Identity\LoginHandoff;
 use Drupal\aabenforms_core\Service\AuditLogger;
+use Drupal\aabenforms_mitid\Service\MitIdConfigGuard;
 use Drupal\aabenforms_mitid\Service\MitIdOidcClient;
 use Drupal\aabenforms_mitid\Service\MitIdSessionManager;
 use Drupal\Core\Controller\ControllerBase;
@@ -56,6 +57,11 @@ class MitIdController extends ControllerBase {
   protected LoginHandoff $loginHandoff;
 
   /**
+   * Refuses mock IdP settings outside development and the demo site (#79).
+   */
+  protected MitIdConfigGuard $configGuard;
+
+  /**
    * Shape of a server-minted workflow id (see login()).
    */
   public const WORKFLOW_ID_PATTERN = '/^wf_[a-f0-9]{32}$/';
@@ -94,6 +100,7 @@ class MitIdController extends ControllerBase {
     );
     $instance->flood = $container->get('flood');
     $instance->loginHandoff = $container->get('aabenforms_core.login_handoff');
+    $instance->configGuard = $container->get('aabenforms_mitid.config_guard');
     return $instance;
   }
 
@@ -110,6 +117,13 @@ class MitIdController extends ControllerBase {
    *   valid client_challenge.
    */
   public function login(Request $request): Response {
+    // Never authenticate citizens against mock IdP settings by accident.
+    if (!$this->configGuard->isAllowed()) {
+      $this->getLogger('aabenforms_mitid')->error('MitID login refused: mock IdP settings outside development (@p).', [
+        '@p' => implode(', ', $this->configGuard->problems()),
+      ]);
+      return new JsonResponse(['error' => 'MitID is not configured for this site'], 503);
+    }
     // Always server-mint the workflow ID. It is the bearer capability for the
     // session payload (the session is stored under it), so a client must never
     // be allowed to choose it - honoring a ?workflow_id= would let a caller fix
