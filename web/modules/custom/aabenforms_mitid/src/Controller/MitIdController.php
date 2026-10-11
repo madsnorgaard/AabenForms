@@ -295,13 +295,19 @@ class MitIdController extends ControllerBase {
   /**
    * RP-initiated logout.
    *
-   * Route: GET /mitid/logout?return_url=...
+   * Route: GET|POST /mitid/logout?return_url=...
    *
-   * Revokes the MitID session bound to THIS browser's Drupal session (key
-   * mitid_workflow_id - never a workflow id from the URL), clears the Drupal
-   * session keys, then sends the browser to the IdP end_session endpoint so
-   * the IdP session ends too (on a shared device the next citizen must not be
-   * offered the previous one). return_url gets the same guard as login().
+   * Revokes the MitID session and sends the browser to the IdP end_session
+   * endpoint so the IdP session ends too (on a shared device the next citizen
+   * must not be offered the previous one). return_url gets the same guard as
+   * login().
+   *
+   * Which session: a top-level POST from the SPA carries its own session id
+   * in the form body (session_id) - like revoke, never in the URL. Otherwise
+   * the one bound to THIS browser's Drupal session (key mitid_workflow_id).
+   * The SPA's own id matters: a co-sign on /parent-approval consumes the
+   * Drupal-session binding, and without an id_token_hint Keycloak stops on
+   * its own "Do you want to log out?" page.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
@@ -318,10 +324,22 @@ class MitIdController extends ControllerBase {
 
     $idToken = NULL;
     $session = $request->hasSession() ? $request->getSession() : NULL;
-    $workflowId = $session ? $session->get('mitid_workflow_id') : NULL;
-    if (is_string($workflowId) && preg_match(self::WORKFLOW_ID_PATTERN, $workflowId)) {
+    $workflowIds = [];
+    if ($request->isMethod('POST')) {
+      // Same envelope as revoke(): a body id is a capability guess otherwise.
+      $floodId = (string) $request->getClientIp();
+      if ($this->flood->isAllowed(self::REVOKE_FLOOD_EVENT, self::REVOKE_FLOOD_LIMIT, self::REVOKE_FLOOD_WINDOW, $floodId)) {
+        $this->flood->register(self::REVOKE_FLOOD_EVENT, self::REVOKE_FLOOD_WINDOW, $floodId);
+        $workflowIds[] = $request->request->get('session_id');
+      }
+    }
+    $workflowIds[] = $session ? $session->get('mitid_workflow_id') : NULL;
+    foreach (array_unique(array_filter($workflowIds, 'is_string')) as $workflowId) {
+      if (!preg_match(self::WORKFLOW_ID_PATTERN, $workflowId)) {
+        continue;
+      }
       $this->sessionManager->revokeSession($workflowId);
-      $idToken = $this->sessionManager->takeLogoutIdToken($workflowId);
+      $idToken ??= $this->sessionManager->takeLogoutIdToken($workflowId);
     }
 
     // Clear MitID session data.
