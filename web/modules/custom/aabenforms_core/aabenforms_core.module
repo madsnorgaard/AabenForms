@@ -198,12 +198,14 @@ function aabenforms_core_user_login($account): void {
 /**
  * Implements hook_cron().
  *
- * Purges audit log entries older than the configured retention window.
- * Default is 1825 days (5 years) to align with GDPR audit-retention
+ * Runs one batch of the intake-copy retention policy, then purges audit log
+ * entries older than the configured retention window. Default is 1825 days (5 years) to align with GDPR audit-retention
  * expectations. Set aabenforms_core.settings audit.retention_days to 0 to
  * disable purging, or raise the batch size if cron falls behind.
  */
 function aabenforms_core_cron(): void {
+  aabenforms_core_retention_cron();
+
   $config = \Drupal::config('aabenforms_core.settings');
   $retention = (int) $config->get('audit.retention_days');
   if ($retention < 1) {
@@ -217,6 +219,38 @@ function aabenforms_core_cron(): void {
       'Audit log purge removed @count entries older than @days days.',
       ['@count' => $deleted, '@days' => $retention]
     );
+  }
+}
+
+/**
+ * Runs one batch of the intake-copy retention policy (issue #91).
+ *
+ * Batch-limited by aabenforms_core.retention:batch_size so cron stays fast;
+ * a backlog drains over successive runs. Only closed and journalised cases
+ * outside a legal hold, and submissions that never became a case, are ever
+ * purged (see RetentionManager).
+ */
+function aabenforms_core_retention_cron(): void {
+  /** @var \Drupal\aabenforms_core\Retention\RetentionManager $manager */
+  $manager = \Drupal::service('aabenforms_core.retention_manager');
+  if (!$manager->policy()->enabled) {
+    return;
+  }
+  try {
+    $report = $manager->run(FALSE, NULL, 'cron');
+  }
+  catch (\Throwable $e) {
+    \Drupal::logger('aabenforms_retention')->error('Retention cron failed: @class', ['@class' => get_class($e)]);
+    return;
+  }
+  $purged = count($report['cases']) + count($report['unlinked_submissions']);
+  if ($purged > 0 || $report['digital_post_aged'] > 0 || $report['failed'] !== []) {
+    \Drupal::logger('aabenforms_retention')->info('Retention purged @cases cases, @subs unlinked submissions, redacted @dp Digital Post log rows; @failed failed.', [
+      '@cases' => count($report['cases']),
+      '@subs' => count($report['unlinked_submissions']),
+      '@dp' => $report['digital_post_aged'] + $report['digital_post_redacted'],
+      '@failed' => count($report['failed']),
+    ]);
   }
 }
 

@@ -29,7 +29,7 @@ vedligeholdes som liste pr. kontrakt.]
 | 6 | Journalisering/aflevering | Overdragelse af sag og dokumenter til kommunens ESDH/fagsystem via konnektor |
 | 7 | Auditlogning | Logning af al adgang til personoplysninger (bruger, handling, formål, status, IP, hashet identifikator); retention 5 år, automatisk oprydning |
 | 8 | Backup og gendannelse | Krypterede backups af produktionsdata, [30 dage rullende] |
-| 9 | Sletning | Sletning efter den dataansvarliges instruks; automatiseret retention pr. sagstype er planlagt (issue #91), p.t. dokumenteret manuel procedure |
+| 9 | Sletning | Sletning efter den dataansvarliges instruks. Automatiseret retention er bygget (issue #91, se RETENTION.md): modtagekopier slettes efter fastsatte frister, når sagen er lukket og journaliseret i ESDH, og ikke under tilbageholdelse. Slås til pr. kommune, når fristerne er fastsat; indtil da dokumenteret manuel procedure |
 
 ### Overførsler til tredjelande
 

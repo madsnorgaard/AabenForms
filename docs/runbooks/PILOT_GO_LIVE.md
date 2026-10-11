@@ -9,7 +9,7 @@ Most of the work is agreements, certificates and decisions, not code. Each item 
 - [ ] **Databehandleraftale signed.** Draft: `docs/compliance/DATABEHANDLERAFTALE.md`. Owner: kommune jurist and AabenForms.
 - [ ] **DPIA owned by the kommune.** Draft: `docs/compliance/DPIA_KONSEKVENSANALYSE.md`. The kommune is dataansvarlig and approves the final version. Owner: kommune DPO.
 - [ ] **Art. 30 record updated** per workflow in the pilot (`docs/compliance/FORTEGNELSE_ART30.md`). Owner: kommune DPO.
-- [ ] **Retention periods set** per workflow from the kommune's kassationsbestemmelser (config `aabenforms_core.retention`, see `docs/compliance/RETENTION.md`). The shipped values are placeholders. Owner: kommune DPO and arkivansvarlig. Issue #91.
+- [ ] **Retention periods set and retention switched on.** Set the periods per workflow from the kommune's kassationsbestemmelser, then `enabled: true` (config `aabenforms_core.retention`, see `docs/compliance/RETENTION.md`). It ships switched off with placeholder values. Run `drush aabenforms:retention:run --dry-run` first. Owner: kommune DPO and arkivansvarlig. Issue #91.
 - [ ] **KL Blanketsamling subscription** confirmed, if the pilot replaces a KL blanket. Owner: kommune.
 
 ## 2. Identity: NemLog-in (MitID for citizens)

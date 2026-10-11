@@ -336,6 +336,23 @@ function aabenforms_core_update_11005(): string {
 }
 
 /**
+ * Creates aabenforms_core.retention with the shipped defaults (#91).
+ */
+function aabenforms_core_update_11006(): string {
+  $config = \Drupal::configFactory()->getEditable('aabenforms_core.retention');
+  if (!$config->isNew()) {
+    return 'no changes - aabenforms_core.retention already present';
+  }
+  $path = \Drupal::service('extension.list.module')->getPath('aabenforms_core') . '/config/install';
+  $defaults = (new FileStorage($path))->read('aabenforms_core.retention');
+  if (!is_array($defaults)) {
+    throw new \RuntimeException('Default aabenforms_core.retention config is missing from the module.');
+  }
+  $config->setData($defaults)->save();
+  return 'created aabenforms_core.retention (placeholder periods; the kommune DPO must set them, see docs/compliance/RETENTION.md)';
+}
+
+/**
  * Implements hook_uninstall().
  */
 function aabenforms_core_uninstall(): void {
