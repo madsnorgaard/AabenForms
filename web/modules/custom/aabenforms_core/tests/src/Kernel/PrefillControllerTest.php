@@ -10,6 +10,8 @@ use Drupal\aabenforms_core\Prefill\LegalBasis;
 use Drupal\Core\Serialization\Yaml;
 use Drupal\Core\Session\UserSession;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\encrypt\Entity\EncryptionProfile;
+use Drupal\key\Entity\Key;
 use Drupal\webform\Entity\Webform;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -361,6 +363,76 @@ class PrefillControllerTest extends KernelTestBase {
     $this->assertArrayHasKey('prefill_cases', $rows);
     $this->assertSame(hash('sha256', self::BIRTHE_CPR), $rows['prefill_cases']['identifier_hash']);
     $this->assertSame((int) $rows['prefill_cases']['id'], $cases['audit_id']);
+  }
+
+  /**
+   * On a demo site the klage demo never runs dry; elsewhere prefill is read-only.
+   */
+  public function testKlageDemoAlwaysHasAnAppealableCase(): void {
+    // The seeded application carries a CPR, encrypted at rest as in
+    // production; without a profile the presave hook refuses to store it.
+    Key::create([
+      'id' => 'aabenforms_cpr_test',
+      'label' => 'CPR test key',
+      'key_type' => 'encryption',
+      'key_type_settings' => ['key_size' => '256'],
+      'key_provider' => 'config',
+      'key_provider_settings' => ['key_value' => base64_encode(random_bytes(32)), 'base64_encoded' => TRUE],
+      'key_input' => 'none',
+    ])->save();
+    EncryptionProfile::create([
+      'id' => 'aabenforms_aes256',
+      'label' => 'AES 256',
+      'encryption_method' => 'real_aes',
+      'encryption_key' => 'aabenforms_cpr_test',
+    ])->save();
+    $storage = $this->container->get('entity_type.manager')->getStorage('aabenforms_case');
+    // Birthe's only case was already appealed in an earlier demo run.
+    $storage->create([
+      'title' => 'Merudgifter - afslag (demo)',
+      'case_type' => 'merudgifter',
+      'status' => 'paaklaget',
+      'afgoerelse_type' => 'afslag',
+      'subject_cpr_hash' => CaseLookup::hashCpr(self::BIRTHE_CPR),
+    ])->save();
+    // A stored (not demo-seeded) session: seeded ones only work on DDEV.
+    $birthe = 'wf_' . bin2hex(random_bytes(16));
+    $this->container->get('aabenforms_mitid.session_manager')->storeSession($birthe, [
+      'cpr' => self::BIRTHE_CPR,
+      'name' => 'Birthe Jensen',
+    ]);
+
+    // Not a demo site: nothing is created, nothing to appeal.
+    $ddev = getenv('DDEV_HOSTNAME');
+    putenv('DDEV_HOSTNAME');
+    putenv('AABENFORMS_DEMO_SITE');
+    $before = (int) $storage->getQuery()->accessCheck(FALSE)->count()->execute();
+    $readOnly = $this->prefill('klage', $birthe);
+    $this->assertSame($before, (int) $storage->getQuery()->accessCheck(FALSE)->count()->execute(), 'Prefill never writes outside a demo site');
+    $this->assertSame(200, $readOnly['status'], json_encode($readOnly['body']));
+    $this->assertNull($readOnly['body']['fields']['case_id']['value'] ?? NULL);
+
+    // The demo site: a fresh decided case appears, exactly once.
+    putenv('AABENFORMS_DEMO_SITE=1');
+    $demo = $this->prefill('klage', $birthe);
+    $this->assertNotNull($demo['body']['fields']['case_id']['value'], json_encode($demo['body']['fields']['case_id']));
+    $this->prefill('klage', $birthe);
+    $this->assertSame($before + 1, (int) $storage->getQuery()->accessCheck(FALSE)->count()->execute(), 'An appealable case is never duplicated');
+    $seededRows = $this->container->get('database')->select('aabenforms_audit_log', 'a')
+      ->condition('action', 'demo_case_seeded')->countQuery()->execute()->fetchField();
+    $this->assertSame(1, (int) $seededRows, 'The seeding is audited once');
+
+    // Another persona never gets a demo case.
+    $freja = 'wf_' . bin2hex(random_bytes(16));
+    $this->container->get('aabenforms_mitid.session_manager')->storeSession($freja, [
+      'cpr' => self::FREJA_CPR,
+      'name' => 'Freja Nielsen',
+    ]);
+    $this->prefill('klage', $freja);
+    $this->assertSame($before + 1, (int) $storage->getQuery()->accessCheck(FALSE)->count()->execute());
+
+    putenv('AABENFORMS_DEMO_SITE');
+    putenv($ddev === FALSE ? 'DDEV_HOSTNAME' : 'DDEV_HOSTNAME=' . $ddev);
   }
 
   /**
