@@ -1,472 +1,237 @@
-/* AabenForms MitID-style mock theme.
+/* ÅbenForms mock MitID login - Det Fælles Designsystem (DKFDS), Virk theme.
  *
- * Visual language: Danish gov-tech credibility - navy + coral, Atkinson
- * Hyperlegible Next, generous whitespace, soft elevation. The "demo" banner
- * is a non-negotiable: every interaction screen must surface that this is a
- * mock IdP and no real CPR is in flight. */
+ * PatternFly is not loaded (stylesCommon is empty in theme.properties), so
+ * these are the only rules on the page. Values follow DKFDS: IBM Plex Sans,
+ * primary #0059B3 / hover #004993, text #1A1A1A, grays #F5F5F5 / #DCDCDC /
+ * #454545, 48px inputs with a 1px #454545 border and 4px radius, and the
+ * DKFDS focus ring. The warning alert stays on every screen: this is a mock
+ * IdP and no real CPR number is in flight. */
 
-@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;600;700&display=swap');
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 400; font-display: swap; src: url('../fonts/IBMPlexSans-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 500; font-display: swap; src: url('../fonts/IBMPlexSans-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 600; font-display: swap; src: url('../fonts/IBMPlexSans-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'IBM Plex Sans'; font-style: normal; font-weight: 700; font-display: swap; src: url('../fonts/IBMPlexSans-Bold.woff2') format('woff2'); }
 
 :root {
-    --af-navy: #0a2240;
-    --af-navy-deep: #061830;
-    --af-coral: #ff5a5f;
-    --af-coral-hover: #ff3d44;
-    --af-paper: #ffffff;
-    --af-canvas: #eef1f6;
-    --af-line: #d8dde6;
-    --af-text: #11203a;
-    --af-text-soft: #5b6781;
-    --af-amber: #f4b21a;
-    --af-amber-soft: #fff4d2;
-    --af-radius: 12px;
-    --af-radius-sm: 8px;
-    --af-shadow: 0 24px 60px rgba(10, 34, 64, 0.14), 0 6px 16px rgba(10, 34, 64, 0.08);
+    --fds-primary: #0059B3;
+    --fds-primary-dark: #004993;
+    --fds-text: #1A1A1A;
+    --fds-gray-100: #F5F5F5;
+    --fds-gray-300: #DCDCDC;
+    --fds-gray-700: #454545;
+    --fds-error: #B51D09;
+    --fds-warning-bg: #FFF4D6;
+    --fds-warning-border: #E3A700;
+    --fds-focus: 0 0 0 4px #FFFFFF, 0 0 0 7px #454545;
 }
+
+*, *::before, *::after { box-sizing: border-box; }
 
 html, body {
     margin: 0;
     padding: 0;
-    background: var(--af-canvas);
-    color: var(--af-text);
-    font-family: 'Atkinson Hyperlegible Next', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background: var(--fds-gray-100);
+    color: var(--fds-text);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
     font-size: 16px;
     line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
 }
 
-/* Hide Keycloak's default page chrome - the inherited template.ftl wraps
- * the form with a header section, page title and a dark patterned bg image
- * we don't want. We hide the lot and re-anchor inside the form section. */
-.aabenforms-hidden-title,
-#kc-page-title,
-.login-pf-header,
-.login-pf-page-header,
-#kc-header,
-#kc-header-wrapper { display: none !important; }
-
-/* Page background gets a subtle navy gradient hairline at the top edge to
- * frame the login card. */
-body::before {
-    content: '';
-    position: fixed;
-    inset: 0 0 auto 0;
-    height: 6px;
-    background: linear-gradient(90deg, var(--af-navy) 0%, var(--af-coral) 100%);
-    z-index: 50;
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
-/* Aggressive backdrop reset - kill the inherited diamond pattern bg image
- * and the dark gradient the parent theme paints behind everything. The
- * Keycloak parent CSS sets the diamond pattern via a body background-image
- * and an injected ::before pseudo - we wipe both. */
-html, html body,
-html.login-pf, body.login-pf, body.login-pf-body,
-.login-pf, .login-pf-page,
-.login-pf-page-header, .login-pf-body {
-    background: var(--af-canvas) !important;
-    background-image: none !important;
-    background-color: var(--af-canvas) !important;
-    color: var(--af-text) !important;
+/* Header row 1 (portal-info): ÅbenForms mark + wordmark. The wordmark text
+ * comes from the loginTitleHtml message; the mark is painted by ::before. */
+.af-portal {
+    background: #FFFFFF;
+    border-bottom: 1px solid var(--fds-gray-300);
 }
-
-body::after, .login-pf-page::before, .login-pf-page::after,
-.login-pf-body::before, .login-pf-body::after {
-    background: none !important;
-    background-image: none !important;
-    content: none !important;
-    display: none !important;
-}
-
-.login-pf-page {
-    padding-top: 64px;
-    padding-bottom: 64px;
-    min-height: 100vh;
-    box-sizing: border-box;
-    position: relative;
-    z-index: 1;
-}
-
-.card-pf {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    max-width: 480px;
+.af-portal-inner {
+    max-width: 1200px;
     margin: 0 auto;
-}
-
-#kc-content,
-#kc-content-wrapper {
-    background: var(--af-paper);
-    border-radius: var(--af-radius);
-    box-shadow: var(--af-shadow);
-    padding: 0;
-    overflow: hidden;
-    border: 1px solid var(--af-line);
-}
-
-#kc-form,
-#kc-form-wrapper {
-    background: transparent;
-    padding: 0 32px 28px;
-}
-
-/* Brand header - navy band with logo + "MitID Demo" tag. */
-.aabenforms-brand-header {
-    background: linear-gradient(140deg, var(--af-navy) 0%, var(--af-navy-deep) 100%);
-    color: var(--af-paper);
-    padding: 28px 32px 24px;
-}
-
-.aabenforms-brand-row {
+    padding: 16px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-}
-
-.aabenforms-logo {
-    height: 32px;
-    width: auto;
-    display: block;
-}
-
-.aabenforms-brand-mark {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 12px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.aabenforms-brand-tag {
-    margin: 12px 0 0;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 13px;
-    line-height: 1.45;
-}
-
-/* Demo banner - amber, immediately under the brand header. */
-.aabenforms-demo-banner {
-    display: flex;
     gap: 12px;
-    align-items: flex-start;
-    background: var(--af-amber-soft);
-    color: #5a4505;
-    padding: 14px 32px;
-    border-bottom: 1px solid #f0e0a8;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.aabenforms-demo-banner-icon {
-    color: var(--af-amber);
-    font-size: 18px;
-    line-height: 1;
-    flex-shrink: 0;
-    margin-top: 2px;
-}
-
-.aabenforms-demo-banner strong {
-    display: block;
-    color: #4a3a04;
-    margin-bottom: 2px;
-    font-weight: 700;
-}
-
-.aabenforms-demo-banner-body {
-    display: block;
-    color: #6a5510;
-}
-
-/* Page title inside the card. */
-.aabenforms-pagetitle {
-    margin: 28px 32px 18px;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--af-text);
-}
-
-/* Persona switcher - one-click demo login row. Sits above the form so the
- * keyboard order is preserved: persona buttons come first, then username,
- * then password, then submit (tab indices 2/3/4 on the form inputs). */
-.aabenforms-personas {
-    margin: 0 32px 20px;
-    padding: 14px 16px 16px;
-    background: #f5f7fb;
-    border: 1px solid var(--af-line);
-    border-radius: var(--af-radius-sm);
-}
-
-.aabenforms-personas-title {
-    margin: 0 0 10px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--af-text-soft);
-}
-
-.aabenforms-personas-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.aabenforms-persona {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 2px;
-    padding: 9px 12px;
-    border: 1.5px solid var(--af-line);
-    border-radius: var(--af-radius-sm);
-    background: var(--af-paper);
-    color: var(--af-text);
-    font-family: inherit;
-    text-align: left;
-    cursor: pointer;
-    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
-}
-
-.aabenforms-persona:hover {
-    border-color: var(--af-navy);
-    background: #fbfcfe;
-}
-
-.aabenforms-persona:active {
-    transform: translateY(1px);
-}
-
-.aabenforms-persona.is-active {
-    border-color: var(--af-coral);
-    background: #fff4f4;
-    box-shadow: 0 0 0 2px rgba(255, 90, 95, 0.12);
-}
-
-.aabenforms-persona-name {
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-.aabenforms-persona-meta {
-    font-size: 11px;
-    color: var(--af-text-soft);
-    line-height: 1.2;
-}
-
-@media (max-width: 380px) {
-    .aabenforms-personas-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Form fields. */
-.aabenforms-field {
-    margin-bottom: 18px;
-}
-
-.aabenforms-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 13px;
+    font-size: 20px;
     font-weight: 600;
-    color: var(--af-text);
-    letter-spacing: 0.01em;
+    color: var(--fds-text);
+}
+.af-portal-inner::before {
+    content: '';
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    background: url('../img/mark.svg') no-repeat center / contain;
 }
 
-.aabenforms-input,
-input[type="text"]#username,
-input[type="password"]#password {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px 14px;
-    border: 1.5px solid var(--af-line);
-    border-radius: var(--af-radius-sm);
-    background: var(--af-paper);
-    color: var(--af-text);
-    font-family: inherit;
-    font-size: 15px;
-    line-height: 1.4;
-    transition: border-color 120ms ease, box-shadow 120ms ease;
+.af-page { min-height: 100vh; }
+
+.af-card {
+    max-width: 560px;
+    margin: 32px auto 48px;
+    padding: 32px 40px 24px;
+    background: #FFFFFF;
+    border: 1px solid var(--fds-gray-300);
+    border-radius: 4px;
 }
 
-.aabenforms-input:focus,
-input[type="text"]#username:focus,
-input[type="password"]#password:focus {
-    outline: none;
-    border-color: var(--af-navy);
-    box-shadow: 0 0 0 3px rgba(10, 34, 64, 0.12);
+.af-card-header { position: relative; }
+
+#kc-page-title {
+    margin: 0 0 24px;
+    font-size: 32px;
+    line-height: 1.25;
+    font-weight: 600;
+    color: var(--fds-text);
 }
 
-.aabenforms-input[aria-invalid="true"] {
-    border-color: var(--af-coral);
-    box-shadow: 0 0 0 3px rgba(255, 90, 95, 0.12);
-}
+/* Language switcher (Keycloak locale dropdown) as plain function links. */
+#kc-locale { margin: 0 0 16px; }
+#kc-current-locale-link { display: none; }
+#kc-locale ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; justify-content: flex-end; }
 
-.aabenforms-error {
+a, .af-link {
+    color: var(--fds-primary);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+a:hover, .af-link:hover { color: var(--fds-primary-dark); text-decoration-thickness: 2px; }
+a:focus-visible { outline: none; box-shadow: var(--fds-focus); border-radius: 2px; }
+
+/* DKFDS alert. */
+.alert {
+    position: relative;
+    margin: 0 0 24px;
+    padding: 16px 16px 16px 56px;
+    border: 1px solid var(--fds-gray-700);
+    border-left-width: 8px;
+    border-radius: 4px;
+    background: #FFFFFF;
+}
+.alert::before {
+    content: '!';
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--fds-text);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 16px;
+    line-height: 24px;
+    text-align: center;
+}
+.alert p { margin: 0; }
+.alert-heading { font-weight: 600; }
+.alert-warning { background: var(--fds-warning-bg); border-color: var(--fds-warning-border); }
+.alert-warning::before { background: #1A1A1A; }
+.alert-error { background: #FBE9E7; border-color: var(--fds-error); }
+.alert-error::before { background: var(--fds-error); }
+.alert-success { background: #E8F5E9; border-color: #358000; }
+.alert-success::before { content: '\2713'; background: #358000; }
+.alert-info { background: #E6F0F9; border-color: var(--fds-primary); }
+.alert-info::before { content: 'i'; background: var(--fds-primary); }
+.pf-c-alert__icon { display: none; }
+
+/* DKFDS form. */
+.form-group { margin: 0 0 24px; }
+.form-label {
     display: block;
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--af-coral-hover);
-    font-weight: 500;
+    margin: 0 0 8px;
+    font-weight: 600;
+    font-size: 16px;
 }
+.form-hint { margin: 0 0 24px; color: var(--fds-gray-700); font-size: 14px; }
 
-.aabenforms-helper-row {
-    margin: -8px 0 18px;
+.form-input,
+input[type="text"], input[type="password"], input[type="email"] {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: 48px;
+    padding: 8px 12px;
+    font: inherit;
+    color: var(--fds-text);
+    background: #FFFFFF;
+    border: 1px solid var(--fds-gray-700);
+    border-radius: 4px;
+    appearance: none;
 }
-
-.aabenforms-helper {
-    font-size: 12px;
-    color: var(--af-text-soft);
+.form-input:focus, input:focus {
+    outline: none;
+    box-shadow: var(--fds-focus);
 }
+.form-error { border-left: 4px solid var(--fds-error); padding-left: 16px; }
+.form-error .form-input { border: 2px solid var(--fds-error); }
+.form-error-message { display: block; margin: 0 0 8px; color: var(--fds-error); font-weight: 600; }
 
-/* Primary CTA - coral with arrow. */
-.aabenforms-actions {
-    margin-top: 24px;
+/* Username prefilled from login_hint: read-only, with a way out. */
+.af-hinted {
+    padding: 16px;
+    background: var(--fds-gray-100);
+    border: 1px solid var(--fds-gray-300);
+    border-radius: 4px;
 }
+.af-hinted-text { margin: 0 0 4px; font-size: 18px; }
+.af-hinted-text strong { font-weight: 600; }
 
-.aabenforms-button-primary,
-button#kc-login {
+/* DKFDS buttons. */
+.af-actions { margin: 8px 0 0; }
+.button, button, input[type="submit"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 14px 20px;
-    border: none;
-    border-radius: var(--af-radius-sm);
-    background: var(--af-coral);
-    color: var(--af-paper);
-    font-family: inherit;
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    cursor: pointer;
-    transition: background 120ms ease, transform 120ms ease;
-}
-
-.aabenforms-button-primary:hover,
-button#kc-login:hover {
-    background: var(--af-coral-hover);
-}
-
-.aabenforms-button-primary:active,
-button#kc-login:active {
-    transform: translateY(1px);
-}
-
-.aabenforms-button-arrow {
-    font-size: 18px;
-    line-height: 1;
-}
-
-/* Footer copy under form. */
-.aabenforms-foot {
-    margin: 22px 32px 28px;
-    padding-top: 18px;
-    border-top: 1px solid var(--af-line);
-    text-align: center;
-}
-
-.aabenforms-foot-line {
-    margin: 4px 0;
-    font-size: 12px;
-    color: var(--af-text-soft);
+    min-height: 48px;
+    padding: 8px 24px;
+    font: inherit;
+    font-weight: 600;
     line-height: 1.5;
-}
-
-/* Locale switcher - top-right of the card area. Keycloak renders it as
- * #kc-locale; we want it visible but minimal. */
-#kc-locale {
-    position: absolute;
-    top: 18px;
-    right: 18px;
-    z-index: 60;
-}
-
-#kc-locale ul {
-    display: flex;
-    gap: 6px;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-}
-
-#kc-locale a {
-    display: inline-block;
-    padding: 6px 10px;
-    border-radius: 6px;
-    color: var(--af-text-soft);
-    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
     text-decoration: none;
-    background: rgba(255, 255, 255, 0.7);
-    border: 1px solid var(--af-line);
+}
+.button-primary, button[type="submit"], input[type="submit"] {
+    color: #FFFFFF;
+    background: var(--fds-primary);
+    border: 1px solid var(--fds-primary);
+}
+.button-primary:hover, button[type="submit"]:hover, input[type="submit"]:hover {
+    background: var(--fds-primary-dark);
+    border-color: var(--fds-primary-dark);
+}
+.button-primary:active { background: #003870; }
+.button:focus-visible, button:focus-visible, input[type="submit"]:focus-visible {
+    outline: none;
+    box-shadow: var(--fds-focus);
+}
+.button-primary:disabled { background: var(--fds-gray-300); border-color: var(--fds-gray-300); color: var(--fds-gray-700); cursor: default; }
+.button-secondary {
+    color: var(--fds-primary);
+    background: #FFFFFF;
+    border: 1px solid var(--fds-primary);
 }
 
-#kc-locale a:hover {
-    background: var(--af-paper);
-    color: var(--af-navy);
+.af-foot {
+    margin: 32px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--fds-gray-300);
+    color: var(--fds-gray-700);
+    font-size: 14px;
+}
+.af-foot p { margin: 0 0 4px; }
+
+@media (max-width: 600px) {
+    .af-card { margin: 0; padding: 24px 16px; border: 0; border-radius: 0; }
+    #kc-page-title { font-size: 26px; }
+    .af-actions .button { width: 100%; }
 }
 
-/* Alert messages from Keycloak - re-skin as our coral/amber/green. */
-.alert {
-    border-radius: var(--af-radius-sm);
-    padding: 12px 14px;
-    margin: 0 32px 16px;
-    font-size: 13px;
-    border: 1px solid transparent;
-}
-
-.alert-error {
-    background: #fde9ea;
-    color: #8a1a1f;
-    border-color: #f5b7ba;
-}
-
-.alert-warning {
-    background: var(--af-amber-soft);
-    color: #6a5510;
-    border-color: #f0e0a8;
-}
-
-.alert-success {
-    background: #e3f4ea;
-    color: #155f3b;
-    border-color: #a7d8bb;
-}
-
-/* Mobile. */
-@media (max-width: 540px) {
-    .login-pf-page,
-    body.login-pf {
-        padding-top: 24px;
-        padding-bottom: 24px;
-    }
-    .card-pf {
-        max-width: 100%;
-        margin: 0 16px;
-    }
-    .aabenforms-brand-header,
-    .aabenforms-demo-banner,
-    .aabenforms-pagetitle,
-    #kc-form-wrapper,
-    .aabenforms-foot {
-        padding-left: 22px;
-        padding-right: 22px;
-    }
-    .aabenforms-foot {
-        margin-left: 0;
-        margin-right: 0;
-    }
-}
+/* "Ikke dig?": swap the read-only name for the editable username field. */
+.af-change-user { display: none; }
+.af-change-user:target { display: block; }
+.af-hinted-wrap:has(.af-change-user:target) .af-hinted { display: none; }

@@ -49,7 +49,8 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "attributes": {
-        "access.token.lifespan": "3600"
+        "access.token.lifespan": "3600",
+        "post.logout.redirect.uris": "https://aabenforms.dk/*##https://api.aabenforms.dk/*"
       },
       "protocolMappers": [
         {
@@ -228,6 +229,34 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "true"
           }
+        },
+        {
+          "name": "digital_post_exempt",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "digital_post_exempt",
+            "claim.name": "digital_post_exempt",
+            "jsonType.label": "boolean",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "fuldmagt",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "fuldmagt",
+            "claim.name": "fuldmagt",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
         }
       ]
     },
@@ -350,6 +379,9 @@
         ],
         "description": [
           "Typical citizen - Most common Danish surname"
+        ],
+        "fuldmagt": [
+          "[{\"cpr\":\"2403482210\",\"name\":\"Birthe Jensen\",\"scopes\":[\"klage\",\"digital_post_copy\"]}]"
         ]
       },
       "realmRoles": [
@@ -693,6 +725,59 @@
       "realmRoles": [
         "user"
       ]
+    },
+    {
+      "username": "birthe.jensen",
+      "firstName": "Birthe",
+      "lastName": "Jensen",
+      "email": "birthe.jensen@example.dk",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "test1234",
+          "temporary": false
+        }
+      ],
+      "attributes": {
+        "cpr": [
+          "2403482210"
+        ],
+        "birthdate": [
+          "1948-03-24"
+        ],
+        "given_name": [
+          "Birthe"
+        ],
+        "family_name": [
+          "Jensen"
+        ],
+        "street": [
+          "Skovvejen 12, st. tv."
+        ],
+        "postal_code": [
+          "8000"
+        ],
+        "city": [
+          "Aarhus C"
+        ],
+        "municipality_code": [
+          "0751"
+        ],
+        "digital_post_exempt": [
+          "true"
+        ],
+        "assurance_level": [
+          "http://eidas.europa.eu/LoA/substantial"
+        ],
+        "description": [
+          "Elderly citizen (born 1948), Digital Post exempt, mother of Mikkel Jensen - klage / digital inclusion scenario"
+        ]
+      },
+      "realmRoles": [
+        "user"
+      ]
     }
   ],
   "roles": {
@@ -808,5 +893,18 @@
     "ssn"
   ],
   "browserFlow": "browser",
-  "directGrantFlow": "direct grant"
+  "directGrantFlow": "direct grant",
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}],\"unmanagedAttributePolicy\":\"ENABLED\"}"
+          ]
+        }
+      }
+    ]
+  }
 }

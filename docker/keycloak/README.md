@@ -18,6 +18,19 @@ Public URL: https://auth.aabenforms.dk - realm `danish-gov-test`, imported from
 - Bootstrap admin: `KC_BOOTSTRAP_ADMIN_USERNAME/PASSWORD` map to the existing
   `KEYCLOAK_ADMIN` / `KEYCLOAK_ADMIN_PASSWORD` in `.env`; only used on an empty database.
 
+## One source for the theme and the realm
+
+- `themes/aabenforms-mitid` is the only copy of the DKFDS login theme. DDEV
+  mounts it too (`.ddev/docker-compose.mocks.yaml`), so local and production
+  cannot drift. Production Keycloak caches themes: after a theme change is
+  deployed, run `docker compose restart keycloak`.
+- `realms/danish-gov-test.json` mirrors the live production realm: the five
+  personas (incl. birthe.jensen, mikkel.jensen's `fuldmagt`), all claim mappers
+  (incl. `digital_post_exempt`, `fuldmagt`), the post-logout redirect URIs and
+  the user profile with `unmanagedAttributePolicy: ENABLED`. Without that
+  policy Keycloak 24+ silently drops the personas' `cpr` and other attributes.
+  The live realm is managed by hand; keep this file in step with it.
+
 ## Re-import the realm after editing the JSON
 
 `--import-realm` only imports into an empty database:
