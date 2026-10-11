@@ -69,6 +69,18 @@ function aabenforms_workflows_help(string $route_name, RouteMatchInterface $rout
  */
 function aabenforms_workflows_mail(string $key, array &$message, array $params): void {
   switch ($key) {
+    // Fixed text only: e-mail is not a secure channel, so no names or CPR.
+    case 'case_handler_notice':
+      $options = ['langcode' => $message['langcode']];
+      $message['subject'] = $params['case_id'] !== ''
+        ? t('Case @id awaits your decision', ['@id' => $params['case_id']], $options)
+        : t('A case awaits your decision', [], $options);
+      $message['body'][] = t('An application that both custody holders have signed awaits your decision.', [], $options);
+      $message['body'][] = t('Log in with your staff account to see the case and decide:', [], $options);
+      $message['body'][] = $params['link'];
+      $message['body'][] = t('This e-mail contains no personal data. The case is only shown after you log in.', [], $options);
+      break;
+
     case 'parent_approval':
       $message['subject'] = t('Approval Required: @child_name', [
         '@child_name' => $params['child_name'],

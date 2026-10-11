@@ -605,3 +605,18 @@ msgstr "Afgør ansøgninger om skoleskift"
 
 msgid "The CPR number is shown masked to protect the child."
 msgstr "CPR-nummeret vises maskeret af hensyn til barnet."
+
+msgid "Case @id awaits your decision"
+msgstr "Sag nr. @id afventer din afgørelse"
+
+msgid "A case awaits your decision"
+msgstr "En sag afventer din afgørelse"
+
+msgid "An application that both custody holders have signed awaits your decision."
+msgstr "En ansøgning, som begge forældremyndighedsindehavere har underskrevet, afventer din afgørelse."
+
+msgid "Log in with your staff account to see the case and decide:"
+msgstr "Log ind med din medarbejderkonto for at se sagen og træffe afgørelse:"
+
+msgid "This e-mail contains no personal data. The case is only shown after you log in."
+msgstr "Denne mail indeholder ingen personoplysninger. Sagen vises først, når du er logget ind."
