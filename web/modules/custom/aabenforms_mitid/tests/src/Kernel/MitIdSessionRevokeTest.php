@@ -189,4 +189,37 @@ class MitIdSessionRevokeTest extends KernelTestBase {
     $this->assertSame('aabenforms-backend', $query['client_id']);
   }
 
+  /**
+   * A POST from the SPA names its own session in the body (never the URL).
+   *
+   * The co-sign case: /parent-approval consumed the Drupal-session binding,
+   * so only the SPA's own id still leads to the id_token_hint.
+   */
+  public function testLogoutPostUsesBodySessionId(): void {
+    $id = $this->seed();
+    $other = $this->seed();
+    $controller = MitIdController::create($this->container);
+
+    $request = Request::create('/mitid/logout?return_url=/demo/skoleskift', 'POST', ['session_id' => $id]);
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    parse_str(parse_url($controller->logout($request)->headers->get('Location'), PHP_URL_QUERY), $query);
+    $this->assertSame('ID.TOKEN.SECRET', $query['id_token_hint']);
+    $this->assertSame('http://localhost/demo/skoleskift', $query['post_logout_redirect_uri']);
+    $this->assertNull($this->sessionManager->getSession($id));
+
+    // An id in the query string is ignored, for GET and POST alike.
+    foreach (['GET', 'POST'] as $method) {
+      $request = Request::create('/mitid/logout?session_id=' . $other, $method, $method === 'POST' ? ['return_url' => '/'] : []);
+      $request->setSession(new Session(new MockArraySessionStorage()));
+      parse_str(parse_url($controller->logout($request)->headers->get('Location'), PHP_URL_QUERY), $query);
+      $this->assertArrayNotHasKey('id_token_hint', $query, $method);
+    }
+    $this->assertNotNull($this->sessionManager->getSession($other));
+
+    // A malformed body id is ignored.
+    $request = Request::create('/mitid/logout', 'POST', ['session_id' => 'not-a-session']);
+    parse_str(parse_url($controller->logout($request)->headers->get('Location'), PHP_URL_QUERY), $query);
+    $this->assertArrayNotHasKey('id_token_hint', $query);
+  }
+
 }
