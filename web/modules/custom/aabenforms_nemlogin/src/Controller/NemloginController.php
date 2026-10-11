@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_nemlogin\Controller;
 
+use Drupal\aabenforms_core\Identity\LoginHandoff;
 use Drupal\aabenforms_nemlogin\Service\NemloginSamlAuthenticator;
 use Drupal\aabenforms_nemlogin\Service\NemloginSettingsBuilder;
 use Drupal\Core\Controller\ControllerBase;
@@ -40,12 +41,18 @@ class NemloginController extends ControllerBase {
   protected NemloginSettingsBuilder $settingsBuilder;
 
   /**
+   * One-time code handoff to the SPA (#156).
+   */
+  protected LoginHandoff $loginHandoff;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
     $instance = parent::create($container);
     $instance->authenticator = $container->get('aabenforms_nemlogin.authenticator');
     $instance->settingsBuilder = $container->get('aabenforms_nemlogin.settings_builder');
+    $instance->loginHandoff = $container->get('aabenforms_core.login_handoff');
     return $instance;
   }
 
@@ -79,6 +86,17 @@ class NemloginController extends ControllerBase {
     $workflowId = 'wf_' . bin2hex(random_bytes(16));
     $returnUrl = $this->safeReturnUrl($request);
 
+    // A return to another origin (the SPA) gets the session through a
+    // one-time code bound to this challenge (see LoginHandoff), never the
+    // session id in the URL. Backend pages use the Drupal session.
+    $challenge = '';
+    if (preg_match('#^https?://#i', $returnUrl) && strtolower((string) parse_url($returnUrl, PHP_URL_HOST)) !== strtolower($request->getHost())) {
+      $challenge = $request->query->get('client_challenge');
+      if (!LoginHandoff::isValidChallenge($challenge)) {
+        return new JsonResponse(['error' => 'client_challenge required'], 400);
+      }
+    }
+
     // RelayState is an opaque 128-bit token; the sensitive values live
     // server-side keyed by it. It is held in a keyvalue-expirable store (NOT a
     // session-bound PrivateTempStore): the ACS is a cross-site top-level POST
@@ -89,6 +107,7 @@ class NemloginController extends ControllerBase {
     $this->relayStore()->setWithExpire('relay_' . $relayState, [
       'workflow_id' => $workflowId,
       'return_url' => $returnUrl,
+      'client_challenge' => $challenge,
       'created' => time(),
     ], 600);
 
@@ -142,14 +161,16 @@ class NemloginController extends ControllerBase {
       return new RedirectResponse('/');
     }
 
-    // Bind the handle to the browser session (same-origin path) and hand it to
-    // the frontend on the return URL, exactly as the MitID rail does.
+    // Bind the handle to the browser session (same-origin path). The SPA gets
+    // a one-time code instead of the handle, exactly as the MitID rail does.
     $request->getSession()->set('mitid_workflow_id', $stateData['workflow_id']);
     $request->getSession()->set('mitid_authenticated', TRUE);
 
     $returnUrl = $stateData['return_url'];
-    $separator = str_contains($returnUrl, '?') ? '&' : '?';
-    $redirectUrl = $returnUrl . $separator . 'session=' . urlencode($stateData['workflow_id']);
+    $challenge = (string) ($stateData['client_challenge'] ?? '');
+    $redirectUrl = $challenge !== ''
+      ? LoginHandoff::appendCode($returnUrl, $this->loginHandoff->issue($stateData['workflow_id'], $challenge))
+      : $returnUrl;
     if (preg_match('#^https?://#i', $redirectUrl)) {
       return new TrustedRedirectResponse($redirectUrl);
     }

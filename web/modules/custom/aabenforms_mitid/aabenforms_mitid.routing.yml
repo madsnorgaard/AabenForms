@@ -41,15 +41,27 @@ aabenforms_mitid.logout:
   options:
     no_cache: TRUE
 
-aabenforms_mitid.session:
-  path: '/mitid/session/{session_id}'
+# The session id never travels in a URL (#156): the SPA redeems a one-time
+# login code, then reads its session with "Authorization: Bearer".
+aabenforms_mitid.session_exchange:
+  path: '/api/mitid/session/exchange'
   defaults:
-    _controller: '\Drupal\aabenforms_mitid\Controller\MitIdController::getSession'
-    _title: 'Get Session Data'
+    _controller: '\Drupal\aabenforms_mitid\Controller\MitIdController::exchange'
   requirements:
     _access: 'TRUE'
-    session_id: '.+'
+  methods: [POST]
+  options:
+    no_cache: TRUE
+
+aabenforms_mitid.session_current:
+  path: '/api/mitid/session'
+  defaults:
+    _controller: '\Drupal\aabenforms_mitid\Controller\MitIdController::currentSession'
+  requirements:
+    _access: 'TRUE'
   methods: [GET]
+  options:
+    no_cache: TRUE
 
 aabenforms_mitid.session_revoke:
   path: '/api/mitid/session/revoke'

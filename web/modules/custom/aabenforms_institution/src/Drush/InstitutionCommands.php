@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\aabenforms_institution\Drush;
 
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drupal\aabenforms_institution\Entity\AabenformsInstitution;
 use Drupal\aabenforms_institution\Service\InstitutionRegistry;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -21,6 +22,7 @@ final class InstitutionCommands extends DrushCommands {
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly InstitutionRegistry $registry,
+    private readonly DemoEnvironment $demoEnvironment,
   ) {
     parent::__construct();
   }
@@ -37,6 +39,10 @@ final class InstitutionCommands extends DrushCommands {
    *
    * @command aabenforms:institution:seed
    * @aliases af:inst:seed
+   * Without --file the bundled Aarhus demo fixture is seeded. That is demo
+   * data, so it runs only under DDEV or with AABENFORMS_DEMO_SITE=1, while
+   * seeding a real extract with --file works everywhere.
+   *
    * @option file Path to the CSV file. Defaults to the bundled Aarhus demo fixture.
    * @usage drush af:inst:seed
    *   Seed the bundled Aarhus demo institutions.
@@ -44,6 +50,9 @@ final class InstitutionCommands extends DrushCommands {
    *   Seed from a data.stil.dk extract.
    */
   public function seed(array $options = ['file' => NULL]): void {
+    if (empty($options['file']) && !$this->demoEnvironment->isDemoAllowed()) {
+      throw new \RuntimeException($this->demoEnvironment->refusalMessage('aabenforms:institution:seed (bundled demo fixture)'));
+    }
     $file = $options['file'] ?? \Drupal::service('extension.list.module')->getPath('aabenforms_institution') . '/fixtures/aarhus_demo_institutions.csv';
     if (!is_readable($file)) {
       throw new \RuntimeException(sprintf('CSV file not readable: %s', $file));

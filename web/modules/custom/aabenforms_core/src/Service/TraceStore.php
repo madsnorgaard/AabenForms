@@ -2,6 +2,7 @@
 
 namespace Drupal\aabenforms_core\Service;
 
+use Drupal\aabenforms_core\Privacy\PiiRedactor;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Database\Connection;
 
@@ -12,6 +13,8 @@ use Drupal\Core\Database\Connection;
  * otherwise be lost after the response is sent. This store writes one row per
  * submission into aabenforms_trace so a case can be traced, debugged and
  * demonstrated after the fact - the persisted spine of the evidence dashboard.
+ * Steps are redacted before they are written: the table outlives the request
+ * and must never hold a raw CPR or a session handle (#74).
  */
 class TraceStore {
 
@@ -31,12 +34,18 @@ class TraceStore {
   protected TenantResolver $tenantResolver;
 
   /**
+   * The PII redactor.
+   */
+  protected PiiRedactor $redactor;
+
+  /**
    * Constructs the trace store.
    */
-  public function __construct(Connection $database, TimeInterface $time, TenantResolver $tenant_resolver) {
+  public function __construct(Connection $database, TimeInterface $time, TenantResolver $tenant_resolver, PiiRedactor $redactor) {
     $this->database = $database;
     $this->time = $time;
     $this->tenantResolver = $tenant_resolver;
+    $this->redactor = $redactor;
   }
 
   /**
@@ -55,7 +64,7 @@ class TraceStore {
    *   The WorkflowExecutionCollector::toArray() result.
    */
   public function save(int $sid, string $webform_id, ?int $case_id, array $execution): void {
-    $steps = $execution['steps'] ?? [];
+    $steps = $this->redactor->redactArray((array) ($execution['steps'] ?? []));
     $this->database->delete('aabenforms_trace')
       ->condition('sid', $sid)
       ->execute();

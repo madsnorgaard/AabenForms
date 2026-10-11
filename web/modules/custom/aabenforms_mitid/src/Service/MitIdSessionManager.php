@@ -3,6 +3,7 @@
 namespace Drupal\aabenforms_mitid\Service;
 
 use Drupal\aabenforms_core\Identity\SessionManagerInterface;
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drupal\aabenforms_core\Service\AuditLogger;
 use Drupal\aabenforms_mitid\DemoPersonas;
 use Drupal\Component\Datetime\TimeInterface;
@@ -93,13 +94,17 @@ class MitIdSessionManager implements SessionManagerInterface {
    *   The logger factory.
    * @param \Drupal\aabenforms_core\Service\AuditLogger $audit_logger
    *   The audit logger.
+   * @param \Drupal\aabenforms_core\Demo\DemoEnvironment|null $demoEnvironment
+   *   Decides whether demo identities may be seeded (local development only).
    */
   public function __construct(
     KeyValueExpirableFactoryInterface $key_value,
     TimeInterface $time,
     LoggerChannelFactoryInterface $logger_factory,
     AuditLogger $audit_logger,
+    protected ?DemoEnvironment $demoEnvironment = NULL,
   ) {
+    $this->demoEnvironment ??= new DemoEnvironment();
     $this->keyValue = $key_value;
     $this->time = $time;
     $this->logger = $logger_factory->get('aabenforms_mitid');
@@ -181,6 +186,13 @@ class MitIdSessionManager implements SessionManagerInterface {
    *   is unknown or storage failed.
    */
   public function seedDemoSession(string $persona, ?string $workflow_id = NULL): ?string {
+    // A seeded identity is a session nobody authenticated for: it may only
+    // ever exist in local development (DDEV), never on a public site, not
+    // even the public demo site. Every seeding path ends here.
+    if (!$this->demoEnvironment->isLocalDevelopment()) {
+      $this->logger->warning('Refusing to seed a demo MitID session outside local development.');
+      return NULL;
+    }
     $data = DemoPersonas::get($persona);
     if ($data === NULL) {
       $this->logger->warning('Refusing to seed unknown demo persona: {persona}', [

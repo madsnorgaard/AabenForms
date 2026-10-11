@@ -1,0 +1,59 @@
+# Per-route, per-client-IP rate limits (RouteRateLimitSubscriber, #142).
+# route: an exact route name, or a prefix ending in '*' (one shared bucket).
+# limit: requests allowed per window; window: seconds (also the Retry-After).
+# Sized for many citizens behind one IP (a borgerservice office or a
+# kommune NAT); the IdP has its own brute-force protection.
+enabled: true
+routes:
+  -
+    route: aabenforms_mitid.login
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_mitid.callback
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_mitid.session_exchange
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_mitid.session_current
+    limit: 120
+    window: 60
+  -
+    route: aabenforms_digital_post_session_inbox.recent
+    limit: 120
+    window: 60
+  -
+    route: aabenforms_workflows.school_transfer_receipt
+    limit: 120
+    window: 60
+  -
+    route: aabenforms_workflows.parent_approval
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_workflows.parent_approval_mitid
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_workflows.parent_approval_mitid_complete
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_workflows.parent_approval_complete
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_nemlogin.login
+    limit: 60
+    window: 60
+  -
+    route: aabenforms_nemlogin.acs
+    limit: 60
+    window: 60
+  -
+    route: 'jsonapi.*'
+    limit: 120
+    window: 60

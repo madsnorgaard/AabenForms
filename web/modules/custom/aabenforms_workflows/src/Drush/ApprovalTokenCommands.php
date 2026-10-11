@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_workflows\Drush;
 
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drupal\aabenforms_workflows\Service\ApprovalTokenService;
 use Drush\Commands\DrushCommands;
 
@@ -11,8 +12,10 @@ use Drush\Commands\DrushCommands;
  * Drush commands for parent-approval token testing.
  *
  * Provides `af:approval-token:mint` which prints a freshly-signed token
- * to stdout. Production-guarded: refuses to run if the DRUPAL_ENV
- * environment variable is "production". The Playwright runner uses this
+ * to stdout. Local-only: a minted token is a forged parent capability, so
+ * it runs only under DDEV (not even on a demo site that opts in with
+ * AABENFORMS_DEMO_SITE) and never when DRUPAL_ENV is "production". The
+ * Playwright runner uses this
  * to mint a valid token for the parent-approval E2E happy-path spec
  * without embedding the site's PRIVATE_KEY in test code.
  */
@@ -25,6 +28,7 @@ final class ApprovalTokenCommands extends DrushCommands {
 
   public function __construct(
     private readonly ApprovalTokenService $tokenService,
+    private readonly DemoEnvironment $demoEnvironment,
   ) {
     parent::__construct();
   }
@@ -49,6 +53,10 @@ final class ApprovalTokenCommands extends DrushCommands {
   ): int {
     if (getenv('DRUPAL_ENV') === self::PRODUCTION_ENV) {
       $this->logger()->error('Approval-token minting is disabled when DRUPAL_ENV=production.');
+      return self::EXIT_FAILURE;
+    }
+    if (!$this->demoEnvironment->isLocalDevelopment()) {
+      $this->io()->error($this->demoEnvironment->localOnlyRefusalMessage('aabenforms:approval-token:mint'));
       return self::EXIT_FAILURE;
     }
 

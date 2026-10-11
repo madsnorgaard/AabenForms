@@ -686,6 +686,7 @@ class MitIdSessionManagerTest extends UnitTestCase {
    * @covers ::seedDemoSession
    */
   public function testSeedDemoSessionStoresPersona(): void {
+    putenv('DDEV_HOSTNAME=aabenforms.ddev.site');
     $captured = NULL;
     $this->store->expects($this->once())
       ->method('setWithExpire')
@@ -711,6 +712,7 @@ class MitIdSessionManagerTest extends UnitTestCase {
    * @covers ::seedDemoSession
    */
   public function testSeedDemoSessionExplicitWorkflowId(): void {
+    putenv('DDEV_HOSTNAME=aabenforms.ddev.site');
     $this->store->expects($this->once())->method('setWithExpire');
 
     $result = $this->sessionManager->seedDemoSession('lars', 'wf_fixed');
@@ -724,10 +726,36 @@ class MitIdSessionManagerTest extends UnitTestCase {
    * @covers ::seedDemoSession
    */
   public function testSeedDemoSessionUnknownPersona(): void {
+    putenv('DDEV_HOSTNAME=aabenforms.ddev.site');
     $this->store->expects($this->never())->method('setWithExpire');
     $this->logger->expects($this->once())->method('warning');
 
     $this->assertNull($this->sessionManager->seedDemoSession('nobody'));
+  }
+
+  /**
+   * Tests a seeded identity can never exist outside local development.
+   *
+   * @covers ::seedDemoSession
+   */
+  public function testSeedDemoSessionRefusedOutsideDdev(): void {
+    putenv('DDEV_HOSTNAME');
+    putenv('AABENFORMS_DEMO_SITE=1');
+    $this->store->expects($this->never())->method('setWithExpire');
+
+    $this->assertNull($this->sessionManager->seedDemoSession('freja'), 'Not even on the public demo site');
+    putenv('AABENFORMS_DEMO_SITE');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function tearDown(): void {
+    // Unit tests share one process: restore the real environment.
+    $original = $_SERVER['DDEV_HOSTNAME'] ?? $_ENV['DDEV_HOSTNAME'] ?? '';
+    putenv($original === '' ? 'DDEV_HOSTNAME' : 'DDEV_HOSTNAME=' . $original);
+    putenv('AABENFORMS_DEMO_SITE');
+    parent::tearDown();
   }
 
 }

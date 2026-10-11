@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\aabenforms_workflows\Drush;
 
+use Drupal\aabenforms_core\Demo\DemoEnvironment;
 use Drupal\aabenforms_workflows\Service\OrgChartServiceInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drush\Commands\DrushCommands;
@@ -19,6 +20,7 @@ final class SchoolLeaderCommands extends DrushCommands {
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly OrgChartServiceInterface $orgChart,
+    private readonly DemoEnvironment $demoEnvironment,
   ) {
     parent::__construct();
   }
@@ -48,6 +50,10 @@ final class SchoolLeaderCommands extends DrushCommands {
       'password' => NULL,
     ],
   ): int {
+    if (!$this->demoEnvironment->isDemoAllowed()) {
+      $this->io()->error($this->demoEnvironment->refusalMessage('aabenforms:demo:ensure-skoleleder'));
+      return self::EXIT_FAILURE;
+    }
     $name = (string) $options['name'];
     $mail = (string) $options['mail'];
 

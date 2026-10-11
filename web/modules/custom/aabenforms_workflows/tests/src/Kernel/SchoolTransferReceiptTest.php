@@ -203,6 +203,22 @@ class SchoolTransferReceiptTest extends KernelTestBase {
   }
 
   /**
+   * A newer invitation still waiting for Lars hides the older receipt.
+   *
+   * The receipt is always for the invitation the co-signer acts on now, not
+   * an older, already co-signed application.
+   */
+  public function testNewerPendingInvitationHidesTheOldReceipt(): void {
+    $newer = $this->submission->createDuplicate();
+    $newer->setElementData('parent2_status', 'pending')->save();
+    $this->assertSame(404, $this->receipt($this->seed('lars'))['status']);
+
+    $newer->setElementData('parent2_status', 'complete')->save();
+    $result = $this->receipt($this->seed('lars'));
+    $this->assertSame((int) $newer->id(), $result['body']['data']['submission_id']);
+  }
+
+  /**
    * Binds the demo leaders: skoleleder to Risskov, another to Frederiksbjerg.
    */
   protected function bindLeaders(): void {
