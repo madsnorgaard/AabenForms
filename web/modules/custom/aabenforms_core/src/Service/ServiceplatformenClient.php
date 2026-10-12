@@ -15,7 +15,9 @@ use Psr\Log\LoggerInterface;
  * SOAP client for Danish government Serviceplatformen SF1500 services.
  *
  * Modernized from itk-dev/serviceplatformen with improvements:
- * - Retry logic for transient failures (timeout, connection errors)
+ * - Retry logic for transient failures (connection errors, 408/503/504)
+ * - Circuit breaker and short connect timeout, so an upstream outage fails
+ *   fast instead of holding PHP-FPM workers (#72)
  * - Structured exception handling (ServiceplatformenException)
  * - Drupal logger integration
  * - Configurable per-environment service URLs
@@ -30,14 +32,35 @@ use Psr\Log\LoggerInterface;
 class ServiceplatformenClient {
 
   /**
-   * Maximum retry attempts for failed requests.
+   * Maximum attempts per request, the first one included.
    */
-  protected const MAX_RETRIES = 3;
+  protected const MAX_RETRIES = 2;
 
   /**
    * Retry delay in seconds (exponential backoff).
    */
-  protected const RETRY_DELAY = 2;
+  protected const RETRY_DELAY = 1;
+
+  /**
+   * Seconds to establish the connection.
+   *
+   * A healthy endpoint connects well within this; a dead one must not hold a
+   * worker for long.
+   */
+  protected const CONNECT_TIMEOUT = 3;
+
+  /**
+   * Seconds for the whole request, connection included.
+   */
+  protected const TIMEOUT = 15;
+
+  /**
+   * Read-only lookups, safe to send again.
+   *
+   * SF1601 sends a letter: a retry after a timeout could deliver it twice, so
+   * it is never retried here.
+   */
+  protected const IDEMPOTENT_SERVICES = ['SF1520', 'SF1530', 'SF6006'];
 
   /**
    * Default cache expiration (15 minutes).
@@ -73,6 +96,13 @@ class ServiceplatformenClient {
   protected ClientInterface $httpClient;
 
   /**
+   * The circuit breaker, NULL only where a test builds the client by hand.
+   *
+   * @var \Drupal\aabenforms_core\Service\ServiceplatformenCircuitBreaker|null
+   */
+  protected ?ServiceplatformenCircuitBreaker $circuitBreaker;
+
+  /**
    * Constructs a ServiceplatformenClient.
    *
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
@@ -83,17 +113,21 @@ class ServiceplatformenClient {
    *   The logger factory.
    * @param \GuzzleHttp\ClientInterface $http_client
    *   The HTTP client.
+   * @param \Drupal\aabenforms_core\Service\ServiceplatformenCircuitBreaker|null $circuit_breaker
+   *   The circuit breaker.
    */
   public function __construct(
     ConfigFactoryInterface $config_factory,
     CacheBackendInterface $cache,
     LoggerChannelFactoryInterface $logger_factory,
     ClientInterface $http_client,
+    ?ServiceplatformenCircuitBreaker $circuit_breaker = NULL,
   ) {
     $this->configFactory = $config_factory;
     $this->cache = $cache;
     $this->logger = $logger_factory->get('aabenforms_core');
     $this->httpClient = $http_client;
+    $this->circuitBreaker = $circuit_breaker;
   }
 
   /**
@@ -168,12 +202,39 @@ class ServiceplatformenClient {
    *   If all retries fail.
    */
   protected function executeWithRetry(string $service, string $operation, array $params, int $attempt = 1): array {
+    if ($this->circuitBreaker && !$this->circuitBreaker->isAvailable($service)) {
+      $this->logger->warning('Serviceplatformen circuit open, failing fast: {service}::{operation}', [
+        'service' => $service,
+        'operation' => $operation,
+      ]);
+      throw new ServiceplatformenException(
+        'Serviceplatformen is temporarily unavailable (circuit open)',
+        $service,
+        $operation,
+        retryable: FALSE,
+        code: 503,
+      );
+    }
+
     try {
-      return $this->execute($service, $operation, $params);
+      $response = $this->execute($service, $operation, $params);
+      $this->circuitBreaker?->recordSuccess($service);
+      return $response;
     }
     catch (ServiceplatformenException $e) {
-      // Retry on transient errors (timeout, connection).
-      if ($e->isRetryable() && $attempt < self::MAX_RETRIES) {
+      // Only availability failures count; a SOAP fault means it answered.
+      if ($e->isRetryable() && $this->circuitBreaker?->recordFailure($service)) {
+        $this->logger->error('Serviceplatformen circuit opened for {service} after repeated failures', [
+          'service' => $service,
+        ]);
+      }
+
+      // Retry transient errors, but never a timeout (a slow upstream will
+      // not be faster a second later) and never a non-idempotent send.
+      if ($e->isRetryable()
+        && !$this->isTimeout($e)
+        && in_array($service, self::IDEMPOTENT_SERVICES, TRUE)
+        && $attempt < self::MAX_RETRIES) {
         // Exponential backoff.
         $delay = self::RETRY_DELAY * pow(2, $attempt - 1);
 
@@ -228,8 +289,8 @@ class ServiceplatformenClient {
           'SOAPAction' => $operation,
         ],
         'body' => $soapEnvelope,
-        'timeout' => 30,
-        'connect_timeout' => 10,
+        'timeout' => self::TIMEOUT,
+        'connect_timeout' => self::CONNECT_TIMEOUT,
       ]);
 
       $body = (string) $response->getBody();
@@ -273,6 +334,28 @@ class ServiceplatformenClient {
         previous: $e
       );
     }
+  }
+
+  /**
+   * Whether the failure was a timeout rather than a refused connection.
+   *
+   * @param \Drupal\aabenforms_core\Exception\ServiceplatformenException $e
+   *   The failure.
+   *
+   * @return bool
+   *   TRUE for a cURL timeout or an HTTP 408/504.
+   */
+  protected function isTimeout(ServiceplatformenException $e): bool {
+    if (in_array($e->getCode(), [408, 504], TRUE)) {
+      return TRUE;
+    }
+    $previous = $e->getPrevious();
+    if ($previous instanceof ConnectException) {
+      // CURLE_OPERATION_TIMEDOUT.
+      return ($previous->getHandlerContext()['errno'] ?? NULL) === 28
+        || stripos($previous->getMessage(), 'timed out') !== FALSE;
+    }
+    return FALSE;
   }
 
   /**

@@ -6,6 +6,11 @@ services:
       - '@cache.default'
       - '@logger.factory'
       - '@http_client'
+      - '@aabenforms_core.serviceplatformen_circuit_breaker'
+
+  aabenforms_core.serviceplatformen_circuit_breaker:
+    class: Drupal\aabenforms_core\Service\ServiceplatformenCircuitBreaker
+    arguments: ['@keyvalue.expirable']
 
   aabenforms_core.encryption_service:
     class: Drupal\aabenforms_core\Service\EncryptionService
