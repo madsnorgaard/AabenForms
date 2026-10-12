@@ -7,6 +7,7 @@
  * Provides ECA workflow integration and pre-built templates.
  */
 
+use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Url;
@@ -277,5 +278,25 @@ function aabenforms_workflows_honeypot_form_protections_alter(array &$options, a
   $form_id = $form['#form_id'] ?? $form['form_id']['#value'] ?? NULL;
   if (in_array($form_id, $gated_forms, TRUE)) {
     $options = array_values(array_diff($options, ['time_restriction']));
+  }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for eca entities.
+ *
+ * A flow built by the wizard has a matching template_instance config. The
+ * wizard's own delete form removes both, but a flow deleted any other way
+ * (drush, the ECA admin UI, the entity API) left the instance behind, so the
+ * dashboard and the template browser kept counting it (#199). During a config
+ * sync the import owns both configs, so it is left alone;
+ * WorkflowTemplateInstantiator::getInstances() skips any orphan regardless.
+ */
+function aabenforms_workflows_eca_delete(EntityInterface $entity): void {
+  if ($entity instanceof ConfigEntityInterface && $entity->isSyncing()) {
+    return;
+  }
+  $config = \Drupal::configFactory()->getEditable('aabenforms_workflows.template_instance.' . $entity->id());
+  if (!$config->isNew()) {
+    $config->delete();
   }
 }
