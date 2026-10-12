@@ -4,6 +4,17 @@
 **Target**: Both Drupal backend and Nuxt 3 frontend developers
 **Approach**: Standards-based (Keycloak, WireMock, Prism) with realistic Danish test data
 
+> **SOAP dialect: not the real KOMBIT protocol.** `ServiceplatformenClient` sends a
+> simplified placeholder dialect: fictional namespaces such as
+> `http://serviceplatformen.dk/cprlookup/1`, a `PersonLookupRequest` with a `PNR` element,
+> and a WS-Security UsernameToken. The real SF1520/SF1530/SF6006 services use KOMBIT
+> schemas (for example `GetPersonBaseDataExtended`), STS-issued tokens and an OCES client
+> certificate. The WireMock mappings that the client actually hits (`sf1520-cpr-*.json`,
+> `sf1530-*.json`, `sf6006-*.json`) speak the placeholder dialect.
+> `sf1520-freja-nielsen.json` is an older stub in the KOMBIT shape that the client never
+> matches. Moving to the real protocol is part of #76. SF1601 Digital Post is separate:
+> `aabenforms_digital_post` builds real MeMo XML.
+
 ---
 
 ## Quick Start
@@ -46,10 +57,10 @@ WireMock (Serviceplatformen):
 # Test MitID OIDC discovery
 curl http://localhost:8080/realms/danish-gov-test/.well-known/openid-configuration
 
-# Test CPR lookup (Serviceplatformen SF1520)
+# Test CPR lookup (Serviceplatformen SF1520, the client's placeholder dialect)
 curl -X POST http://localhost:8081/sf1520 \
-  -H "Content-Type: text/xml" \
-  --data '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://kombit.dk/xml/schemas/RequestPersonBaseDataExtended/1/"><soapenv:Body><ns:GetPersonBaseDataExtended><ns:CPRNumber>0101904521</ns:CPRNumber></ns:GetPersonBaseDataExtended></soapenv:Body></soapenv:Envelope>'
+  -H "Content-Type: application/soap+xml; charset=utf-8" \
+  --data '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://serviceplatformen.dk/cprlookup/1"><soap:Body><ns:PersonLookupRequest><ns:PNR>0101701234</ns:PNR></ns:PersonLookupRequest></soap:Body></soap:Envelope>'
 
 # Test Adressevælger address autocomplete
 curl http://localhost:8082/adresser/autocomplete?q=frederiksberg
@@ -128,10 +139,9 @@ JWKs:           http://localhost:8080/realms/danish-gov-test/protocol/openid-con
 **Admin UI**: http://localhost:8081/__admin
 
 **Features**:
-- SOAP 1.1/1.2 support
-- OIO-compliant XML responses
-- SF1520 (CPR lookup), SF1530 (CVR lookup), SF1601 (Digital Post)
-- Request matching (XPath)
+- SOAP responses in the client's placeholder dialect (see the note at the top)
+- SF1520 (CPR lookup), SF1530 (CVR lookup), SF6006 (family/custody), SF1601 (Digital Post)
+- Request matching on the CPR/CVR in the body
 - No OCES certificate validation (bypassed for dev)
 
 **Services**:
@@ -139,6 +149,7 @@ JWKs:           http://localhost:8080/realms/danish-gov-test/protocol/openid-con
 SF1520 (CPR):        POST http://localhost:8081/sf1520
 SF1530 (CVR):        POST http://localhost:8081/sf1530
 SF1601 (Digital Post): POST http://localhost:8081/sf1601
+SF6006 (Familie+):   POST http://localhost:8081/sf6006
 ```
 
 ---
@@ -232,22 +243,17 @@ $config['aabenforms_mitid.settings']['oidc']['redirect_uri'] = 'https://aabenfor
 $config['aabenforms_mitid.settings']['mock_mode'] = TRUE;
 $config['aabenforms_mitid.settings']['production'] = FALSE;
 
-// Serviceplatformen Mock (WireMock)
-$config['aabenforms_core.settings']['serviceplatformen']['endpoint'] = 'http://localhost:8081';
-$config['aabenforms_core.settings']['serviceplatformen']['mock_mode'] = TRUE;
-$config['aabenforms_core.settings']['serviceplatformen']['validate_certificates'] = FALSE; // No OCES in mock
-
-// SF1520 (CPR Lookup)
-$config['aabenforms_cpr.settings']['serviceplatformen_url'] = 'http://localhost:8081/sf1520';
-$config['aabenforms_cpr.settings']['mock_mode'] = TRUE;
-
-// SF1530 (CVR Lookup)
-$config['aabenforms_cvr.settings']['serviceplatformen_url'] = 'http://localhost:8081/sf1530';
-$config['aabenforms_cvr.settings']['mock_mode'] = TRUE;
-
-// SF1601 (Digital Post)
-$config['aabenforms_digital_post.settings']['serviceplatformen_url'] = 'http://localhost:8081/sf1601';
-$config['aabenforms_digital_post.settings']['mock_mode'] = TRUE;
+// Serviceplatformen Mock (WireMock): one URL per service.
+$config['aabenforms_core.settings']['serviceplatformen']['urls'] = [
+  'SF1520' => 'http://localhost:8081/sf1520',
+  'SF1530' => 'http://localhost:8081/sf1530',
+  'SF1601' => 'http://localhost:8081/sf1601',
+  'SF6006' => 'http://localhost:8081/sf6006',
+];
+// The CPR/CVR lookup actions and the family lookup run in demo mode (no
+// call at all) while serviceplatformen.certificates.cert_path and key_path
+// are empty. To exercise WireMock, set both to any non-empty value, or call
+// the client directly as in "Test CPR Lookup" below.
 
 // Adressevælger Mock (Prism)
 $config['aabenforms_adressevaelger.settings']['api_url'] = 'http://localhost:8082';
@@ -281,20 +287,16 @@ echo 'Visit this URL to login: ' . \$authUrl . PHP_EOL;
 ### 3. Test CPR Lookup
 
 ```bash
-# Test SF1520 CPR lookup via mock
+# Test SF1520 CPR lookup via mock (point serviceplatformen.urls at WireMock first)
 ddev drush ev "
 \$client = \Drupal::service('aabenforms_core.serviceplatformen_client');
 
 try {
-  \$person = \$client->execute('sf1520', 'GetPersonBaseDataExtended', [
-    'CPRNumber' => '0101904521',
-  ]);
-
-  echo 'Name: ' . \$person['PersonGivenName'] . ' ' . \$person['PersonSurnameName'] . PHP_EOL;
-  echo 'CPR: ' . \$person['PersonCprNumber'] . PHP_EOL;
-  echo 'Address: ' . \$person['PersonAddressStructured']['StreetName'] . ' ' .
-       \$person['PersonAddressStructured']['StreetBuildingIdentifier'] . PHP_EOL;
-  echo 'Protected: ' . (\$person['PersonProtection'] ? 'Yes' : 'No') . PHP_EOL;
+  \$result = \$client->request('SF1520', 'PersonLookup', ['cpr' => '0101701234'], ['no_cache' => TRUE]);
+  \$person = \$result['person'];
+  echo 'Name: ' . \$person['full_name'] . PHP_EOL;
+  echo 'CPR: ' . \$person['cpr'] . PHP_EOL;
+  echo 'Address: ' . \$person['address'] . ', ' . \$person['postal_code'] . ' ' . \$person['city'] . PHP_EOL;
 } catch (\Exception \$e) {
   echo 'Error: ' . \$e->getMessage() . PHP_EOL;
 }
@@ -303,10 +305,9 @@ try {
 
 **Expected Output**:
 ```
-Name: Freja Nielsen
-CPR: 0101904521
-Address: Frederiksberg Allé 42
-Protected: No
+Name: Anders Andersen
+CPR: 0101701234
+Address: Testvej 1, 8000 Aarhus C
 ```
 
 ---
@@ -620,8 +621,7 @@ echo 'CPR: ' . \$cpr . PHP_EOL;
 # Test SF1520 lookup
 ddev drush ev "
 \$client = \Drupal::service('aabenforms_core.serviceplatformen_client');
-\$person = \$client->execute('sf1520', 'GetPersonBaseDataExtended', ['CPRNumber' => '0101904521']);
-print_r(\$person);
+print_r(\$client->request('SF1520', 'PersonLookup', ['cpr' => '0101701234'], ['no_cache' => TRUE]));
 "
 
 # Test session manager
