@@ -81,6 +81,16 @@ class WorkflowTemplateInstantiatorTest extends KernelTestBase {
   }
 
   /**
+   * The instantiator from the current container.
+   *
+   * Instantiate() ends with drupal_flush_all_caches(), which rebuilds the
+   * container, so services fetched in setUp() see stale config caches.
+   */
+  protected function freshInstantiator(): WorkflowTemplateInstantiator {
+    return \Drupal::service('aabenforms_workflows.template_instantiator');
+  }
+
+  /**
    * Helper: returns a valid contact_form configuration.
    *
    * @param array $overrides
@@ -579,7 +589,8 @@ XML;
     $this->assertTrue($a['success']);
     $this->assertTrue($b['success']);
 
-    $instances = $this->instantiator->getInstances();
+    // instantiate() flushes all caches, which rebuilds the container.
+    $instances = $this->freshInstantiator()->getInstances();
     $this->assertCount(2, $instances, 'Two instances listed.');
 
     $ids = array_map(fn ($row) => $row['id'] ?? NULL, $instances);
@@ -597,6 +608,38 @@ XML;
       $this->assertArrayHasKey('created', $row);
       $this->assertArrayHasKey('updated', $row);
     }
+  }
+
+  /**
+   * Deleting the flow outside the wizard removes its instance (#199).
+   *
+   * @covers ::getInstances
+   */
+  public function testDeletingFlowDirectlyRemovesInstance(): void {
+    $result = $this->instantiator->instantiate('contact_form', $this->contactFormConfig());
+    $this->assertTrue($result['success']);
+    $id = $result['workflow_id'];
+    $this->assertCount(1, $this->freshInstantiator()->getInstances());
+
+    \Drupal::entityTypeManager()->getStorage('eca')->load($id)->delete();
+
+    $this->assertTrue(\Drupal::config('aabenforms_workflows.template_instance.' . $id)->isNew(), 'Instance config deleted.');
+    $this->assertSame([], $this->freshInstantiator()->getInstances());
+  }
+
+  /**
+   * An instance whose flow is gone is never listed (#199).
+   *
+   * @covers ::getInstances
+   */
+  public function testOrphanedInstanceIsSkipped(): void {
+    $result = $this->instantiator->instantiate('contact_form', $this->contactFormConfig());
+    $this->assertTrue($result['success']);
+    // A flow removed without entity hooks, as a config sync can leave it.
+    \Drupal::configFactory()->getEditable('eca.eca.' . $result['workflow_id'])->delete();
+
+    $this->assertFalse(\Drupal::config('aabenforms_workflows.template_instance.' . $result['workflow_id'])->isNew(), 'Instance config remains.');
+    $this->assertSame([], $this->freshInstantiator()->getInstances());
   }
 
   /**

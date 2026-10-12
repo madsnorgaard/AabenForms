@@ -944,22 +944,28 @@ class WorkflowTemplateInstantiator {
   }
 
   /**
-   * Gets all workflow instances.
+   * Gets all workflow instances whose ECA flow still exists.
+   *
+   * An instance whose flow is gone (deleted outside the wizard, or by a
+   * config sync) is skipped, so it is never counted as an active flow (#199).
    *
    * @return array
    *   Array of workflow instances.
    */
   public function getInstances(): array {
-    $instances = [];
-
-    // Load all template instance configs.
-    $config_names = $this->configFactory->listAll('aabenforms_workflows.template_instance.');
-
-    foreach ($config_names as $config_name) {
-      $config = $this->configFactory->get($config_name);
-      $instances[] = $config->getRawData();
+    $prefix = 'aabenforms_workflows.template_instance.';
+    $config_names = $this->configFactory->listAll($prefix);
+    if ($config_names === []) {
+      return [];
     }
+    $flows = array_flip($this->configFactory->listAll('eca.eca.'));
 
+    $instances = [];
+    foreach ($config_names as $config_name) {
+      if (isset($flows['eca.eca.' . substr($config_name, strlen($prefix))])) {
+        $instances[] = $this->configFactory->get($config_name)->getRawData();
+      }
+    }
     return $instances;
   }
 
