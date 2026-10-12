@@ -893,6 +893,17 @@ if (getenv('IS_DDEV_PROJECT') == 'true' && file_exists(__DIR__ . '/settings.ddev
   include __DIR__ . '/settings.ddev.php';
 }
 
+// DDEV, as in production (root settings.php): trust the direct caller as a
+// reverse proxy. The frontend's Nuxt server calls Drupal container-to-container
+// for the MitID session routes and sends the citizen's IP and the public host
+// in X-Forwarded-For / -Host / -Proto. Without this, rate limits see Nuxt's IP
+// and absolute URLs (e.g. the co-sign link in a Digital Post letter) get the
+// container name as host.
+if (getenv('IS_DDEV_PROJECT') == 'true') {
+  $settings['reverse_proxy'] = TRUE;
+  $settings['reverse_proxy_addresses'] = [$_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'];
+}
+
 /**
  * Load local development override configuration, if available.
  *
