@@ -257,3 +257,25 @@ function aabenforms_workflows_cron(): void {
     \Drupal::logger('aabenforms_workflows')->warning('Reset a stale ECA replay capture: debug mode was left armed, so citizen PII is no longer being recorded to the shared replay store.');
   }
 }
+
+/**
+ * Implements hook_honeypot_form_protections_alter().
+ *
+ * Keeps Honeypot's hidden bot-trap field on the gated decision forms but
+ * drops its minimum-time check. A parent who ticks "approve" and submits
+ * within five seconds is a real person, not a bot: the co-sign form sits
+ * behind a verified MitID session bound to that parent plus a one-time
+ * token, and the leader decision forms behind a staff login. The time check
+ * only rejected genuine quick decisions there.
+ */
+function aabenforms_workflows_honeypot_form_protections_alter(array &$options, array $form): void {
+  $gated_forms = [
+    'aabenforms_parent_approval_form',
+    'aabenforms_school_transfer_decision',
+    'aabenforms_school_transfer_decided',
+  ];
+  $form_id = $form['#form_id'] ?? $form['form_id']['#value'] ?? NULL;
+  if (in_array($form_id, $gated_forms, TRUE)) {
+    $options = array_values(array_diff($options, ['time_restriction']));
+  }
+}
