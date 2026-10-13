@@ -1885,27 +1885,27 @@
         },
         {
             "name": "drupal/encrypt",
-            "version": "3.2.0",
+            "version": "3.3.0",
             "source": {
                 "type": "git",
                 "url": "https://git.drupalcode.org/project/encrypt.git",
-                "reference": "8.x-3.2"
+                "reference": "8.x-3.3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://ftp.drupal.org/files/projects/encrypt-8.x-3.2.zip",
-                "reference": "8.x-3.2",
-                "shasum": "32a700eeb59aac51f6ce4651718243a1641d5ef0"
+                "url": "https://ftp.drupal.org/files/projects/encrypt-8.x-3.3.zip",
+                "reference": "8.x-3.3",
+                "shasum": "2c780b4da61bd3bcccafbd098a777c1fed75432e"
             },
             "require": {
-                "drupal/core": "^8 || ^9 || ^10 || ^11",
+                "drupal/core": "^10.3 || ^11",
                 "drupal/key": "^1"
             },
             "type": "drupal-module",
             "extra": {
                 "drupal": {
-                    "version": "8.x-3.2",
-                    "datestamp": "1727640040",
+                    "version": "8.x-3.3",
+                    "datestamp": "1784634622",
                     "security-coverage": {
                         "status": "covered",
                         "message": "Covered by Drupal's security advisory policy"
@@ -1913,7 +1913,7 @@
                 },
                 "drush": {
                     "services": {
-                        "drush.services.yml": "^9 || ^10 || ^11"
+                        "drush.services.yml": "^10 || ^11"
                     }
                 }
             },
@@ -1933,6 +1933,10 @@
                 {
                     "name": "nerdstein",
                     "homepage": "https://www.drupal.org/user/1557710"
+                },
+                {
+                    "name": "ptmkenny",
+                    "homepage": "https://www.drupal.org/user/97885"
                 },
                 {
                     "name": "rlhawk",
