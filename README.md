@@ -142,3 +142,7 @@ The queue is in [GitHub issues](https://github.com/madsnorgaard/AabenForms/issue
 ## License
 
 GPL-2.0-or-later. See [LICENSE.txt](LICENSE.txt).
+
+## Author
+
+Mads Nørgaard, senior developer and DevOps engineer (Drupal, Nuxt). [madsnorgaard.net](https://madsnorgaard.net)
