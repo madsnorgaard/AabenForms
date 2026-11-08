@@ -18,6 +18,7 @@ GitHub issue.
 | [DPIA_KONSEKVENSANALYSE.md](DPIA_KONSEKVENSANALYSE.md) | Data protection impact assessment (art. 35): CPR, children's and custody data, MitID identity, Digital Post | Draft - risk table reflects verified platform state |
 | [RETENTION.md](RETENTION.md) | Retention and right-to-erasure: what is kept and deleted, the default periods (placeholders for the DPO), legal hold, and the art. 17(3)(b) erasure procedure | Implemented (#91); periods to be set per kommune |
 | [NIS2_INCIDENT_RUNBOOK.md](NIS2_INCIDENT_RUNBOOK.md) | Incident response runbook with the NIS2 and GDPR art. 33/34 notification deadlines | Draft - contact table to be completed per kommune |
+| [GEDISA_MAPPING.md](GEDISA_MAPPING.md) | KL's GEDISA principles for good digital self-service (10 blanket components, 10 principles, 9 language rules) mapped item by item to the generic form renderer and the demo wizard, with the prioritised changes that close each gap | Gap analysis - 2 of 29 items met, 23 partial, 3 missing |
 | [TILGAENGELIGHEDSERKLAERING.md](TILGAENGELIGHEDSERKLAERING.md) | Accessibility statement (webtilgængelighedsloven, EN 301 549 / WCAG 2.1 AA) for the citizen frontend; source of https://aabenforms.dk/tilgaengelighed | Published - partially compliant, known gaps listed (#247) |
 
 The accessibility statement covers AabenForms' own citizen frontend. A
