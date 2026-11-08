@@ -24,6 +24,12 @@ use Symfony\Component\HttpFoundation\Response;
 class MitIdController extends ControllerBase {
 
   /**
+   * Maximum age in seconds of a pending login (state record) before the
+   * callback refuses it.
+   */
+  protected const STATE_MAX_AGE = 600;
+
+  /**
    * The MitID OIDC client.
    *
    * @var \Drupal\aabenforms_mitid\Service\MitIdOidcClient
@@ -276,6 +282,14 @@ class MitIdController extends ControllerBase {
     if (!$stateData) {
       $this->getLogger('aabenforms_mitid')->error('Invalid OAuth state parameter');
       return new JsonResponse(['error' => 'Invalid state parameter'], 400);
+    }
+
+    // A login attempt is short-lived: the private tempstore keeps records for
+    // days, so reject a state older than the IdP round-trip could take.
+    if (time() - (int) ($stateData['created'] ?? 0) > self::STATE_MAX_AGE) {
+      $tempStore->delete('oauth_state_' . $state);
+      $this->getLogger('aabenforms_mitid')->warning('Expired OAuth state parameter');
+      return new JsonResponse(['error' => 'Login attempt expired, please start again'], 400);
     }
 
     // Extract stored data.

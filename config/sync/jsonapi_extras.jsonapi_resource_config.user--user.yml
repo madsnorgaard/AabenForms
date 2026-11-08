@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - user
+id: user--user
+disabled: true
+path: user/user
+resourceType: user--user
+resourceFields: {  }

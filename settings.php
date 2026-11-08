@@ -22,7 +22,15 @@ $settings['hash_salt'] = getenv('HASH_SALT');
 $settings['update_free_access'] = false;
 $settings['container_yamls'][] = $app_root . '/' . $site_path . '/services.yml';
 
-$settings['trusted_host_patterns'][] = getenv('TRUSTED_HOSTS');
+// Trusted hosts: a comma-separated list of regular expressions in
+// TRUSTED_HOST_PATTERNS (the name docker-compose.yml and .env.example use;
+// TRUSTED_HOSTS is read for older deployments). An empty value used to end
+// up as the pattern '{}i', which matches every Host header and silently
+// turned the check off; now nothing is set and Drupal's status report says so.
+$trusted_hosts = getenv('TRUSTED_HOST_PATTERNS') ?: getenv('TRUSTED_HOSTS') ?: '';
+foreach (array_filter(array_map('trim', explode(',', $trusted_hosts))) as $trusted_host_pattern) {
+  $settings['trusted_host_patterns'][] = $trusted_host_pattern;
+}
 
 $settings['file_scan_ignore_directories'] = [
   'node_modules',
@@ -52,9 +60,14 @@ if (file_exists($app_root . '/' . $site_path . '/settings.local.php')) {
     include $app_root . '/' . $site_path . '/settings.local.php';
 }
 
-# Force SSL via reverse proxy (Traefik)
+# Behind Traefik: honour X-Forwarded-* only from the proxies named in
+# REVERSE_PROXY_ADDRESSES (comma-separated IPs or CIDR ranges, e.g. the
+# Traefik container address or the docker network). Without the variable the
+# direct caller is trusted, which lets any container on the shared network
+# spoof the client IP that rate limits and the audit log use.
 $settings['reverse_proxy'] = true;
-$settings['reverse_proxy_addresses'] = array(@$_SERVER['REMOTE_ADDR']);
+$reverse_proxies = array_filter(array_map('trim', explode(',', getenv('REVERSE_PROXY_ADDRESSES') ?: '')));
+$settings['reverse_proxy_addresses'] = $reverse_proxies ?: array(@$_SERVER['REMOTE_ADDR']);
 
 # MitID OIDC: production overrides for the public mock IdP at
 # https://auth.aabenforms.dk. The browser hits the public hostname for the

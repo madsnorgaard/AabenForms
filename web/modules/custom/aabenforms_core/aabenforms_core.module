@@ -12,10 +12,13 @@
  * - AabenformsDashboardSection plugin manager (admin dashboard).
  */
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\user\Entity\User;
+use Drupal\webform\WebformInterface;
 use Drupal\webform\WebformSubmissionInterface;
 
 /**
@@ -343,6 +346,26 @@ function aabenforms_core_page_attachments(array &$attachments): void {
       $key,
     ];
   }
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_access() for webform entities.
+ *
+ * Citizens submit through the headless API (/api/webform/{id}/submit), which
+ * is the only path that binds the applicant CPR to the MitID session and
+ * runs the identity binder. Webform's own page at /webform/{id} (and the
+ * /form/{id} alias) renders a native submission form that skips all of that:
+ * a submission posted there is saved with whatever CPR the client typed, and
+ * the ECA flows then act on it. Deny the native page to everyone except
+ * staff who administer webforms; the API routes check 'view' and
+ * 'submission_create', not 'submission_page', so they are unaffected.
+ */
+function aabenforms_core_webform_access(WebformInterface $webform, string $operation, AccountInterface $account): AccessResult {
+  if ($operation !== 'submission_page') {
+    return AccessResult::neutral();
+  }
+  return AccessResult::forbiddenIf(!$account->hasPermission('administer webform'), 'Native webform pages are not a citizen surface; submit through the API.')
+    ->cachePerPermissions();
 }
 
 /**
