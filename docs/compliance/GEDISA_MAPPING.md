@@ -72,6 +72,24 @@ B9 opsummering). Ingen punkter er irrelevante for platformen.
 | C8 | Korrekt retskrivning | Delvist | "Gennemgådetaljerne", "forældre myndighed", "Dette felttype", "DDMMYY"; ae/oe i stedet for æ/ø i afvisningsbeskeder i flere ECA-flows |
 | C9 | Entydige lovhenvisninger | Delvist | Samme lov skrives på fire måder; "DBF art. 6(1)(e)" er ikke dansk citeringspraksis; RSL § 66 og § 67 blandes |
 
+KL's egne eksempler på reglerne, som teksterne skal måles mod:
+
+| Nr | Skriv | Ikke | Regel |
+|---|---|---|---|
+| C1 | Dagpleje og daginstitutioner | Regler og vejledning for, når dit barn skal starte ... | Overskriften dækker indholdet med færrest mulige ord og viser målgruppen ved behov |
+| C2 | Din bopæl | Bopælsoplysninger | Én ting ad gangen, ingen indskud, punktopstilling ved tre eller flere oplysninger |
+| C3 | For at vi kan vurdere ... | Til brug for vurdering af ... | Skriv direkte til borgeren, gør aktøren tydelig, undgå passiv og ord på -ing og -else |
+| C4 | Deler du lejlighed med en anden? | Bor du sammen med en roomie? | Almindeligt dansk inden for Retskrivningsordbogens ordforråd |
+| C5 | I forbindelse med | Ifm. | Ingen fremmedord eller forkortelser, der ikke er juridisk eller fagligt nødvendige |
+| C6 | EU/EØS-borger + forklaring | Uforklaret fagterm alene | Bevar nødvendige termer, men forklar dem dér, hvor borgeren har brug for det |
+| C7 | "Vi" i feltdialogen: kommunen spørger, borgeren svarer | Baggrund, der ikke hjælper borgeren med at udfylde eller kende sine rettigheder | Kun det, borgeren behøver for at forstå, udfylde og kende den videre proces |
+| C8 | "Kommunen" i vejledningen; navngiv myndigheden, især når flere omtales | Stavning uden for Retskrivningsordbogen | Retskrivningsordbogen for stavning, bøjning, orddeling og grammatisk komma |
+| C9 | Entydig populærtitel, retskilden som den gælder ved offentliggørelsen | Forkortelser og blandede former | Præcis henvisning med tydelig afsender |
+
+I ÅbenForms betyder det konkret: "vi" er kommunen i felttekster og hjælpetekster
+("Vi henter dit CPR-nummer fra dit MitID-login"), og "kommunen" navngives med
+tenantens navn i vejledning og breve, ikke "ÅbenForms".
+
 ## Vejen til "opfyldt": ændringer i prioriteret rækkefølge
 
 Rækkefølgen er efter værdi for en kommunal køber. De tre første giver en
