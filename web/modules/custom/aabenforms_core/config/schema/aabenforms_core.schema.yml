@@ -164,3 +164,40 @@ aabenforms_core.retention:
     batch_size:
       type: integer
       label: 'Maximum purge units per cron run'
+
+# Citizen guidance a kommune authors per webform (KL "Principper for god og
+# effektiv digital selvbetjening": intro, have ready, legal basis, expected
+# response, next steps). Read by GET /api/webform/{id} as attributes.gedisa.
+webform.webform.*.third_party.aabenforms_core:
+  type: mapping
+  label: 'AabenForms citizen guidance'
+  mapping:
+    intro:
+      type: text
+      label: 'Intro (HTML): what the citizen applies for and who handles it'
+    have_ready:
+      type: sequence
+      label: 'What to have ready'
+      sequence:
+        type: string
+        label: 'Item'
+    legal_basis:
+      type: sequence
+      label: 'Legal basis'
+      sequence:
+        type: mapping
+        label: 'Law reference'
+        mapping:
+          title:
+            type: label
+            label: 'Short title, e.g. Serviceloven § 41'
+          url:
+            type: uri
+            label: 'Link to the law text (optional)'
+            requiredKey: false
+    expected_response:
+      type: string
+      label: 'Expected response time, one sentence'
+    next_steps:
+      type: text
+      label: 'Next steps (HTML): what happens after sending'
