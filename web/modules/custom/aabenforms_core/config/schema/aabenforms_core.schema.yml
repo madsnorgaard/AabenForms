@@ -168,7 +168,7 @@ aabenforms_core.retention:
 # Citizen guidance a kommune authors per webform (KL "Principper for god og
 # effektiv digital selvbetjening": intro, have ready, legal basis, expected
 # response, next steps). Read by GET /api/webform/{id} as attributes.gedisa.
-webform.webform.*.third_party.aabenforms_core:
+webform.settings.third_party.aabenforms_core:
   type: mapping
   label: 'AabenForms citizen guidance'
   mapping:
