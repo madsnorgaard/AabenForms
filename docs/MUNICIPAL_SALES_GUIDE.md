@@ -90,7 +90,7 @@ Engage your Data Protection Officer for a full compliance assessment before any 
 ### 5. Modern Architecture
 
 - Headless CMS (Drupal 11, core 11.3.10, PHP 8.4) backend
-- Vue.js/Nuxt 3 frontend
+- Vue.js/Nuxt 4 frontend
 - RESTful JSON:API
 - Self-hostable; no vendor lock-in
 - Multi-tenancy support via the domain module

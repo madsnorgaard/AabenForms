@@ -13,7 +13,7 @@
 Create a **complete Danish government mock services stack** for local DDEV development that:
 - Uses international standards (OIDC, SOAP, OpenAPI)
 - Includes realistic Danish test data
-- Works with both Drupal backend and Nuxt 3 frontend
+- Works with both Drupal backend and Nuxt 4 frontend
 - Requires zero external credentials
 - Enables offline development
 
@@ -88,7 +88,7 @@ ddev mocks-logs     # View logs
 1. **DDEV_MOCK_SERVICES_GUIDE.md** (50 KB)
    - Complete integration guide
    - Drupal backend configuration
-   - Nuxt 3 frontend configuration
+   - Nuxt 4 frontend configuration
    - Troubleshooting
    - Production deployment
 
@@ -182,7 +182,7 @@ $config['aabenforms_core.settings']['serviceplatformen']['endpoint'] = 'http://l
 $config['aabenforms_core.settings']['serviceplatformen']['mock_mode'] = TRUE;
 ```
 
-### Nuxt 3 Configuration
+### Nuxt 4 Configuration
 
 **File**: `nuxt.config.ts`
 

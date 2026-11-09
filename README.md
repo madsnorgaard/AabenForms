@@ -62,7 +62,7 @@ The open items, in order, are tracked in the security programme [#252](https://g
 ## Architecture
 
 ```
-Nuxt 3 frontend  ->  Drupal 11 backend (ECA, Webform, JSON + JSON:API)  ->  Danish public services
+Nuxt 4 frontend  ->  Drupal 11 backend (ECA, Webform, JSON + JSON:API)  ->  Danish public services
 (aabenforms.dk)      (api.aabenforms.dk)                                   MitID / NemLog-in, Serviceplatformen,
                                                                            Digital Post, KOMBIT, ESDH
 ```
@@ -136,7 +136,7 @@ The queue is in [GitHub issues](https://github.com/madsnorgaard/AabenForms/issue
 
 ## Related
 
-- Frontend: [aabenforms-frontend](https://github.com/madsnorgaard/aabenforms-frontend) (Nuxt 3, DKFDS)
+- Frontend: [aabenforms-frontend](https://github.com/madsnorgaard/aabenforms-frontend) (Nuxt 4, DKFDS)
 - Deployment: [contabo-infrastructure](https://github.com/madsnorgaard/contabo-infrastructure)
 
 ## License

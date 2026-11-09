@@ -4,7 +4,7 @@
 
 **ÅbenForms** is a headless workflow automation platform for Danish municipalities, built on:
 - **Backend**: Drupal 11.3 (this repository; core is pinned to the 11.3 line on purpose)
-- **Frontend**: Nuxt 3 (separate repository)
+- **Frontend**: Nuxt 4 (separate repository)
 - **Deployment**: contabo-infrastructure orchestration (separate repository, deploys to VPS2 on push to `main`)
 
 This backend provides:
