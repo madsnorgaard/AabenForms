@@ -1,5 +1,5 @@
 uuid: 8d3c4f1a-1234-4567-89ab-parking000001
-langcode: en
+langcode: da
 status: open
 dependencies: {  }
 weight: 0
@@ -9,27 +9,28 @@ uid: 1
 template: false
 archive: false
 id: parking_permit
-title: 'Resident Parking Permit'
-description: 'Apply for a resident-zone parking permit for your registered vehicle.'
+title: 'Beboerparkering'
+description: 'Søg om parkeringstilladelse til beboere for den bil, der står registreret på din adresse.'
 categories: {  }
 elements: |
   cpr:
     '#type': textfield
-    '#title': 'CPR number (DDMMYY-XXXX)'
+    '#title': 'Dit CPR-nummer'
+    '#description': 'Skriv dit CPR-nummer med 10 cifre, fx 010190-1234. Vi krypterer det, når vi modtager det.'
     '#required': true
     '#pattern': '\d{6}-?\d{4}'
   address:
     '#type': textfield
-    '#title': 'Registered address'
+    '#title': 'Din adresse'
     '#required': true
   vehicle_registration:
     '#type': textfield
-    '#title': 'Vehicle registration plate'
+    '#title': 'Bilens nummerplade'
     '#required': true
     '#pattern': '[A-Z0-9]{2,7}'
   duration_months:
     '#type': number
-    '#title': 'Duration (months)'
+    '#title': 'Hvor mange måneder skal tilladelsen gælde?'
     '#required': true
     '#min': 1
     '#max': 12
@@ -140,7 +141,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Permit application registered. Decision sent via Digital Post within 5 working days.'
+  confirmation_message: 'Vi har modtaget din ansøgning. Du får afgørelsen i Digital Post inden for 5 hverdage.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

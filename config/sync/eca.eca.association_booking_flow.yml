@@ -118,6 +118,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: association_booking_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Bookingen blev ikke behandlet, fordi foreningens MitID Erhverv-identitet ikke kunne bekraeftes. Log ind og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke bookingen, fordi vi ikke kunne bekræfte foreningens identitet med MitID Erhverv. Log ind, og prøv igen.'
     successors: {  }

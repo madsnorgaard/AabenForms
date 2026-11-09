@@ -32,10 +32,10 @@ class LegalBasisTest extends UnitTestCase {
    */
   public static function reviewedForms(): array {
     return [
-      'merudgifter' => ['merudgifter', 'Serviceloven §41, Forvaltningsloven §7, DBF art. 6(1)(e)'],
-      'school_transfer' => ['school_transfer', 'Folkeskoleloven §36, forældreansvarsloven §3'],
-      'klage' => ['klage', 'Forvaltningsloven §25, Retssikkerhedsloven §66'],
-      'building_permit' => ['building_permit', 'Byggeloven §16'],
+      'merudgifter' => ['merudgifter', 'Serviceloven § 41, Forvaltningsloven § 7, Databeskyttelsesforordningen artikel 6, stk. 1, litra e'],
+      'school_transfer' => ['school_transfer', 'Folkeskoleloven § 36, Forældreansvarsloven § 3'],
+      'klage' => ['klage', 'Forvaltningsloven § 25, Retssikkerhedsloven § 66'],
+      'building_permit' => ['building_permit', 'Byggeloven § 16'],
     ];
   }
 

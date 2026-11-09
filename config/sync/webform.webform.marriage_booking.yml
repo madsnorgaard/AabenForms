@@ -1,5 +1,5 @@
 uuid: 8d3c4f1a-1234-4567-89ab-marriage00001
-langcode: en
+langcode: da
 status: open
 dependencies: {  }
 weight: 0
@@ -9,39 +9,41 @@ uid: 1
 template: false
 archive: false
 id: marriage_booking
-title: 'Civil Marriage Booking'
-description: 'Book a civil marriage ceremony at the municipality.'
+title: 'Borgerlig vielse'
+description: 'Book en borgerlig vielse hos kommunen.'
 categories: {  }
 elements: |
   partner1_cpr:
     '#type': textfield
-    '#title': 'Partner 1 CPR (DDMMYY-XXXX)'
+    '#title': 'Part 1: CPR-nummer'
+    '#description': 'Skriv CPR-nummeret med 10 cifre, fx 010190-1234. Vi krypterer det, når vi modtager det.'
     '#required': true
     '#pattern': '\d{6}-?\d{4}'
   partner1_name:
     '#type': textfield
-    '#title': 'Partner 1 full name'
+    '#title': 'Part 1: fulde navn'
     '#required': true
   partner2_cpr:
     '#type': textfield
-    '#title': 'Partner 2 CPR (DDMMYY-XXXX)'
+    '#title': 'Part 2: CPR-nummer'
+    '#description': 'Skriv CPR-nummeret med 10 cifre, fx 010190-1234. Vi krypterer det, når vi modtager det.'
     '#required': true
     '#pattern': '\d{6}-?\d{4}'
   partner2_name:
     '#type': textfield
-    '#title': 'Partner 2 full name'
+    '#title': 'Part 2: fulde navn'
     '#required': true
   ceremony_date:
     '#type': date
-    '#title': 'Preferred ceremony date'
+    '#title': 'Hvilken dato ønsker I at blive viet?'
     '#required': true
   witness1_name:
     '#type': textfield
-    '#title': 'Witness 1 full name'
+    '#title': 'Vidne 1: fulde navn'
     '#required': true
   witness2_name:
     '#type': textfield
-    '#title': 'Witness 2 full name'
+    '#title': 'Vidne 2: fulde navn'
     '#required': true
 css: ''
 javascript: ''
@@ -150,7 +152,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Booking received. Both partners will receive a confirmation in Digital Post once a date is allocated.'
+  confirmation_message: 'Vi har modtaget jeres booking. I får begge besked om datoen i Digital Post.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

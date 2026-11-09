@@ -102,7 +102,7 @@ actions:
       recipient_type: cpr
       sender_cvr_token: ''
       subject_template: 'Bekræftelse af vielsesbooking'
-      body_template: '<p>Vi har modtaget jeres ansøgning om civil vielse. I modtager bekræftelse på dato i Digital Post.</p>'
+      body_template: '<p>Vi har modtaget jeres ansøgning om borgerlig vielse. I får besked om datoen i Digital Post.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors: {  }
@@ -111,6 +111,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: marriage_booking_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Bookingen blev ikke behandlet, fordi din identitet ikke kunne bekraeftes med MitID. Log ind med MitID og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke din booking, fordi vi ikke kunne bekræfte din identitet med MitID. Log ind med MitID, og prøv igen.'
     successors: {  }

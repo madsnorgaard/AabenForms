@@ -39,7 +39,7 @@ elements: |
   child_cpr:
     '#type': cpr_field
     '#title': 'Barnets CPR-nummer'
-    '#description': 'Krypteres ved modtagelse. Udfyldes hvis kendt.'
+    '#description': 'Udfyld, hvis du kender det. Vi krypterer det, når vi modtager det.'
   child_birthdate:
     '#type': textfield
     '#title': 'Barnets fødselsdato (hvis CPR ikke kendes)'
@@ -164,7 +164,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Din underretning er modtaget og behandles inden for 24 timer. Du modtager en kvittering.'
+  confirmation_message: 'Tak. Vi har modtaget din underretning og vurderer den inden for 24 timer. Du får en kvittering på e-mail.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

@@ -1,5 +1,5 @@
 uuid: 8d3c4f1a-1234-4567-89ab-address0001
-langcode: en
+langcode: da
 status: open
 dependencies: {  }
 weight: 0
@@ -9,33 +9,34 @@ uid: 1
 template: false
 archive: false
 id: address_change
-title: 'Address Change'
-description: 'Notify the municipality of a registered address change.'
+title: 'Flytning'
+description: 'Meld flytning til kommunen.'
 categories: {  }
 elements: |
   cpr:
     '#type': textfield
-    '#title': 'CPR number (DDMMYY-XXXX)'
+    '#title': 'Dit CPR-nummer'
+    '#description': 'Skriv dit CPR-nummer med 10 cifre, fx 010190-1234. Vi krypterer det, når vi modtager det.'
     '#required': true
     '#pattern': '\d{6}-?\d{4}'
     '#placeholder': '0101900001'
   old_address:
     '#type': textfield
-    '#title': 'Current address'
+    '#title': 'Din nuværende adresse'
     '#required': true
     '#placeholder': 'Lohgade 1, 2100 København Ø'
   new_address:
     '#type': textfield
-    '#title': 'New address'
+    '#title': 'Din nye adresse'
     '#required': true
     '#placeholder': 'Vestergade 5, 8000 Aarhus C'
   moving_date:
     '#type': date
-    '#title': 'Moving date'
+    '#title': 'Flyttedato'
     '#required': true
   consent:
     '#type': checkbox
-    '#title': 'I confirm the information above is accurate.'
+    '#title': 'Jeg bekræfter, at oplysningerne er rigtige.'
     '#required': true
 css: ''
 javascript: ''
@@ -144,7 +145,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Address change registered. You will receive a confirmation in Digital Post.'
+  confirmation_message: 'Vi har registreret din flytning. Du får en bekræftelse i Digital Post.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

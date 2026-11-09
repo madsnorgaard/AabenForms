@@ -106,5 +106,5 @@ actions:
     configuration:
       event_type: mileage_expense_denied
       step_label: 'Adgang afvist'
-      message: 'Udlaegget blev ikke behandlet, fordi det ikke kunne bekraeftes, at du er logget ind som medarbejder.'
+      message: 'Vi behandlede ikke udlægget, fordi vi ikke kunne bekræfte, at du er logget ind som medarbejder.'
     successors: {  }

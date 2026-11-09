@@ -99,7 +99,7 @@ actions:
       recipient_type: cpr
       sender_cvr_token: ''
       subject_template: 'Afgørelse på din ansøgning'
-      body_template: '<p>Der er truffet afgørelse på din ansøgning. Se bilag i Digital Post.</p>'
+      body_template: '<p>Vi har truffet afgørelse i din sag. Du kan læse afgørelsen i brevet i Digital Post.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors: {  }
@@ -108,6 +108,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: citizen_service_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Ansoegningen blev ikke behandlet, fordi din identitet ikke kunne bekraeftes med MitID. Log ind med MitID og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke din ansøgning, fordi vi ikke kunne bekræfte din identitet med MitID. Log ind med MitID, og prøv igen.'
     successors: {  }

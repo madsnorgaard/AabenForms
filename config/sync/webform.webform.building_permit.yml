@@ -1,5 +1,5 @@
 uuid: 8d3c4f1a-1234-4567-89ab-buildperm0001
-langcode: en
+langcode: da
 status: open
 dependencies: {  }
 weight: 0
@@ -9,29 +9,31 @@ uid: 1
 template: false
 archive: false
 id: building_permit
-title: 'Building Permit Application'
-description: 'Apply for a residential building permit (extensions, garages, sheds).'
+title: 'Ansøgning om byggetilladelse'
+description: 'Søg om byggetilladelse til din bolig, fx tilbygning, garage eller skur. Kommunen behandler ansøgningen efter byggeloven § 16.'
 categories: {  }
 elements: |
   cpr:
     '#type': textfield
-    '#title': 'CPR number (DDMMYY-XXXX)'
+    '#title': 'Dit CPR-nummer'
     '#required': true
     '#pattern': '\d{6}-?\d{4}'
+    '#description': 'Skriv dit CPR-nummer med 10 cifre, fx 010190-1234. Vi krypterer det, når vi modtager det.'
   applicant_name:
     '#type': textfield
-    '#title': 'Applicant name'
+    '#title': 'Dit navn'
     '#required': true
   property_address:
     '#type': textfield
-    '#title': 'Property address'
+    '#title': 'Adressen på ejendommen'
     '#required': true
+    '#description': 'Skriv adressen på det sted, du vil bygge.'
   project_description:
     '#type': textarea
-    '#title': 'Project description'
+    '#title': 'Hvad vil du bygge?'
     '#required': true
     '#rows': 4
-    '#description': 'Describe what you intend to build, the size in m², and proximity to property lines.'
+    '#description': 'Beskriv, hvad du vil bygge, hvor stort det bliver i m², og hvor tæt det ligger på skel.'
 css: ''
 javascript: ''
 settings:
@@ -139,7 +141,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Your building-permit application has been registered. The case worker will respond via Digital Post.'
+  confirmation_message: 'Vi har modtaget din ansøgning om byggetilladelse. Du får svar fra en sagsbehandler i Digital Post.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

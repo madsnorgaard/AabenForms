@@ -100,6 +100,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: company_verification_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Anmodningen blev ikke behandlet, fordi virksomhedens MitID Erhverv-identitet ikke kunne bekraeftes. Log ind og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke anmodningen, fordi vi ikke kunne bekræfte virksomhedens identitet med MitID Erhverv. Log ind, og prøv igen.'
     successors: {  }
