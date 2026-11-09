@@ -1,7 +1,23 @@
 uuid: 2e4a6c8d-1f3b-4d5e-9a7c-8b6d4f2e0a1c
 langcode: da
 status: open
-dependencies: {  }
+dependencies:
+  module:
+    - aabenforms_core
+third_party_settings:
+  aabenforms_core:
+    intro: '<p>Her søger du om at få dækket de ekstra udgifter, du har, fordi dit barn har en betydelig og varig funktionsnedsættelse. Det kan fx være medicin, særlig kost, tøj eller kørsel.</p><p>Familieafdelingen i din kommune behandler ansøgningen efter servicelovens § 41. Du får svar i Digital Post.</p>'
+    have_ready:
+      - 'Barnets CPR-nummer'
+      - 'Et overslag over dine merudgifter pr. måned'
+      - 'En kort beskrivelse af, hvordan funktionsnedsættelsen påvirker barnets hverdag'
+    legal_basis:
+      -
+        title: 'Serviceloven § 41'
+      -
+        title: 'Forvaltningsloven § 7'
+    expected_response: 'Du får normalt svar inden for 8 uger.'
+    next_steps: '<p>En sagsbehandler i familieafdelingen gennemgår din ansøgning. Mangler vi oplysninger, skriver vi til dig i Digital Post. Du får vores afgørelse i Digital Post, normalt inden for 8 uger.</p><p>Har du spørgsmål, kan du kontakte kommunen. Oplys dit sagsnummer, så kan vi hurtigt finde din sag.</p>'
 weight: 0
 open: null
 close: null
@@ -9,37 +25,97 @@ uid: 1
 template: false
 archive: false
 id: merudgifter
-title: 'Ansøgning om dækning af merudgifter (SEL §41)'
-description: 'En forælder søger dækning af nødvendige merudgifter ved forsørgelse af et barn med betydelig og varigt nedsat funktionsevne (servicelovens §41). MitID-gated, sagsbehandling med partshøring og klagevejledning.'
+title: 'Ansøgning om dækning af merudgifter til et barn (Serviceloven § 41)'
+description: 'En forælder søger om at få dækket nødvendige merudgifter ved at forsørge et barn med betydelig og varig funktionsnedsættelse (servicelovens § 41). Kræver MitID. Sagsbehandling med partshøring og klagevejledning.'
 categories: {  }
 elements: |
   workflow_id:
     '#type': hidden
-  applicant_cpr:
-    '#type': cpr_field
-    '#title': 'Dit CPR-nummer'
-    '#required': true
-    '#description': 'Udfyldes automatisk fra MitID. Krypteres ved modtagelse.'
-  child_name:
-    '#type': textfield
-    '#title': 'Barnets navn'
-    '#required': true
-  child_cpr:
-    '#type': cpr_field
-    '#title': 'Barnets CPR-nummer'
-    '#required': true
-  funktionsnedsaettelse:
-    '#type': textarea
-    '#title': 'Beskriv barnets funktionsnedsættelse'
-    '#required': true
-    '#rows': 4
-  maanedlig_merudgift:
-    '#type': number
-    '#title': 'Anslåede nødvendige merudgifter (kr./måned)'
-    '#required': true
-    '#min': 0
-    '#step': 1
-    '#description': 'De samlede nødvendige merudgifter ved forsørgelsen pr. måned.'
+  om_ansoegningen:
+    '#type': webform_wizard_page
+    '#title': 'Om ansøgningen'
+    intro:
+      '#type': webform_markup
+      '#markup': '<p>Her søger du om at få dækket de ekstra udgifter, du har, fordi dit barn har en betydelig og varig funktionsnedsættelse. Det kan fx være medicin, særlig kost, tøj eller kørsel.</p><p><strong>Det skal du have klar</strong></p><ul><li>Barnets CPR-nummer</li><li>Et overslag over dine merudgifter pr. måned</li><li>En kort beskrivelse af, hvordan funktionsnedsættelsen påvirker barnets hverdag</li></ul><p>Familieafdelingen i din kommune behandler ansøgningen efter servicelovens § 41. Du får svar i Digital Post.</p>'
+    screen_barn_under_18:
+      '#type': radios
+      '#title': 'Er barnet under 18 år?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+    stop_barn_over_18:
+      '#type': webform_markup
+      '#markup': '<p>Du kan ikke søge merudgifter til et barn her, når barnet er fyldt 18 år. Voksne med nedsat funktionsevne kan søge om dækning af merudgifter efter servicelovens § 100. Kontakt kommunen, så hjælper vi dig videre.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_barn_under_18"]':
+            value: nej
+    screen_barn_bor_hos_dig:
+      '#type': radios
+      '#title': 'Bor barnet hos dig?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+      '#description': 'Barnet skal bo hos dig, og du skal forsørge det i hjemmet.'
+    stop_barn_bor_ikke_hos_dig:
+      '#type': webform_markup
+      '#markup': '<p>Du kan kun søge, når barnet bor hos dig, og du forsørger det i hjemmet. Bor barnet hos den anden forælder, er det den forælder, der skal søge. Kontakt kommunen, hvis du er i tvivl.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_barn_bor_hos_dig"]':
+            value: nej
+  hvem_soeger:
+    '#type': webform_wizard_page
+    '#title': 'Hvem søger'
+    applicant_cpr:
+      '#type': cpr_field
+      '#title': 'Dit CPR-nummer'
+      '#required': true
+      '#description': 'Vi henter dit CPR-nummer fra dit MitID-login og krypterer det, når vi modtager det.'
+  hvad_soeges:
+    '#type': webform_wizard_page
+    '#title': 'Det søger du om'
+    child_name:
+      '#type': textfield
+      '#title': 'Barnets navn'
+      '#required': true
+    child_cpr:
+      '#type': cpr_field
+      '#title': 'Barnets CPR-nummer'
+      '#required': true
+      '#description': 'Vi bruger nummeret til at tjekke i CPR-registret, at barnet bor hos dig.'
+    maanedlig_merudgift:
+      '#type': number
+      '#title': 'Hvor store er dine merudgifter om måneden (kr.)?'
+      '#required': true
+      '#min': 0
+      '#step': 1
+      '#description': 'Skriv de samlede udgifter, du har på grund af barnets funktionsnedsættelse, ud over hvad andre forældre har. Et overslag er nok.'
+  det_skal_vi_bruge:
+    '#type': webform_wizard_page
+    '#title': 'Det skal vi bruge fra dig'
+    funktionsnedsaettelse:
+      '#type': textarea
+      '#title': 'Beskriv barnets funktionsnedsættelse'
+      '#required': true
+      '#rows': 4
+      '#description': 'Skriv, hvordan funktionsnedsættelsen påvirker barnets hverdag, og hvilke udgifter den giver. Du skal ikke vedlægge lægepapirer nu. Vi beder om dem, hvis vi får brug for dem.'
+  opsummering:
+    '#type': webform_wizard_page
+    '#title': 'Opsummering og underskrift'
+    '#description': 'Tjek dine svar, før du sender. Du kan rette hvert svar med linket Redigér.'
+    erklaering:
+      '#type': checkbox
+      '#title': 'Jeg erklærer, at oplysningerne er rigtige, og jeg ved, at kommunen kan kontrollere dem i registre.'
+      '#required': true
+      '#required_error': 'Du skal bekræfte erklæringen, før du kan sende.'
+      '#description': 'Du skriver under med dit MitID-login. Giver du bevidst forkerte oplysninger, kan du blive straffet, og du kan skulle betale ydelsen tilbage.'
 css: ''
 javascript: ''
 settings:
@@ -147,7 +223,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Din ansøgning om merudgifter er modtaget og behandles.'
+  confirmation_message: 'Vi har modtaget din ansøgning om merudgifter. En sagsbehandler i familieafdelingen gennemgår den. Mangler vi oplysninger, skriver vi til dig i Digital Post. Du får vores afgørelse i Digital Post, normalt inden for 8 uger. Har du spørgsmål, kan du kontakte kommunen og oplyse dit sagsnummer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

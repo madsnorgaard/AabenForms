@@ -1,7 +1,22 @@
 uuid: 3c5e7a9b-4d6f-4a8c-9b1d-5e6f7a8b9c0d
 langcode: da
 status: open
-dependencies: {  }
+dependencies:
+  module:
+    - aabenforms_core
+third_party_settings:
+  aabenforms_core:
+    intro: '<p>Her klager du over en afgørelse, kommunen har truffet i din sag. Vi vurderer afgørelsen igen. Fastholder vi den, sender vi din klage videre til Ankestyrelsen, som er den myndighed, der afgør klager over kommunens afgørelser.</p><p>Du skal klage senest 4 uger efter, at du har fået afgørelsen. Kommunen behandler klagen efter forvaltningsloven og retssikkerhedsloven. Du får svar i Digital Post.</p>'
+    have_ready:
+      - 'Sagsnummeret fra det brev, du har fået med afgørelsen'
+      - 'En beskrivelse af, hvad du er uenig i, og hvad du ønsker i stedet'
+    legal_basis:
+      -
+        title: 'Forvaltningsloven § 25'
+      -
+        title: 'Retssikkerhedsloven § 66'
+    expected_response: 'Vi genvurderer afgørelsen inden for 4 uger.'
+    next_steps: '<p>Kommunen vurderer afgørelsen igen inden for 4 uger. Giver vi dig medhold, får du en ny afgørelse i Digital Post. Fastholder vi afgørelsen, sender vi din klage og sagens papirer videre til Ankestyrelsen, og du får besked i Digital Post.</p><p>Har du spørgsmål, kan du kontakte kommunen. Oplys dit sagsnummer.</p>'
 weight: 0
 open: null
 close: null
@@ -9,26 +24,73 @@ uid: 1
 template: false
 archive: false
 id: klage
-title: 'Klage over afgørelse'
-description: 'En borger klager over en afgørelse i en sag. Sagen sendes til genvurdering (status påklaget).'
+title: 'Klage over en afgørelse'
+description: 'En borger klager over en afgørelse i sin sag. Sagen sendes til genvurdering (status påklaget).'
 categories: {  }
 elements: |
-  case_id:
-    '#type': number
-    '#title': 'Sagsnummer'
-    '#required': true
-    '#min': 1
-    '#description': 'Nummeret på den sag, du klager over.'
-  applicant_cpr:
-    '#type': textfield
-    '#title': 'Dit CPR-nummer'
-    '#required': true
-    '#description': 'DDMMÅÅ-XXXX. Krypteres ved modtagelse.'
-  klage_begrundelse:
-    '#type': textarea
-    '#title': 'Begrundelse for klagen'
-    '#required': true
-    '#rows': 6
+  om_ansoegningen:
+    '#type': webform_wizard_page
+    '#title': 'Om klagen'
+    intro:
+      '#type': webform_markup
+      '#markup': '<p>Her klager du over en afgørelse, kommunen har truffet i din sag. Vi vurderer afgørelsen igen. Fastholder vi den, sender vi din klage videre til Ankestyrelsen, som er den myndighed, der afgør klager over kommunens afgørelser.</p><p><strong>Det skal du have klar</strong></p><ul><li>Sagsnummeret fra det brev, du har fået med afgørelsen</li><li>En beskrivelse af, hvad du er uenig i, og hvad du ønsker i stedet</li></ul><p>Kommunen behandler klagen efter forvaltningsloven og retssikkerhedsloven. Du får svar i Digital Post.</p>'
+    screen_hvad_klager_du_over:
+      '#type': radios
+      '#title': 'Hvad klager du over?'
+      '#required': true
+      '#options':
+        afgoerelse: 'En afgørelse, kommunen har truffet i min sag'
+        andet: 'Noget andet, fx sagsbehandlingstiden eller den måde, jeg er blevet behandlet på'
+    stop_ikke_afgoerelse:
+      '#type': webform_markup
+      '#markup': '<p>Her kan du kun klage over en afgørelse. Vil du klage over sagsbehandlingstiden eller over den måde, du er blevet behandlet på, skal du skrive til kommunen eller til kommunens borgerrådgiver. Kontakt kommunen, så hjælper vi dig videre.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_hvad_klager_du_over"]':
+            value: andet
+    info_klagefrist:
+      '#type': webform_markup
+      '#markup': '<p>Du skal klage senest 4 uger efter, at du har fået afgørelsen. Vi tjekker fristen, når vi modtager klagen. Er fristen overskredet, får du besked om det.</p>'
+      '#attributes':
+        data-aabenforms-alert: info
+  hvem_soeger:
+    '#type': webform_wizard_page
+    '#title': 'Hvem klager'
+    applicant_cpr:
+      '#type': textfield
+      '#title': 'Dit CPR-nummer'
+      '#required': true
+      '#description': 'Vi henter dit CPR-nummer fra dit MitID-login og krypterer det, når vi modtager det.'
+  hvad_soeges:
+    '#type': webform_wizard_page
+    '#title': 'Den afgørelse, du klager over'
+    case_id:
+      '#type': number
+      '#title': 'Sagsnummer'
+      '#required': true
+      '#min': 1
+      '#description': 'Nummeret står øverst i det brev med afgørelsen, du har fået i Digital Post.'
+  det_skal_vi_bruge:
+    '#type': webform_wizard_page
+    '#title': 'Det skal vi bruge fra dig'
+    klage_begrundelse:
+      '#type': textarea
+      '#title': 'Hvorfor er du uenig i afgørelsen?'
+      '#required': true
+      '#rows': 6
+      '#description': 'Skriv, hvad du mener er forkert, og hvad du ønsker i stedet. Du behøver ikke henvise til love eller paragraffer.'
+  opsummering:
+    '#type': webform_wizard_page
+    '#title': 'Opsummering og underskrift'
+    '#description': 'Tjek dine svar, før du sender. Du kan rette hvert svar med linket Redigér.'
+    erklaering:
+      '#type': checkbox
+      '#title': 'Jeg erklærer, at oplysningerne er rigtige, og jeg ved, at kommunen kan kontrollere dem i registre.'
+      '#required': true
+      '#required_error': 'Du skal bekræfte erklæringen, før du kan sende.'
+      '#description': 'Du skriver under med dit MitID-login. Klager du på vegne af en anden med digital fuldmagt, gælder erklæringen de oplysninger, du giver.'
   on_behalf_of:
     '#type': hidden
     '#title': 'Klager på vegne af'
@@ -150,7 +212,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Din klage er modtaget, og sagen sendes til genvurdering.'
+  confirmation_message: 'Vi har modtaget din klage. Kommunen vurderer afgørelsen igen inden for 4 uger. Giver vi dig medhold, får du en ny afgørelse i Digital Post. Fastholder vi afgørelsen, sender vi din klage videre til Ankestyrelsen, og du får besked i Digital Post. Har du spørgsmål, kan du kontakte kommunen og oplyse dit sagsnummer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

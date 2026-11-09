@@ -1,7 +1,23 @@
 uuid: 3f8a1b2c-4d5e-4f6a-8b9c-0d1e2f3a4b5c
 langcode: da
 status: open
-dependencies: {  }
+dependencies:
+  module:
+    - aabenforms_core
+third_party_settings:
+  aabenforms_core:
+    intro: '<p>Her søger du om at flytte dit barn til en anden folkeskole i kommunen. Skolelederen på den skole, du ønsker, vurderer, om der er plads.</p><p>Har I fælles forældremyndighed, skal den anden forælder skrive under på ansøgningen. Vi sender en anmodning i Digital Post. Skoleforvaltningen i din kommune behandler ansøgningen efter folkeskolelovens § 36, stk. 3. I får svar i Digital Post.</p>'
+    have_ready:
+      - 'Barnets CPR-nummer'
+      - 'Navnet på den skole, du ønsker'
+      - 'Den anden forælders CPR-nummer, hvis I har fælles forældremyndighed'
+    legal_basis:
+      -
+        title: 'Folkeskoleloven § 36, stk. 3'
+      -
+        title: 'Forældreansvarsloven § 3'
+    expected_response: 'Du får normalt svar inden for 4 uger.'
+    next_steps: '<p>Har I fælles forældremyndighed, sender vi nu en anmodning om medunderskrift til den anden forælder i Digital Post. Derefter vurderer skolelederen på den ønskede skole, om der er plads. I får afgørelsen i Digital Post, normalt inden for 4 uger.</p><p>Har du spørgsmål, kan du kontakte skoleforvaltningen i din kommune. Oplys dit sagsnummer.</p>'
 weight: 0
 open: null
 close: null
@@ -10,78 +26,110 @@ template: false
 archive: false
 id: school_transfer
 title: 'Ansøgning om skoleskift'
-description: 'En forælder søger om at flytte sit barn til en anden folkeskole. MitID-gated med registerbaseret kontrol af forældremyndighed (FOB 2025-9), medunderskrift fra den anden forældremyndighedsindehaver, skoleleder-vurdering og afgørelsesbrev til begge indehavere via Digital Post.'
+description: 'En forælder søger om at flytte sit barn til en anden folkeskole. Kræver MitID. Forældremyndigheden kontrolleres i CPR-registret (ombudsmandens udtalelse FOB 2025-9), den anden forældremyndighedsindehaver medunderskriver, skolelederen vurderer, og begge indehavere får afgørelsen i Digital Post.'
 categories: {  }
 elements: |
   workflow_id:
     '#type': hidden
-  applicant_cpr:
-    '#type': cpr_field
-    '#title': 'Dit CPR-nummer'
-    '#required': true
-    '#description': 'Udfyldes automatisk fra MitID. Krypteres ved modtagelse.'
-  child_name:
-    '#type': textfield
-    '#title': 'Barnets navn'
-    '#required': true
-  child_cpr:
-    '#type': cpr_field
-    '#title': 'Barnets CPR-nummer'
-    '#required': true
-    '#description': 'Forældremyndighed kontrolleres i CPR-registret.'
-  current_school:
-    '#type': select
-    '#title': 'Nuværende skole'
-    '#required': true
-    '#options':
-      '751101': 'Frederiksbjerg Skole'
-      '751102': 'Katrinebjergskolen'
-      '751103': 'Møllevangskolen'
-      '751104': 'Risskov Skole'
-      '751105': 'Skåde Skole'
-  target_school:
-    '#type': select
-    '#title': 'Ønsket skole'
-    '#required': true
-    '#options':
-      '751101': 'Frederiksbjerg Skole'
-      '751102': 'Katrinebjergskolen'
-      '751103': 'Møllevangskolen'
-      '751104': 'Risskov Skole'
-      '751105': 'Skåde Skole'
-  reason:
-    '#type': textarea
-    '#title': 'Begrundelse for ønsket om skoleskift'
-    '#required': true
-    '#rows': 4
-  custody_status:
-    '#type': radios
-    '#title': 'Forældremyndighed'
-    '#required': true
-    '#options':
-      sole: 'Jeg har forældremyndigheden alene'
-      joint_agreed: 'Fælles forældremyndighed - den anden indehaver er enig i skoleskiftet'
-      joint_disagreed: 'Fælles forældremyndighed - den anden indehaver er uenig, eller jeg ved det ikke'
-    '#description': 'Ved fælles forældremyndighed er skolevalg en væsentlig beslutning, som begge indehavere skal være enige om.'
-  parent2_cpr:
-    '#type': cpr_field
-    '#title': 'Den anden forældremyndighedsindehavers CPR-nummer'
-    '#states':
-      visible:
-        ':input[name="custody_status"]':
-          value: joint_agreed
-      required:
-        ':input[name="custody_status"]':
-          value: joint_agreed
-    '#description': 'Den anden indehaver modtager en anmodning om medunderskrift i Digital Post.'
-  parent2_email:
-    '#type': email
-    '#title': 'Den anden indehavers e-mail (reserve)'
-    '#states':
-      visible:
-        ':input[name="custody_status"]':
-          value: joint_agreed
-    '#description': 'Bruges kun hvis Digital Post ikke kan leveres.'
+  om_ansoegningen:
+    '#type': webform_wizard_page
+    '#title': 'Om ansøgningen'
+    intro:
+      '#type': webform_markup
+      '#markup': '<p>Her søger du om at flytte dit barn til en anden folkeskole i kommunen. Skolelederen på den skole, du ønsker, vurderer, om der er plads.</p><p><strong>Det skal du have klar</strong></p><ul><li>Barnets CPR-nummer</li><li>Navnet på den skole, du ønsker</li><li>Den anden forælders CPR-nummer, hvis I har fælles forældremyndighed</li></ul><p>Skoleforvaltningen i din kommune behandler ansøgningen efter folkeskolelovens § 36, stk. 3. I får svar i Digital Post.</p>'
+    custody_status:
+      '#type': radios
+      '#title': 'Hvem har forældremyndigheden over barnet?'
+      '#required': true
+      '#options':
+        sole: 'Jeg har forældremyndigheden alene'
+        joint_agreed: 'Vi har fælles forældremyndighed, og den anden forælder er enig i skoleskiftet'
+        joint_disagreed: 'Vi har fælles forældremyndighed, men den anden forælder er uenig eller kender ikke til ønsket'
+      '#description': 'Har I fælles forældremyndighed, skal I være enige om skoleskiftet. Vi tjekker forældremyndigheden i CPR-registret.'
+    stop_uenighed:
+      '#type': webform_markup
+      '#markup': '<p>Når I har fælles forældremyndighed, skal I være enige om et skoleskift. Vi kan ikke flytte barnet mod den anden forælders vilje. Tal med den anden forælder først. Kan I ikke blive enige, kan Familieretshuset hjælpe jer. Kontakt skoleforvaltningen, hvis du er i tvivl.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="custody_status"]':
+            value: joint_disagreed
+  hvem_soeger:
+    '#type': webform_wizard_page
+    '#title': 'Hvem søger'
+    applicant_cpr:
+      '#type': cpr_field
+      '#title': 'Dit CPR-nummer'
+      '#required': true
+      '#description': 'Vi henter dit CPR-nummer fra dit MitID-login og krypterer det, når vi modtager det.'
+    parent2_cpr:
+      '#type': cpr_field
+      '#title': 'Den anden forælders CPR-nummer'
+      '#states':
+        visible:
+          ':input[name="custody_status"]':
+            value: joint_agreed
+        required:
+          ':input[name="custody_status"]':
+            value: joint_agreed
+      '#description': 'Vi sender en anmodning om medunderskrift til den anden forælder i Digital Post.'
+    parent2_email:
+      '#type': email
+      '#title': 'Den anden forælders e-mail (reserve)'
+      '#states':
+        visible:
+          ':input[name="custody_status"]':
+            value: joint_agreed
+      '#description': 'Vi bruger kun e-mailen, hvis vi ikke kan levere brevet i Digital Post.'
+  hvad_soeges:
+    '#type': webform_wizard_page
+    '#title': 'Det søger du om'
+    child_name:
+      '#type': textfield
+      '#title': 'Barnets navn'
+      '#required': true
+    child_cpr:
+      '#type': cpr_field
+      '#title': 'Barnets CPR-nummer'
+      '#required': true
+      '#description': 'Vi bruger nummeret til at tjekke forældremyndigheden i CPR-registret.'
+    current_school:
+      '#type': select
+      '#title': 'Barnets nuværende skole'
+      '#required': true
+      '#options':
+        '751101': 'Frederiksbjerg Skole'
+        '751102': 'Katrinebjergskolen'
+        '751103': 'Møllevangskolen'
+        '751104': 'Risskov Skole'
+        '751105': 'Skåde Skole'
+    target_school:
+      '#type': select
+      '#title': 'Den skole, du ønsker'
+      '#required': true
+      '#options':
+        '751101': 'Frederiksbjerg Skole'
+        '751102': 'Katrinebjergskolen'
+        '751103': 'Møllevangskolen'
+        '751104': 'Risskov Skole'
+        '751105': 'Skåde Skole'
+    reason:
+      '#type': textarea
+      '#title': 'Hvorfor ønsker du et skoleskift?'
+      '#required': true
+      '#rows': 4
+      '#description': 'Skriv kort, hvad der ligger bag ønsket. Skolelederen læser det, når hun eller han vurderer ansøgningen.'
+  opsummering:
+    '#type': webform_wizard_page
+    '#title': 'Opsummering og underskrift'
+    '#description': 'Tjek dine svar, før du sender. Du kan rette hvert svar med linket Redigér.'
+    erklaering:
+      '#type': checkbox
+      '#title': 'Jeg erklærer, at oplysningerne er rigtige, og jeg ved, at kommunen kan kontrollere dem i registre.'
+      '#required': true
+      '#required_error': 'Du skal bekræfte erklæringen, før du kan sende.'
+      '#description': 'Du skriver under med dit MitID-login. Har I fælles forældremyndighed, skriver den anden forælder under bagefter.'
   parent1_status:
     '#type': hidden
     '#default_value': complete
@@ -200,7 +248,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Ansøgningen om skoleskift er modtaget. Du får svar via Digital Post.'
+  confirmation_message: 'Vi har modtaget din ansøgning om skoleskift. Har I fælles forældremyndighed, sender vi nu en anmodning om medunderskrift til den anden forælder i Digital Post. Derefter vurderer skolelederen på den ønskede skole, om der er plads. I får afgørelsen i Digital Post, normalt inden for 4 uger. Har du spørgsmål, kan du kontakte skoleforvaltningen i din kommune og oplyse dit sagsnummer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''
