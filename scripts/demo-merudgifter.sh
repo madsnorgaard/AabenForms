@@ -63,7 +63,10 @@ PAYLOAD=$(cat <<JSON
   "child_name":"Emil Nielsen",
   "child_cpr":"1503151234",
   "funktionsnedsaettelse":"Autisme. Behov for specialkost, ekstra transport til behandling og slitage på tøj.",
-  "maanedlig_merudgift":$AMOUNT
+  "maanedlig_merudgift":$AMOUNT,
+  "screen_barn_under_18":"ja",
+  "screen_barn_bor_hos_dig":"ja",
+  "erklaering":1
 }}
 JSON
 )
