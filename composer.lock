@@ -1527,7 +1527,7 @@
         },
         {
             "name": "drupal/core-project-message",
-            "version": "11.4.11",
+            "version": "11.4.12",
             "source": {
                 "type": "git",
                 "url": "https://github.com/drupal/core-project-message.git",
@@ -15566,6 +15566,7 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
+        "drupal/domain": 10,
         "drupal/openid_connect": 15
     },
     "prefer-stable": true,
