@@ -127,6 +127,21 @@ actions:
       case_id_token: '[case_id]'
     successors:
       -
+        id: send_receipt
+        condition: ''
+  send_receipt:
+    label: 'Send kvitteringsbrev (Digital Post)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:applicant_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Kvittering: vi har modtaget dit oplysningsskema om sygedagpenge'
+      body_template: '<p>Kommunen har i dag modtaget dit oplysningsskema om sygedagpenge.</p><p><strong>Sagsnummer:</strong> [case_id]. Oplys nummeret, når du kontakter os om sagen.</p><p><strong>Det sker nu:</strong> Vi henter oplysninger om din løn og din sygemelding fra eIndkomst og din arbejdsgiver og vurderer, om du har ret til sygedagpenge. Du får vores afgørelse i Digital Post. Senest 8 uger efter din første sygedag kontakter vi dig om den første opfølgningssamtale.</p><p><strong>Hvornår hører du fra os:</strong> Du får normalt svar inden for 4 uger.</p><p><strong>Har du spørgsmål?</strong> Kontakt jobcentret i din kommune og oplys dit sagsnummer.</p>'
+      type: 'Digital Post'
+      result_token: sygedagpenge_receipt_result
+    successors:
+      -
         id: employment_check
         condition: ''
   employment_check:

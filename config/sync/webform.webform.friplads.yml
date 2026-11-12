@@ -1,7 +1,22 @@
 uuid: 9a2c4e6f-1b3d-4c5e-8a7b-2c3d4e5f6a7b
 langcode: da
 status: open
-dependencies: {  }
+dependencies:
+  module:
+    - aabenforms_core
+third_party_settings:
+  aabenforms_core:
+    intro: '<p>Her søger du om tilskud til betalingen for dit barns plads i daginstitution, dagpleje eller SFO. Tilskuddets størrelse afhænger af husstandens indkomst, som vi henter fra eIndkomst, så du skal ikke selv oplyse den.</p><p>Pladsanvisningen i din kommune behandler ansøgningen efter dagtilbudslovens § 43. Du får svar i Digital Post.</p>'
+    have_ready:
+      - 'Barnets navn'
+      - 'Dit MitID'
+    legal_basis:
+      -
+        title: 'Dagtilbudsloven § 43'
+      -
+        title: 'Forvaltningsloven § 7'
+    expected_response: 'Du får normalt svar inden for 4 uger.'
+    next_steps: '<p>Vi henter husstandens indkomst fra eIndkomst og beregner tilskuddet. Du får vores afgørelse i Digital Post, normalt inden for 4 uger. Tilskuddet trækkes fra i din betaling for pladsen fra måneden efter, at vi har modtaget ansøgningen.</p><p>Har du spørgsmål, kan du kontakte pladsanvisningen i din kommune. Oplys dit sagsnummer.</p>'
 weight: 0
 open: null
 close: null
@@ -10,18 +25,63 @@ template: false
 archive: false
 id: friplads
 title: 'Ansøgning om økonomisk fripladstilskud'
-description: 'En forælder søger økonomisk fripladstilskud til dagtilbud. Husstandsindkomsten afgør tilskuddet; lav indkomst straksbehandles automatisk, høj indkomst sendes til manuel vurdering.'
+description: 'En forælder søger økonomisk fripladstilskud til dagtilbud eller SFO. Husstandens indkomst afgør tilskuddet; lav indkomst straksbehandles automatisk, høj indkomst sendes til manuel vurdering.'
 categories: {  }
 elements: |
-  applicant_cpr:
-    '#type': textfield
-    '#title': 'Dit CPR-nummer'
-    '#required': true
-    '#description': 'DDMMÅÅ-XXXX. Krypteres ved modtagelse. Udfyldes automatisk fra MitID i produktion.'
-  child_name:
-    '#type': textfield
-    '#title': 'Barnets navn'
-    '#required': true
+  om_ansoegningen:
+    '#type': webform_wizard_page
+    '#title': 'Om ansøgningen'
+    intro:
+      '#type': webform_markup
+      '#markup': '<p>Her søger du om tilskud til betalingen for dit barns plads i daginstitution, dagpleje eller SFO. Tilskuddets størrelse afhænger af husstandens indkomst, som vi henter fra eIndkomst, så du skal ikke selv oplyse den.</p><p><strong>Det skal du have klar</strong></p><ul><li>Barnets navn</li><li>Dit MitID</li></ul><p>Pladsanvisningen i din kommune behandler ansøgningen efter dagtilbudslovens § 43. Du får svar i Digital Post.</p>'
+    screen_barn_i_dagtilbud:
+      '#type': radios
+      '#title': 'Har barnet plads i en daginstitution, dagpleje eller SFO i kommunen?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+      '#description': 'Du kan søge, når barnet har fået en plads, også selv om pladsen først starter senere.'
+    stop_ingen_plads:
+      '#type': webform_markup
+      '#markup': '<p>Du kan først søge fripladstilskud, når barnet har en plads i et af kommunens dagtilbud eller en SFO. Søg om en plads først. Har barnet plads i en anden kommune, skal du søge tilskud der. Kontakt pladsanvisningen, hvis du er i tvivl.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_barn_i_dagtilbud"]':
+            value: nej
+  hvem_soeger:
+    '#type': webform_wizard_page
+    '#title': 'Hvem søger'
+    applicant_cpr:
+      '#type': textfield
+      '#title': 'Dit CPR-nummer'
+      '#required': true
+      '#description': 'Vi henter dit CPR-nummer fra dit MitID-login og krypterer det, når vi modtager det.'
+  hvad_soeges:
+    '#type': webform_wizard_page
+    '#title': 'Det søger du om'
+    child_name:
+      '#type': textfield
+      '#title': 'Barnets navn'
+      '#required': true
+      '#description': 'Det barn, du søger tilskud til.'
+    info_indkomst:
+      '#type': webform_markup
+      '#markup': '<p>Vi henter husstandens indkomst fra eIndkomst, så du skal ikke selv oplyse den. Ændrer indkomsten sig med mere end 5 trin på indkomstskalaen, skal du give os besked, fordi tilskuddet så ændrer sig.</p>'
+      '#attributes':
+        data-aabenforms-alert: info
+  opsummering:
+    '#type': webform_wizard_page
+    '#title': 'Opsummering og underskrift'
+    '#description': 'Tjek dine svar, før du sender. Du kan rette hvert svar med linket Redigér.'
+    erklaering:
+      '#type': checkbox
+      '#title': 'Jeg erklærer, at oplysningerne er rigtige, og jeg ved, at kommunen kan kontrollere dem i registre.'
+      '#required': true
+      '#required_error': 'Du skal bekræfte erklæringen, før du kan sende.'
+      '#description': 'Du skriver under med dit MitID-login. Giver du bevidst forkerte oplysninger, kan du blive straffet, og du kan skulle betale tilskuddet tilbage.'
 css: ''
 javascript: ''
 settings:
@@ -129,7 +189,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Din ansøgning om fripladstilskud er modtaget og behandles.'
+  confirmation_message: 'Vi har modtaget din ansøgning om fripladstilskud. Vi henter husstandens indkomst fra eIndkomst og beregner tilskuddet. Du får vores afgørelse i Digital Post, normalt inden for 4 uger. Har du spørgsmål, kan du kontakte pladsanvisningen i din kommune og oplyse dit sagsnummer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

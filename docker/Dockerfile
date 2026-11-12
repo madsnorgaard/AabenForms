@@ -35,9 +35,16 @@ COPY web/profiles/custom /opt/drupal/web/profiles/custom/
 WORKDIR /opt/drupal
 RUN composer install --no-dev --no-interaction --optimize-autoloader
 
-# Set ownership and permissions for /opt/drupal
-RUN chown -R www-data:www-data /opt/drupal /opt/drupal/backups && \
-    chmod -R 775 /opt/drupal
+# Code is owned by root and read-only for the web server; only the paths
+# Drupal writes to belong to www-data. A web-writable vendor/, core/ or
+# settings.php would turn any file-write bug into persistent code execution.
+# The capital X keeps the execute bit on directories and on files that already
+# have it (vendor/bin/drush and friends), and adds it nowhere else.
+RUN chown -R root:root /opt/drupal && \
+    chmod -R u=rwX,go=rX /opt/drupal && \
+    chmod 444 /opt/drupal/web/sites/default/settings.php && \
+    chown -R www-data:www-data /opt/drupal/web/sites/default/files /opt/drupal/backups && \
+    chmod -R 775 /opt/drupal/web/sites/default/files /opt/drupal/backups
 
 # Set the working directory
 WORKDIR /opt/drupal

@@ -1,7 +1,7 @@
 # ÅbenForms Mock Services - DDEV Integration Guide
 
 **Purpose**: Use Danish government mock services (MitID, Serviceplatformen, Adressevælger) in local DDEV development
-**Target**: Both Drupal backend and Nuxt 3 frontend developers
+**Target**: Both Drupal backend and Nuxt 4 frontend developers
 **Approach**: Standards-based (Keycloak, WireMock, Prism) with realistic Danish test data
 
 > **SOAP dialect: not the real KOMBIT protocol.** `ServiceplatformenClient` sends a
@@ -76,7 +76,7 @@ curl http://localhost:8082/adresser/autocomplete?q=frederiksberg
 ├─────────────────────────────────────────────────────┤
 │                                                      │
 │  ┌──────────────────┐      ┌──────────────────┐   │
-│  │  Drupal Backend  │      │  Nuxt 3 Frontend │   │
+│  │  Drupal Backend  │      │  Nuxt 4 Frontend │   │
 │  │  (port 443)      │◄────►│  (port 3000)     │   │
 │  └────────┬─────────┘      └──────────┬───────┘   │
 │           │                            │            │
@@ -312,7 +312,7 @@ Address: Testvej 1, 8000 Aarhus C
 
 ---
 
-## Nuxt 3 Frontend Configuration
+## Nuxt 4 Frontend Configuration
 
 ### 1. Install Dependencies
 

@@ -1,7 +1,23 @@
 uuid: b0d22f34-6364-42fd-a89c-70c52ebc8311
 langcode: da
 status: open
-dependencies: {  }
+dependencies:
+  module:
+    - aabenforms_core
+third_party_settings:
+  aabenforms_core:
+    intro: '<p>Din arbejdsgiver har meldt dig syg. Her giver du kommunen de oplysninger, vi skal bruge for at vurdere, om du har ret til sygedagpenge, og for at planlægge den første samtale med dig.</p><p>Jobcentret i din kommune behandler skemaet efter sygedagpengeloven. Du får svar i Digital Post.</p>'
+    have_ready:
+      - 'Datoen for din første sygedag'
+      - 'En kort beskrivelse af, hvad du ikke kan i dit arbejde lige nu'
+      - 'Dit bedste bud på, hvor længe du er syg'
+    legal_basis:
+      -
+        title: 'Sygedagpengeloven § 32'
+      -
+        title: 'Forvaltningsloven § 7'
+    expected_response: 'Du får normalt svar inden for 4 uger.'
+    next_steps: '<p>Vi henter oplysninger om din løn og din sygemelding fra eIndkomst og din arbejdsgiver og vurderer, om du har ret til sygedagpenge. Du får vores afgørelse i Digital Post, normalt inden for 4 uger. Senest 8 uger efter din første sygedag kontakter vi dig om den første opfølgningssamtale.</p><p>Har du spørgsmål, kan du kontakte jobcentret i din kommune. Oplys dit sagsnummer.</p>'
 weight: 0
 open: null
 close: null
@@ -10,54 +26,114 @@ template: false
 archive: false
 id: sygedagpenge
 title: 'Sygedagpenge - oplysningsskema'
-description: 'Oplysningsskema til kommunen, når arbejdsgiveren har meldt borgeren syg (NemRefusion). Beskæftigelse og løn hentes fra eIndkomst, så borgeren kun beskriver, hvad hun eller han ikke kan, og hvor længe det forventes at vare. MitID-gated. Demo: integrationer til eIndkomst og NemRefusion er ikke etableret.'
+description: 'Oplysningsskema til kommunen, når arbejdsgiveren har meldt borgeren syg (NemRefusion). Beskæftigelse og løn hentes fra eIndkomst, så borgeren kun beskriver, hvad hun eller han ikke kan, og hvor længe det forventes at vare. Kræver MitID. Demo: integrationer til eIndkomst og NemRefusion er ikke etableret.'
 categories: {  }
 elements: |
   workflow_id:
     '#type': hidden
-  applicant_cpr:
-    '#type': cpr_field
-    '#title': 'Dit CPR-nummer'
-    '#required': true
-    '#description': 'Udfyldes automatisk fra MitID. Krypteres ved modtagelse.'
-  employer_cvr:
-    '#type': textfield
-    '#title': 'Arbejdsgiverens CVR-nummer'
-    '#required': true
-    '#maxlength': 8
-    '#pattern': '^[0-9]{8}$'
-    '#description': 'Hentes fra din arbejdsgivers sygemelding og fra eIndkomst. Du skal ikke selv finde det.'
-  first_sick_day:
-    '#type': date
-    '#title': 'Første sygedag'
-    '#required': true
-    '#description': 'Hentes fra din arbejdsgivers sygemelding (NemRefusion). Er du uenig i arbejdsgiverens oplysninger, så giv kommunen besked.'
-  sickness_description:
-    '#type': textarea
-    '#title': 'Hvad kan du ikke på grund af din sygdom?'
-    '#required': true
-    '#rows': 4
-    '#description': 'Beskriv, hvad du ikke kan i dit arbejde lige nu. Du skal ikke oplyse en diagnose.'
-  expected_duration:
-    '#type': select
-    '#title': 'Hvor længe forventer du at være syg?'
-    '#required': true
-    '#options':
-      under_4: 'Under 4 uger'
-      '4_8': '4-8 uger'
-      over_8: 'Over 8 uger'
-      unknown: 'Ved ikke'
-  in_treatment:
-    '#type': radios
-    '#title': 'Er du i behandling?'
-    '#required': true
-    '#options':
-      ja: 'Ja'
-      nej: 'Nej'
-  contact_phone:
-    '#type': tel
-    '#title': 'Telefonnummer (valgfrit)'
-    '#description': 'Kommunen kan ringe til dig om den første opfølgningssamtale.'
+  om_ansoegningen:
+    '#type': webform_wizard_page
+    '#title': 'Om skemaet'
+    intro:
+      '#type': webform_markup
+      '#markup': '<p>Din arbejdsgiver har meldt dig syg. Her giver du kommunen de oplysninger, vi skal bruge for at vurdere, om du har ret til sygedagpenge, og for at planlægge den første samtale med dig.</p><p><strong>Det skal du have klar</strong></p><ul><li>Datoen for din første sygedag</li><li>En kort beskrivelse af, hvad du ikke kan i dit arbejde lige nu</li><li>Dit bedste bud på, hvor længe du er syg</li></ul><p>Jobcentret i din kommune behandler skemaet efter sygedagpengeloven. Du får svar i Digital Post.</p>'
+    screen_arbejdsgiver_anmeldt:
+      '#type': radios
+      '#title': 'Har din arbejdsgiver meldt dig syg til kommunen?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+      '#description': 'Arbejdsgivere melder sygdom via NemRefusion, som er det system, de bruger til at anmelde sygefravær. Du har typisk fået en besked om det i Digital Post.'
+    stop_ikke_anmeldt:
+      '#type': webform_markup
+      '#markup': '<p>Vi kan først behandle dit skema, når din arbejdsgiver har anmeldt dit sygefravær. Bed din arbejdsgiver om at anmelde det. Er du selvstændig eller ledig, skal du bruge et andet skema. Kontakt jobcentret i din kommune, så hjælper vi dig videre.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_arbejdsgiver_anmeldt"]':
+            value: nej
+    screen_faar_allerede:
+      '#type': radios
+      '#title': 'Får du allerede sygedagpenge eller en anden ydelse fra kommunen for den samme sygeperiode?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+    stop_faar_allerede:
+      '#type': webform_markup
+      '#markup': '<p>Du skal ikke udfylde skemaet igen. Har du spørgsmål til din sag, så kontakt din sagsbehandler i jobcentret.</p>'
+      '#attributes':
+        data-aabenforms-alert: stop
+      '#states':
+        visible:
+          ':input[name="screen_faar_allerede"]':
+            value: ja
+  hvem_soeger:
+    '#type': webform_wizard_page
+    '#title': 'Hvem udfylder skemaet'
+    applicant_cpr:
+      '#type': cpr_field
+      '#title': 'Dit CPR-nummer'
+      '#required': true
+      '#description': 'Vi henter dit CPR-nummer fra dit MitID-login og krypterer det, når vi modtager det.'
+    contact_phone:
+      '#type': tel
+      '#title': 'Dit telefonnummer (valgfrit)'
+      '#description': 'Vi ringer til dig om den første opfølgningssamtale.'
+  hvad_soeges:
+    '#type': webform_wizard_page
+    '#title': 'Din sygemelding'
+    employer_cvr:
+      '#type': textfield
+      '#title': 'Din arbejdsgivers CVR-nummer'
+      '#required': true
+      '#maxlength': 8
+      '#pattern': '^[0-9]{8}$'
+      '#description': 'Vi henter nummeret fra din arbejdsgivers sygemelding og fra eIndkomst, som er det register, hvor arbejdsgivere indberetter løn. Du skal ikke selv finde det.'
+    first_sick_day:
+      '#type': date
+      '#title': 'Din første sygedag'
+      '#required': true
+      '#description': 'Vi henter datoen fra din arbejdsgivers sygemelding. Er du uenig i den, så giv os besked.'
+  det_skal_vi_bruge:
+    '#type': webform_wizard_page
+    '#title': 'Det skal vi bruge fra dig'
+    sickness_description:
+      '#type': textarea
+      '#title': 'Hvad kan du ikke på grund af din sygdom?'
+      '#required': true
+      '#rows': 4
+      '#description': 'Beskriv, hvad du ikke kan i dit arbejde lige nu. Du skal ikke oplyse en diagnose.'
+    expected_duration:
+      '#type': select
+      '#title': 'Hvor længe forventer du at være syg?'
+      '#required': true
+      '#options':
+        under_4: 'Under 4 uger'
+        '4_8': '4-8 uger'
+        over_8: 'Over 8 uger'
+        unknown: 'Ved ikke'
+      '#description': 'Dit bedste bud er nok. Vi bruger det til at planlægge, hvornår vi skal tale sammen.'
+    in_treatment:
+      '#type': radios
+      '#title': 'Er du i behandling?'
+      '#required': true
+      '#options':
+        ja: Ja
+        nej: Nej
+      '#description': 'Fx hos din læge, på sygehuset eller hos en psykolog eller fysioterapeut.'
+  opsummering:
+    '#type': webform_wizard_page
+    '#title': 'Opsummering og underskrift'
+    '#description': 'Tjek dine svar, før du sender. Du kan rette hvert svar med linket Redigér.'
+    erklaering:
+      '#type': checkbox
+      '#title': 'Jeg erklærer, at oplysningerne er rigtige, og jeg ved, at kommunen kan kontrollere dem i registre.'
+      '#required': true
+      '#required_error': 'Du skal bekræfte erklæringen, før du kan sende.'
+      '#description': 'Du skriver under med dit MitID-login. Giver du bevidst forkerte oplysninger, kan du blive straffet, og du kan skulle betale sygedagpenge tilbage.'
 css: ''
 javascript: ''
 settings:
@@ -165,7 +241,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Dit oplysningsskema om sygedagpenge er modtaget og behandles.'
+  confirmation_message: 'Vi har modtaget dit oplysningsskema. Vi henter oplysninger om din løn og din sygemelding fra eIndkomst og din arbejdsgiver og vurderer, om du har ret til sygedagpenge. Du får vores afgørelse i Digital Post, normalt inden for 4 uger. Senest 8 uger efter din første sygedag kontakter vi dig om den første opfølgningssamtale. Har du spørgsmål, kan du kontakte jobcentret i din kommune og oplyse dit sagsnummer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

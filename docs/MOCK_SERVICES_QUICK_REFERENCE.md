@@ -104,7 +104,7 @@ $config['aabenforms_webform.settings']['adressevaelger']['api_url'] = 'http://lo
 
 ---
 
-## Nuxt 3 Configuration Snippet
+## Nuxt 4 Configuration Snippet
 
 **File**: `nuxt.config.ts`
 

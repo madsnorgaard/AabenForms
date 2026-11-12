@@ -275,7 +275,7 @@ jobs:
           "
         working-directory: backend
 
-  # Job 4: Frontend Tests (Nuxt 3)
+  # Job 4: Frontend Tests (Nuxt 4)
   frontend-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest

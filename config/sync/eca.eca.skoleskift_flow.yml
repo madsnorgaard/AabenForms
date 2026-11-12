@@ -152,6 +152,21 @@ actions:
       case_id_token: '[case_id]'
     successors:
       -
+        id: send_receipt
+        condition: ''
+  send_receipt:
+    label: 'Send kvitteringsbrev (Digital Post)'
+    plugin: aabenforms_digital_post_send
+    configuration:
+      recipient_token: '[webform_submission:values:applicant_cpr:raw]'
+      recipient_type: cpr
+      sender_cvr_token: ''
+      subject_template: 'Kvittering: vi har modtaget din ansøgning om skoleskift'
+      body_template: '<p>Kommunen har i dag modtaget din ansøgning om skoleskift for [webform_submission:values:child_name].</p><p><strong>Sagsnummer:</strong> [case_id]. Oplys nummeret, når du kontakter os om sagen.</p><p><strong>Det sker nu:</strong> Har I fælles forældremyndighed, sender vi en anmodning om medunderskrift til den anden forælder i Digital Post. Derefter vurderer skolelederen på den ønskede skole, om der er plads. I får afgørelsen i Digital Post.</p><p><strong>Hvornår hører du fra os:</strong> Du får normalt svar inden for 4 uger.</p><p><strong>Har du spørgsmål?</strong> Kontakt skoleforvaltningen i din kommune og oplys dit sagsnummer.</p>'
+      type: 'Digital Post'
+      result_token: skoleskift_receipt_result
+    successors:
+      -
         id: institution_lookup
         condition: ''
   institution_lookup:

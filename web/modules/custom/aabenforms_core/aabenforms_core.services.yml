@@ -72,6 +72,13 @@ services:
       - '@config.factory'
       - '@logger.factory'
 
+  # Wizard pages and GEDISA guidance of a webform for GET /api/webform/{id}.
+  aabenforms_core.webform_structure:
+    class: Drupal\aabenforms_core\Service\WebformStructure
+    arguments:
+      - '@config.factory'
+      - '@aabenforms_core.tenant_resolver'
+
   plugin.manager.aabenforms_dashboard_section:
     class: Drupal\aabenforms_core\Dashboard\AabenformsDashboardSectionManager
     parent: default_plugin_manager
