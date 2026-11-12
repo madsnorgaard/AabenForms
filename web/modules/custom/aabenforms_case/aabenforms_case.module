@@ -1,0 +1,31 @@
+<?php
+
+/**
+ * @file
+ * ÅbenForms case engine: hooks.
+ */
+
+use Drupal\Core\Database\Query\AlterableInterface;
+use Drupal\Core\Database\Query\SelectInterface;
+
+/**
+ * Implements hook_query_TAG_alter() for the aabenforms_case_access tag.
+ *
+ * Entity queries with access checking (JSON:API collections among them) get
+ * this tag. Cases have no query-level access handler, so without this hook
+ * such a query loads every case and then drops the ones the account may not
+ * see, and JSON:API reports each dropped case in meta.omitted with its UUID:
+ * an anonymous GET on the collection enumerated the case ids and the count.
+ * Accounts without a case permission now get an empty result at the SQL
+ * level. Internal code paths (flows, lookups) query with accessCheck(FALSE)
+ * and are not affected.
+ */
+function aabenforms_case_query_aabenforms_case_access_alter(AlterableInterface $query): void {
+  $account = \Drupal::currentUser();
+  if ($account->hasPermission('view aabenforms_case') || $account->hasPermission('administer aabenforms_case')) {
+    return;
+  }
+  if ($query instanceof SelectInterface) {
+    $query->alwaysFalse();
+  }
+}
