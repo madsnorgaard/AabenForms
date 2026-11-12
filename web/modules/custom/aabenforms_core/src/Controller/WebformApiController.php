@@ -5,6 +5,7 @@ namespace Drupal\aabenforms_core\Controller;
 use Drupal\aabenforms_core\Exception\SubmissionIntegrityException;
 use Drupal\aabenforms_core\Identity\SubmissionIdentityBinder;
 use Drupal\aabenforms_core\Service\TraceStore;
+use Drupal\aabenforms_core\Service\WebformStructure;
 use Drupal\aabenforms_core\Service\WorkflowExecutionCollector;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Controller\ControllerBase;
@@ -17,6 +18,11 @@ use Symfony\Component\HttpFoundation\Request;
  * Simple REST controller for webform access (bypasses JSON:API permissions).
  */
 class WebformApiController extends ControllerBase {
+
+  /**
+   * The element key of the citizen's declaration checkbox (KL component 7).
+   */
+  public const DECLARATION_KEY = 'erklaering';
 
   /**
    * The workflow execution collector.
@@ -34,6 +40,11 @@ class WebformApiController extends ControllerBase {
   protected SubmissionIdentityBinder $identityBinder;
 
   /**
+   * Wizard pages and GEDISA guidance of a webform.
+   */
+  protected WebformStructure $structure;
+
+  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
@@ -41,6 +52,7 @@ class WebformApiController extends ControllerBase {
     $instance->executionCollector = $container->get('aabenforms_core.workflow_execution_collector');
     $instance->traceStore = $container->get('aabenforms_core.trace_store');
     $instance->identityBinder = $container->get('aabenforms_core.submission_identity_binder');
+    $instance->structure = $container->get('aabenforms_core.webform_structure');
     return $instance;
   }
 
@@ -75,6 +87,8 @@ class WebformApiController extends ControllerBase {
           'title' => $webform->label(),
           'description' => $webform->get('description'),
           'elements' => $webform->getElementsDecodedAndFlattened(),
+          'pages' => $this->structure->pages($webform),
+          'gedisa' => $this->structure->gedisa($webform),
           'settings' => $webform->getSettings(),
           'requires_mitid' => $this->webformRequiresMitId($webform->id()),
         ],
@@ -158,6 +172,44 @@ class WebformApiController extends ControllerBase {
       return $submission_data;
     }
     return $this->identityBinder->bind($webform, $cpr, $submission_data, $workflow_id, (array) ($session['representations'] ?? []));
+  }
+
+  /**
+   * Rejects a submission whose required declaration checkbox is not ticked.
+   *
+   * Only the erklaering element is enforced here: it is the one checkbox the
+   * GEDISA page structure requires on every form and it never sits behind
+   * #states, so its #required can be honoured without evaluating conditions.
+   *
+   * @param \Drupal\webform\Entity\Webform $webform
+   *   The webform.
+   * @param array $submission_data
+   *   The submitted values.
+   *
+   * @return \Symfony\Component\HttpFoundation\JsonResponse|null
+   *   A 422 response naming the field, or NULL when the data passes.
+   */
+  protected function validateDeclaration(Webform $webform, array $submission_data): ?JsonResponse {
+    $element = $webform->getElement(self::DECLARATION_KEY);
+    if (!$element || empty($element['#required']) || ($element['#type'] ?? '') !== 'checkbox') {
+      return NULL;
+    }
+    $value = $submission_data[self::DECLARATION_KEY] ?? NULL;
+    $ticked = $value === TRUE
+      || $value === 1
+      || (is_string($value) && in_array(strtolower(trim($value)), ['1', 'true', 'on', 'yes'], TRUE));
+    if ($ticked) {
+      return NULL;
+    }
+    $message = (string) ($element['#required_error'] ?? '');
+    if ($message === '') {
+      $message = 'Du skal bekræfte erklæringen, før du kan sende.';
+    }
+    return new JsonResponse([
+      'error' => 'Validation failed',
+      'field' => self::DECLARATION_KEY,
+      'errors' => [self::DECLARATION_KEY => $message],
+    ], 422);
   }
 
   /**
@@ -261,6 +313,17 @@ class WebformApiController extends ControllerBase {
     }
 
     $submission_data = $data['data']['attributes']['data'] ?? $data['data'];
+    if (!is_array($submission_data)) {
+      return new JsonResponse(['error' => 'Invalid submission data'], 400);
+    }
+
+    // The declaration (KL component 7) is the citizen's signature on the
+    // content: a required erklaering checkbox must be ticked, and the SPA's
+    // own check is only a convenience. Cheap, so it runs before the identity
+    // work.
+    if ($violation = $this->validateDeclaration($webform, $submission_data)) {
+      return $violation;
+    }
 
     // The SPA POSTs from a different origin than the backend cookie domain, so
     // the MitID session cookie is not shared. The unguessable workflow_id the
