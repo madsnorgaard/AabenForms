@@ -9,8 +9,11 @@ namespace Drupal\aabenforms_core\Prefill;
  *
  * Every value the prefill endpoint hands the SPA is a register lookup about
  * the citizen, so each one must be able to name the statutory basis the
- * municipality relies on (databeskyttelsesforordningen art. 6(1)(e) read
- * together with the sector law that makes the lookup necessary). The map is
+ * municipality relies on (databeskyttelsesforordningens artikel 6, stk. 1,
+ * litra e, read together with the sector law that makes the lookup
+ * necessary). References use the popular law title and Danish citation
+ * style ("Serviceloven § 41", not "SEL §41" or "DBF art. 6(1)(e)"), because
+ * the string is shown to the citizen as the hjemmel column. The map is
  * keyed by webform machine name; a form without an entry falls back to the
  * general administrative-law basis so the response is never silent about
  * why the data was fetched.
@@ -24,19 +27,19 @@ final class LegalBasis {
   /**
    * The fallback basis for forms without a specific entry.
    */
-  public const DEFAULT = 'Forvaltningsloven §7, DBF art. 6(1)(e)';
+  public const DEFAULT = 'Forvaltningsloven § 7, Databeskyttelsesforordningen artikel 6, stk. 1, litra e';
 
   /**
    * Per-webform legal basis, keyed by webform id.
    */
   public const MAP = [
-    'merudgifter' => 'Serviceloven §41, Forvaltningsloven §7, DBF art. 6(1)(e)',
-    'school_transfer' => 'Folkeskoleloven §36, forældreansvarsloven §3',
-    'klage' => 'Forvaltningsloven §25, Retssikkerhedsloven §66',
-    'building_permit' => 'Byggeloven §16',
-    'friplads' => 'Dagtilbudsloven §43, Forvaltningsloven §7, DBF art. 6(1)(e)',
+    'merudgifter' => 'Serviceloven § 41, Forvaltningsloven § 7, Databeskyttelsesforordningen artikel 6, stk. 1, litra e',
+    'school_transfer' => 'Folkeskoleloven § 36, Forældreansvarsloven § 3',
+    'klage' => 'Forvaltningsloven § 25, Retssikkerhedsloven § 66',
+    'building_permit' => 'Byggeloven § 16',
+    'friplads' => 'Dagtilbudsloven § 43, Forvaltningsloven § 7, Databeskyttelsesforordningen artikel 6, stk. 1, litra e',
     // Beskæftigelseskravet for lønmodtagere (240 timer / 6 måneder).
-    'sygedagpenge' => 'Sygedagpengeloven §32, Forvaltningsloven §7, DBF art. 6(1)(e)',
+    'sygedagpenge' => 'Sygedagpengeloven § 32, Forvaltningsloven § 7, Databeskyttelsesforordningen artikel 6, stk. 1, litra e',
   ];
 
   /**

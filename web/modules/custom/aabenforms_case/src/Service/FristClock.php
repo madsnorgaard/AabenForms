@@ -13,7 +13,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
  * (key "frister"), so a new casework area only needs config, not code. Each
  * area defines a duration as either calendar hours or working days
  * (hverdage), the latter skipping weekends AND Danish public holidays per
- * RSL/forvaltningslov practice.
+ * retssikkerhedsloven/forvaltningsloven practice.
  *
  * Working-day math runs in Europe/Copenhagen (not UTC), so the weekday of a
  * receipt logged near local midnight is classified correctly, and the due
@@ -65,9 +65,12 @@ class FristClock {
   /**
    * Computes the appeal deadline (klagefrist) from the notification moment.
    *
-   * The statutory klagefrist is four weeks in calendar time (RSL §67 stk. 1
-   * for sociale sager), counted from when the citizen is notified of the
-   * decision, not from the decision itself (FVL meddelelseskrav). It is
+   * The statutory klagefrist is four weeks in calendar time
+   * (retssikkerhedslovens § 67, stk. 1, for sociale sager), counted from when
+   * the citizen is notified of the decision, not from the decision itself
+   * (forvaltningslovens krav om, at afgørelsen er meddelt). § 66 is the
+   * kommune's genvurdering duty and § 3, stk. 2 the frist-fastsættelse rule;
+   * neither is what this method computes. It is
    * calendar weeks, not working days, so it does not go through the
    * per-area hverdage math above. Both SetKlagefristAction and the demo
    * case seeder use this so the two can never disagree.

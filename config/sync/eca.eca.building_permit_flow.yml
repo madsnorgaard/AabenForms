@@ -91,7 +91,7 @@ actions:
       recipient_type: cpr
       sender_cvr_token: ''
       subject_template: 'Modtaget: ansøgning om byggetilladelse'
-      body_template: '<p>Vi har modtaget din ansøgning om byggetilladelse. En sagsbehandler tager kontakt.</p>'
+      body_template: '<p>Vi har modtaget din ansøgning om byggetilladelse. En sagsbehandler kontakter dig, og du får afgørelsen i Digital Post.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors: {  }
@@ -100,6 +100,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: building_permit_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Ansoegningen blev ikke behandlet, fordi din identitet ikke kunne bekraeftes med MitID. Log ind med MitID og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke din ansøgning, fordi vi ikke kunne bekræfte din identitet med MitID. Log ind med MitID, og prøv igen.'
     successors: {  }

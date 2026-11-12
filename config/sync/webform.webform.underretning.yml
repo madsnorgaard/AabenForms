@@ -25,7 +25,7 @@ elements: |
   reporter_contact:
     '#type': textfield
     '#title': 'Dit navn og kontakt'
-    '#description': 'Påkrævet for fagpersoner. Borgere kan vælge at være anonyme.'
+    '#description': 'Fagpersoner skal udfylde feltet. Borgere kan vælge at være anonyme.'
     '#states':
       required:
         ':input[name="reporter_type"]':
@@ -37,7 +37,7 @@ elements: |
   child_cpr:
     '#type': textfield
     '#title': 'Barnets CPR-nummer'
-    '#description': 'DDMMÅÅ-XXXX. Krypteres ved modtagelse.'
+    '#description': 'Skriv CPR-nummeret med 10 cifre, fx 010115-1234. Vi krypterer det, når vi modtager det.'
   concern_details:
     '#type': textarea
     '#title': 'Beskriv din bekymring'
@@ -150,7 +150,7 @@ settings:
   confirmation_type: message
   confirmation_url: ''
   confirmation_title: ''
-  confirmation_message: 'Tak. Din underretning er modtaget, og kommunen vurderer den hurtigst muligt.'
+  confirmation_message: 'Tak. Vi har modtaget din underretning og vurderer den inden for 24 timer.'
   confirmation_attributes: {  }
   confirmation_back: true
   confirmation_back_label: ''

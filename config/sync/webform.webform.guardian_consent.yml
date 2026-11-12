@@ -17,7 +17,7 @@ elements: |
     '#type': textfield
     '#title': 'Hvad gives der samtykke til'
     '#required': true
-    '#description': 'F.eks. deltagelse i lejrskole eller deling af oplysninger med PPR.'
+    '#description': 'Fx deltagelse i lejrskole eller deling af oplysninger med PPR.'
   institution_number:
     '#type': select
     '#title': 'Institution'

@@ -36,7 +36,7 @@ elements: |
     '#type': cpr_field
     '#title': 'Barnets CPR-nummer'
     '#required': true
-    '#description': 'Forældremyndighedsindehaverne kontrolleres i CPR-registret, og begge skal samtykke.'
+    '#description': 'Vi kontrollerer forældremyndigheden i CPR-registret. Begge indehavere skal samtykke.'
   concern:
     '#type': textarea
     '#title': 'Beskrivelse af bekymringen og barnets udfordringer'

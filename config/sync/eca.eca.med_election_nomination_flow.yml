@@ -82,6 +82,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: med_nomination_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Indstillingen blev ikke registreret, fordi din identitet ikke kunne bekraeftes med MitID. Log ind og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi registrerede ikke indstillingen, fordi vi ikke kunne bekræfte din identitet med MitID. Log ind, og prøv igen.'
     successors: {  }

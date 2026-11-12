@@ -88,7 +88,7 @@ actions:
       recipient_type: cpr
       sender_cvr_token: ''
       subject_template: 'Bekræftelse på adresseændring'
-      body_template: '<p>Vi har registreret din adresseændring. Den nye adresse er gældende fra den angivne dato.</p>'
+      body_template: '<p>Vi har registreret din adresseændring. Din nye adresse gælder fra den flyttedato, du har oplyst.</p>'
       type: 'Digital Post'
       result_token: digital_post_result
     successors: {  }
@@ -97,6 +97,6 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: address_change_denied
-      step_label: 'Identitet ikke bekraeftet'
-      message: 'Adresseaendringen blev ikke behandlet, fordi din identitet ikke kunne bekraeftes med MitID. Log ind med MitID og proev igen.'
+      step_label: 'Identitet ikke bekræftet'
+      message: 'Vi behandlede ikke din adresseændring, fordi vi ikke kunne bekræfte din identitet med MitID. Log ind med MitID, og prøv igen.'
     successors: {  }

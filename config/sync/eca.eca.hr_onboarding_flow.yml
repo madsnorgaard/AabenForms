@@ -106,5 +106,5 @@ actions:
     configuration:
       event_type: hr_onboarding_denied
       step_label: 'Adgang afvist'
-      message: 'Anmodningen blev ikke behandlet, fordi det ikke kunne bekraeftes, at du er logget ind som medarbejder.'
+      message: 'Vi behandlede ikke anmodningen, fordi vi ikke kunne bekræfte, at du er logget ind som medarbejder.'
     successors: {  }

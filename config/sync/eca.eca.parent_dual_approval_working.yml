@@ -171,14 +171,14 @@ actions:
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: parent1_denied
-      step_label: 'Foraelder 1: identitet ikke bekraeftet'
-      message: 'Foraelder 1s godkendelse blev ikke registreret, fordi identiteten ikke kunne bekraeftes med MitID.'
+      step_label: 'Forælder 1: identitet ikke bekræftet'
+      message: 'Vi registrerede ikke godkendelsen fra forælder 1, fordi vi ikke kunne bekræfte identiteten med MitID.'
     successors: {  }
   deny_parent2:
     label: 'Deny: Parent 2 MitID not verified'
     plugin: aabenforms_workflow_deny
     configuration:
       event_type: parent2_denied
-      step_label: 'Foraelder 2: identitet ikke bekraeftet'
-      message: 'Foraelder 2s godkendelse blev ikke registreret, fordi identiteten ikke kunne bekraeftes med MitID.'
+      step_label: 'Forælder 2: identitet ikke bekræftet'
+      message: 'Vi registrerede ikke godkendelsen fra forælder 2, fordi vi ikke kunne bekræfte identiteten med MitID.'
     successors: {  }
