@@ -6,6 +6,7 @@
  */
 
 use Drupal\Core\Database\Query\AlterableInterface;
+use Drupal\Core\Database\Query\SelectInterface;
 
 /**
  * Implements hook_query_TAG_alter() for the aabenforms_case_access tag.
@@ -24,7 +25,7 @@ function aabenforms_case_query_aabenforms_case_access_alter(AlterableInterface $
   if ($account->hasPermission('view aabenforms_case') || $account->hasPermission('administer aabenforms_case')) {
     return;
   }
-  if ($query instanceof \Drupal\Core\Database\Query\SelectInterface) {
+  if ($query instanceof SelectInterface) {
     $query->alwaysFalse();
   }
 }

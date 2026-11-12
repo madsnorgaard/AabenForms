@@ -47,7 +47,8 @@ class WebformNativePageAccessTest extends KernelTestBase {
     $this->installEntitySchema('webform_submission');
     $this->installSchema('webform', ['webform']);
     $this->installConfig(['webform']);
-    // uid 1 is the superuser; create it so the users below are ordinary.
+    // The first user is the superuser (uid 1); create it so the users below
+    // are ordinary.
     $this->createUser();
   }
 

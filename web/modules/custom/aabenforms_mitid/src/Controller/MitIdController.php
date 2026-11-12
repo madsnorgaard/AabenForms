@@ -24,8 +24,7 @@ use Symfony\Component\HttpFoundation\Response;
 class MitIdController extends ControllerBase {
 
   /**
-   * Maximum age in seconds of a pending login (state record) before the
-   * callback refuses it.
+   * Maximum age in seconds of a pending login before the callback refuses it.
    */
   protected const STATE_MAX_AGE = 600;
 
