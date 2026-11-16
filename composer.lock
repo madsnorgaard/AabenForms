@@ -4568,29 +4568,29 @@
         },
         {
             "name": "onelogin/php-saml",
-            "version": "4.3.2",
+            "version": "4.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/SAML-Toolkits/php-saml.git",
-                "reference": "26b3a47349415e5b7aa300ba4ab7fc316c65f19e"
+                "reference": "68008d28359928b16a4953c2dda19400ce2d0654"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/SAML-Toolkits/php-saml/zipball/26b3a47349415e5b7aa300ba4ab7fc316c65f19e",
-                "reference": "26b3a47349415e5b7aa300ba4ab7fc316c65f19e",
+                "url": "https://api.github.com/repos/SAML-Toolkits/php-saml/zipball/68008d28359928b16a4953c2dda19400ce2d0654",
+                "reference": "68008d28359928b16a4953c2dda19400ce2d0654",
                 "shasum": ""
             },
             "require": {
-                "php": ">=7.3",
-                "robrichards/xmlseclibs": "^3.1.5"
+                "php": ">=8.0",
+                "robrichards/xmlseclibs": "^4.0"
             },
             "require-dev": {
                 "pdepend/pdepend": "^2.8.0",
                 "php-coveralls/php-coveralls": "^2.0",
                 "phploc/phploc": "^4.0 || ^5.0 || ^6.0 || ^7.0",
-                "phpunit/phpunit": "^9.5",
+                "phpunit/phpunit": ">9.6.32",
                 "sebastian/phpcpd": "^4.0 || ^5.0 || ^6.0 ",
-                "squizlabs/php_codesniffer": "^3.5.8"
+                "squizlabs/php_codesniffer": "^3.13.6"
             },
             "suggest": {
                 "ext-curl": "Install curl lib to be able to use the IdPMetadataParser for parsing remote XMLs",
@@ -4628,7 +4628,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-07T22:38:04+00:00"
+            "time": "2026-11-04T18:13:16+00:00"
         },
         {
             "name": "paragonie/constant_time_encoding",
@@ -6172,21 +6172,24 @@
         },
         {
             "name": "robrichards/xmlseclibs",
-            "version": "3.1.5",
+            "version": "4.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/robrichards/xmlseclibs.git",
-                "reference": "03062be78178cbb5e8f605cd255dc32a14981f92"
+                "reference": "a8c54900b91d9cd6569b0c87a8f3809bec6d8170"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/robrichards/xmlseclibs/zipball/03062be78178cbb5e8f605cd255dc32a14981f92",
-                "reference": "03062be78178cbb5e8f605cd255dc32a14981f92",
+                "url": "https://api.github.com/repos/robrichards/xmlseclibs/zipball/a8c54900b91d9cd6569b0c87a8f3809bec6d8170",
+                "reference": "a8c54900b91d9cd6569b0c87a8f3809bec6d8170",
                 "shasum": ""
             },
             "require": {
-                "ext-openssl": "*",
-                "php": ">= 5.4"
+                "php": ">= 8.0",
+                "phpseclib/phpseclib": "^3.0.57"
+            },
+            "suggest": {
+                "ext-openssl": "Improves phpseclib performance when available"
             },
             "type": "library",
             "autoload": {
@@ -6208,9 +6211,9 @@
             ],
             "support": {
                 "issues": "https://github.com/robrichards/xmlseclibs/issues",
-                "source": "https://github.com/robrichards/xmlseclibs/tree/3.1.5"
+                "source": "https://github.com/robrichards/xmlseclibs/tree/4.0.2"
             },
-            "time": "2026-03-13T10:31:56+00:00"
+            "time": "2026-11-07T08:54:15+00:00"
         },
         {
             "name": "sebastian/diff",
