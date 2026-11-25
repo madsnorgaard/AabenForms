@@ -50,4 +50,8 @@ RUN chown -R root:root /opt/drupal && \
 WORKDIR /opt/drupal
 
 # Ensure Apache runs as the correct user
+RUN printf '%s\n' '<LocationMatch "^/(core/)?(install|rebuild)\.php">' '    Require all denied' '</LocationMatch>' \
+      > /etc/apache2/conf-available/block-installer.conf \
+    && a2enconf block-installer
+
 CMD ["apache2-foreground"]
